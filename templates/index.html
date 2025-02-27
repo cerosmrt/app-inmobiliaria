@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Inmobiliaria</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container { max-width: 800px; }
+        .form-section { margin-bottom: 20px; }
+        .list-section { margin-top: 20px; }
+        table { font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Gestión Inmobiliaria</h1>
+
+        <!-- Selector de acción -->
+        <div class="form-section">
+            <label for="accion" class="form-label fw-bold">¿Qué querés cargar?</label>
+            <select id="accion" class="form-select mb-3" onchange="mostrarFormulario()">
+                <option value="propiedad">Cargar Propiedad</option>
+                <option value="cliente">Cargar Cliente</option>
+            </select>
+
+            <!-- Formulario para Propiedad -->
+            <form id="formPropiedad" class="form-section">
+                <div class="mb-3">
+                    <label for="direccion" class="form-label">Dirección</label>
+                    <input type="text" class="form-control" id="direccion" required>
+                </div>
+                <div class="mb-3">
+                    <label for="precio" class="form-label">Precio</label>
+                    <input type="number" class="form-control" id="precio" required>
+                </div>
+                <div class="mb-3">
+                    <label for="tipo" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipo" required>
+                        <option value="Venta">Venta</option>
+                        <option value="Alquiler">Alquiler</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select class="form-select" id="estado" required>
+                        <option value="Disponible">Disponible</option>
+                        <option value="Reservado">Reservado</option>
+                        <option value="Vendido">Vendido</option>
+                        <option value="Alquilado">Alquilado</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Propiedad</button>
+            </form>
+
+            <!-- Formulario para Cliente -->
+            <form id="formCliente" class="form-section" style="display: none;">
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="nombre" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contacto" class="form-label">Contacto (teléfono o email)</label>
+                    <input type="text" class="form-control" id="contacto" required>
+                </div>
+                <div class="mb-3">
+                    <label for="tipoCliente" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipoCliente" required>
+                        <option value="propietario">Propietario</option>
+                        <option value="interesado">Interesado</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Cliente</button>
+            </form>
+        </div>
+
+        <!-- Lista de propiedades cargadas -->
+        <div class="list-section">
+            <h3>Propiedades Cargadas</h3>
+            <table class="table table-striped" id="tablaPropiedades">
+                <thead>
+                    <tr>
+                        <th>Dirección</th>
+                        <th>Precio</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let propiedades = [];
+
+        // Mostrar el formulario correcto según la selección
+        function mostrarFormulario() {
+            const accion = document.getElementById('accion').value;
+            document.getElementById('formPropiedad').style.display = accion === 'propiedad' ? 'block' : 'none';
+            document.getElementById('formCliente').style.display = accion === 'cliente' ? 'block' : 'none';
+        }
+
+        // Cargar propiedades al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarPropiedades();
+            document.getElementById('formPropiedad').addEventListener('submit', guardarPropiedad);
+            document.getElementById('formCliente').addEventListener('submit', guardarCliente);
+        });
+
+        // Cargar propiedades
+        function cargarPropiedades() {
+            fetch('/api/propiedades')
+                .then(response => response.json())
+                .then(data => {
+                    propiedades = data;
+                    mostrarPropiedades();
+                })
+                .catch(error => console.error('Error al cargar propiedades:', error));
+        }
+
+        // Mostrar propiedades en la tabla
+        function mostrarPropiedades() {
+            const tbody = document.querySelector('#tablaPropiedades tbody');
+            tbody.innerHTML = '';
+            propiedades.forEach(prop => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${prop.direccion}</td>
+                    <td>$${prop.precio.toLocaleString()}</td>
+                    <td>${prop.tipo}</td>
+                    <td>${prop.estado}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Guardar propiedad
+        function guardarPropiedad(e) {
+            e.preventDefault();
+            const propiedad = {
+                direccion: document.getElementById('direccion').value,
+                precio: parseFloat(document.getElementById('precio').value),
+                tipo: document.getElementById('tipo').value,
+                estado: document.getElementById('estado').value,
+                descripcion: document.getElementById('descripcion')?.value || ''
+            };
+
+            fetch('/api/propiedades', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(propiedad)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('formPropiedad').reset();
+                cargarPropiedades();
+                alert('Propiedad guardada');
+            })
+            .catch(error => console.error('Error al guardar propiedad:', error));
+        }
+
+        // Guardar cliente
+        function guardarCliente(e) {
+            e.preventDefault();
+            const cliente = {
+                nombre: document.getElementById('nombre').value,
+                contacto: document.getElementById('contacto').value,
+                tipo: document.getElementById('tipoCliente').value
+            };
+
+            fetch('/api/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cliente)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('formCliente').reset();
+                alert('Cliente guardado');
+            })
+            .catch(error => console.error('Error al guardar cliente:', error));
+        }
+    </script>
+</body>
+</html>
