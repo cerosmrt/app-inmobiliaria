@@ -50,6 +50,17 @@
                         <option value="Alquilado">Alquilado</option>
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label for="propietario" class="form-label">Propietario</label>
+                    <select class="form-select" id="propietario">
+                        <option value="">Sin propietario</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="interesados" class="form-label">Interesados</label>
+                    <select class="form-select" id="interesados" multiple>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-primary w-100">Guardar Propiedad</button>
             </form>
 
@@ -94,21 +105,41 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let propiedades = [];
-
+        let clientes = [];
+    
+        // Cargar clientes para los selects
+        function cargarClientes() {
+            fetch('/api/clientes')
+                .then(response => response.json())
+                .then(data => {
+                    clientes = data;
+                    const propietarioSelect = document.getElementById('propietario');
+                    const interesadosSelect = document.getElementById('interesados');
+                    propietarioSelect.innerHTML = '<option value="">Sin propietario</option>';
+                    interesadosSelect.innerHTML = '';
+                    clientes.forEach(cliente => {
+                        propietarioSelect.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`;
+                        interesadosSelect.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`;
+                    });
+                })
+                .catch(error => console.error('Error al cargar clientes:', error));
+        }
+    
         // Mostrar el formulario correcto según la selección
         function mostrarFormulario() {
             const accion = document.getElementById('accion').value;
             document.getElementById('formPropiedad').style.display = accion === 'propiedad' ? 'block' : 'none';
             document.getElementById('formCliente').style.display = accion === 'cliente' ? 'block' : 'none';
         }
-
-        // Cargar propiedades al iniciar
+    
+        // Cargar propiedades y clientes al iniciar
         document.addEventListener('DOMContentLoaded', () => {
             cargarPropiedades();
+            cargarClientes();
             document.getElementById('formPropiedad').addEventListener('submit', guardarPropiedad);
             document.getElementById('formCliente').addEventListener('submit', guardarCliente);
         });
-
+    
         // Cargar propiedades
         function cargarPropiedades() {
             fetch('/api/propiedades')
@@ -119,7 +150,7 @@
                 })
                 .catch(error => console.error('Error al cargar propiedades:', error));
         }
-
+    
         // Mostrar propiedades en la tabla
         function mostrarPropiedades() {
             const tbody = document.querySelector('#tablaPropiedades tbody');
@@ -131,11 +162,13 @@
                     <td>$${prop.precio.toLocaleString()}</td>
                     <td>${prop.tipo}</td>
                     <td>${prop.estado}</td>
+                    <td>${prop.propietario || 'Sin propietario'}</td>
+                    <td>${prop.interesados.join(', ') || 'Ninguno'}</td>
                 `;
                 tbody.appendChild(row);
             });
         }
-
+    
         // Guardar propiedad
         function guardarPropiedad(e) {
             e.preventDefault();
@@ -144,9 +177,10 @@
                 precio: parseFloat(document.getElementById('precio').value),
                 tipo: document.getElementById('tipo').value,
                 estado: document.getElementById('estado').value,
-                descripcion: document.getElementById('descripcion')?.value || ''
+                propietario_id: document.getElementById('propietario').value || null,
+                interesados_ids: Array.from(document.getElementById('interesados').selectedOptions).map(opt => parseInt(opt.value))
             };
-
+    
             fetch('/api/propiedades', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -160,7 +194,7 @@
             })
             .catch(error => console.error('Error al guardar propiedad:', error));
         }
-
+    
         // Guardar cliente
         function guardarCliente(e) {
             e.preventDefault();
@@ -169,7 +203,7 @@
                 contacto: document.getElementById('contacto').value,
                 tipo: document.getElementById('tipoCliente').value
             };
-
+    
             fetch('/api/clientes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -178,6 +212,7 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById('formCliente').reset();
+                cargarClientes();
                 alert('Cliente guardado');
             })
             .catch(error => console.error('Error al guardar cliente:', error));

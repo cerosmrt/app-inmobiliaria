@@ -47,6 +47,7 @@ def get_propiedades():
     propiedades = query.all()
     return jsonify([prop.as_dict() for prop in propiedades])
 
+# Ruta para agregar propiedad
 @app.route('/api/propiedades', methods=['POST'])
 def add_propiedad():
     data = request.get_json()
@@ -55,8 +56,13 @@ def add_propiedad():
         precio=data['precio'],
         tipo=data['tipo'],
         estado=data['estado'],
-        descripcion=data.get('descripcion', '')  # Usa .get() para evitar KeyError si no está
+        descripcion=data.get('descripcion', ''),
+        propietario_id=data.get('propietario_id')  # Nuevo: ID del propietario
     )
+    # Agregar interesados si se pasan
+    if 'interesados_ids' in data:
+        interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
+        nueva_propiedad.interesados = interesados
     db.session.add(nueva_propiedad)
     db.session.commit()
     return jsonify(nueva_propiedad.as_dict()), 201
@@ -68,6 +74,7 @@ def get_propiedad(id):
         return jsonify(propiedad.as_dict())
     return jsonify({"message": "Propiedad no encontrada"}), 404
 
+# Ruta para actualizar propiedad
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 def update_propiedad(id):
     propiedad = Propiedad.query.get(id)
@@ -78,6 +85,11 @@ def update_propiedad(id):
         propiedad.tipo = data['tipo']
         propiedad.estado = data['estado']
         propiedad.descripcion = data.get('descripcion', '')
+        propiedad.propietario_id = data.get('propietario_id')  # Actualizar propietario
+        # Actualizar interesados
+        if 'interesados_ids' in data:
+            interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
+            propiedad.interesados = interesados
         db.session.commit()
         return jsonify({"message": "Propiedad actualizada"})
     return jsonify({"message": "Propiedad no encontrada"}), 404

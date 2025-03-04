@@ -1,18 +1,25 @@
-# Importa la instancia de la aplicación y la base de datos desde el módulo 'app'
+# manage.py
+import sys
 from app import app, db
+from flask_migrate import Migrate, init, migrate, upgrade
 
-# Importa el comando para migrar la base de datos
-from flask_migrate import MigrateCommand
+# Configura Flask-Migrate
+migrate_obj = Migrate(app, db)  # Renombré a migrate_obj para evitar confusión
 
-# Importa el gestor de comandos para ejecutar tareas desde la terminal
-from flask_script import Manager
-
-# Crea una instancia de Manager asociada a la aplicación Flask
-manager = Manager(app)
-
-# Añade el comando 'db' para permitir migraciones (inicializar, migrar, actualizar base de datos)
-manager.add_command('db', MigrateCommand)
-
-# Ejecuta el gestor de comandos si el script se ejecuta directamente
 if __name__ == "__main__":
-    manager.run()
+    with app.app_context():
+        if len(sys.argv) > 1 and sys.argv[1] == "db":
+            if len(sys.argv) > 2:
+                command = sys.argv[2]
+                if command == "init":
+                    init()
+                elif command == "migrate":
+                    migrate()
+                elif command == "upgrade":
+                    upgrade()
+                else:
+                    print("Comando no reconocido. Usa: init, migrate, upgrade")
+            else:
+                print("Uso: python manage.py db [init|migrate|upgrade]")
+        else:
+            print("Uso: python manage.py db [init|migrate|upgrade]")

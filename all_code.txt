@@ -26,25 +26,30 @@ if not os.path.exists('templates'):
 if not os.path.exists('static'):
     os.makedirs('static')
 
-# Rutas para la interfaz web
+# Ruta principal con la nueva interfaz simplificada
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/propiedades_ui')
-def propiedades_ui():
-    return render_template('propiedades.html')
-
-@app.route('/clientes_ui')
-def clientes_ui():
-    return render_template('clientes.html')
-
 # Rutas API para propiedades
 @app.route('/api/propiedades', methods=['GET'])
 def get_propiedades():
-    propiedades = Propiedad.query.all()
-    return jsonify([propiedad.as_dict() for propiedad in propiedades])
+    tipo = request.args.get('tipo', '')
+    propietario = request.args.get('propietario', '')
+    interesado = request.args.get('interesado', '')
 
+    query = Propiedad.query
+    if tipo:
+        query = query.filter(Propiedad.tipo.ilike(f'%{tipo}%'))
+    if propietario:
+        query = query.join(Cliente, Propiedad.propietario).filter(Cliente.nombre.ilike(f'%{propietario}%'))
+    if interesado:
+        query = query.join(Propiedad.interesados).filter(Cliente.nombre.ilike(f'%{interesado}%'))
+    
+    propiedades = query.all()
+    return jsonify([prop.as_dict() for prop in propiedades])
+
+# Ruta para agregar propiedad
 @app.route('/api/propiedades', methods=['POST'])
 def add_propiedad():
     data = request.get_json()
@@ -53,11 +58,16 @@ def add_propiedad():
         precio=data['precio'],
         tipo=data['tipo'],
         estado=data['estado'],
-        descripcion=data['descripcion']
+        descripcion=data.get('descripcion', ''),
+        propietario_id=data.get('propietario_id')  # Nuevo: ID del propietario
     )
+    # Agregar interesados si se pasan
+    if 'interesados_ids' in data:
+        interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
+        nueva_propiedad.interesados = interesados
     db.session.add(nueva_propiedad)
     db.session.commit()
-    return jsonify({"message": "Propiedad agregada"}), 201
+    return jsonify(nueva_propiedad.as_dict()), 201
 
 @app.route('/api/propiedades/<int:id>', methods=['GET'])
 def get_propiedad(id):
@@ -66,6 +76,7 @@ def get_propiedad(id):
         return jsonify(propiedad.as_dict())
     return jsonify({"message": "Propiedad no encontrada"}), 404
 
+# Ruta para actualizar propiedad
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 def update_propiedad(id):
     propiedad = Propiedad.query.get(id)
@@ -75,7 +86,12 @@ def update_propiedad(id):
         propiedad.precio = data['precio']
         propiedad.tipo = data['tipo']
         propiedad.estado = data['estado']
-        propiedad.descripcion = data['descripcion']
+        propiedad.descripcion = data.get('descripcion', '')
+        propiedad.propietario_id = data.get('propietario_id')  # Actualizar propietario
+        # Actualizar interesados
+        if 'interesados_ids' in data:
+            interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
+            propiedad.interesados = interesados
         db.session.commit()
         return jsonify({"message": "Propiedad actualizada"})
     return jsonify({"message": "Propiedad no encontrada"}), 404
@@ -105,7 +121,7 @@ def add_cliente():
     )
     db.session.add(nuevo_cliente)
     db.session.commit()
-    return jsonify({"message": "Cliente agregado"}), 201
+    return jsonify(nuevo_cliente.as_dict()), 201
 
 @app.route('/api/clientes/<int:id>', methods=['GET'])
 def get_cliente(id):
@@ -175,31 +191,43 @@ combine_files(root_folder, output_file)
 print(f"All files combined into {output_file}")
 
 --- File: .\manage.py ---
-# Importa la instancia de la aplicación y la base de datos desde el módulo 'app'
+# manage.py
+import sys
 from app import app, db
+from flask_migrate import Migrate, init, migrate, upgrade
 
-# Importa el comando para migrar la base de datos
-from flask_migrate import MigrateCommand
+# Configura Flask-Migrate
+migrate_obj = Migrate(app, db)  # Renombré a migrate_obj para evitar confusión
 
-# Importa el gestor de comandos para ejecutar tareas desde la terminal
-from flask_script import Manager
-
-# Crea una instancia de Manager asociada a la aplicación Flask
-manager = Manager(app)
-
-# Añade el comando 'db' para permitir migraciones (inicializar, migrar, actualizar base de datos)
-manager.add_command('db', MigrateCommand)
-
-# Ejecuta el gestor de comandos si el script se ejecuta directamente
 if __name__ == "__main__":
-    manager.run()
-
+    with app.app_context():
+        if len(sys.argv) > 1 and sys.argv[1] == "db":
+            if len(sys.argv) > 2:
+                command = sys.argv[2]
+                if command == "init":
+                    init()
+                elif command == "migrate":
+                    migrate()
+                elif command == "upgrade":
+                    upgrade()
+                else:
+                    print("Comando no reconocido. Usa: init, migrate, upgrade")
+            else:
+                print("Uso: python manage.py db [init|migrate|upgrade]")
+        else:
+            print("Uso: python manage.py db [init|migrate|upgrade]")
 
 --- File: .\models.py ---
 # models.py
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+# Tabla intermedia para la relación muchos-a-muchos entre Propiedad e interesados (Clientes)
+interesados_propiedades = db.Table('interesados_propiedades',
+    db.Column('propiedad_id', db.Integer, db.ForeignKey('propiedades.id'), primary_key=True),
+    db.Column('cliente_id', db.Integer, db.ForeignKey('clientes.id'), primary_key=True)
+)
 
 # Modelo para las propiedades
 class Propiedad(db.Model):
@@ -210,6 +238,12 @@ class Propiedad(db.Model):
     tipo = db.Column(db.String)
     estado = db.Column(db.String)
     descripcion = db.Column(db.String)
+    # Relación con el propietario (un Cliente)
+    # En models.py, modificá la línea de propietario_id
+    propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id', name='fk_propiedades_propietario_id'), nullable=True)
+    propietario = db.relationship('Cliente', backref='propiedades', foreign_keys=[propietario_id])
+    # Relación con los interesados (muchos Clientes)
+    interesados = db.relationship('Cliente', secondary=interesados_propiedades, backref='intereses')
 
     def as_dict(self):
         return {
@@ -218,7 +252,9 @@ class Propiedad(db.Model):
             'precio': self.precio,
             'tipo': self.tipo,
             'estado': self.estado,
-            'descripcion': self.descripcion
+            'descripcion': self.descripcion,
+            'propietario': self.propietario.nombre if self.propietario else None,
+            'interesados': [cliente.nombre for cliente in self.interesados]
         }
 
 # Modelo para los clientes
@@ -237,262 +273,6 @@ class Cliente(db.Model):
             'tipo': self.tipo
         }
 
---- File: .\templates\clientes.html ---
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Clientes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">Gestión Inmobiliaria</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/propiedades_ui">Propiedades</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/clientes_ui">Clientes</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Gestión de Clientes</h1>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCliente">
-                <i class="bi bi-plus-circle"></i> Nuevo Cliente
-            </button>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped" id="tablaClientes">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Contacto</th>
-                                <th>Tipo</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Los datos se cargarán aquí mediante JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Nuevo/Editar Cliente -->
-    <div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Nuevo Cliente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formCliente">
-                        <input type="hidden" id="clienteId">
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="contacto" class="form-label">Contacto</label>
-                            <input type="text" class="form-control" id="contacto" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="tipo" class="form-label">Tipo</label>
-                            <select class="form-select" id="tipo" required>
-                                <option value="">Seleccionar...</option>
-                                <option value="Comprador">Comprador</option>
-                                <option value="Vendedor">Vendedor</option>
-                                <option value="Inquilino">Inquilino</option>
-                                <option value="Propietario">Propietario</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnGuardar">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Confirmación para Eliminar -->
-    <div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirmar Eliminación</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>¿Está seguro de que desea eliminar este cliente?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">Eliminar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Variables globales
-        let clientes = [];
-        let clienteIdEliminar = null;
-        const apiUrl = '/api/clientes';
-        const modalCliente = new bootstrap.Modal(document.getElementById('modalCliente'));
-        const modalConfirmar = new bootstrap.Modal(document.getElementById('modalConfirmar'));
-
-        // Cargar clientes al cargar la página
-
-        // Cargar clientes al cargar la página
-document.addEventListener('DOMContentLoaded', cargarClientes);
-
-// Función para cargar los clientes desde la API
-function cargarClientes() {
-    fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-            clientes = data;
-            mostrarClientes();
-        })
-        .catch(error => console.error('Error al cargar clientes:', error));
-}
-
-// Función para mostrar los clientes en la tabla
-function mostrarClientes() {
-    const tbody = document.querySelector('#tablaClientes tbody');
-    tbody.innerHTML = '';
-    
-    clientes.forEach(cliente => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${cliente.id}</td>
-            <td>${cliente.nombre}</td>
-            <td>${cliente.contacto}</td>
-            <td>${cliente.tipo}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary me-1 btn-editar" data-id="${cliente.id}">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger btn-eliminar" data-id="${cliente.id}">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    // Añadir eventos a los botones de editar y eliminar
-    document.querySelectorAll('.btn-editar').forEach(btn => {
-        btn.addEventListener('click', editarCliente);
-    });
-    
-    document.querySelectorAll('.btn-eliminar').forEach(btn => {
-        btn.addEventListener('click', confirmarEliminar);
-    });
-}
-
-// Evento para el botón de guardar
-document.getElementById('btnGuardar').addEventListener('click', guardarCliente);
-
-// Función para guardar un cliente (crear o actualizar)
-function guardarCliente() {
-    const clienteId = document.getElementById('clienteId').value;
-    const cliente = {
-        nombre: document.getElementById('nombre').value,
-        contacto: document.getElementById('contacto').value,
-        tipo: document.getElementById('tipo').value
-    };
-    
-    // Validar que todos los campos estén completos
-    if (!cliente.nombre || !cliente.contacto || !cliente.tipo) {
-        alert('Por favor complete todos los campos');
-        return;
-    }
-    
-    const method = clienteId ? 'PUT' : 'POST';
-    const url = clienteId ? `${apiUrl}/${clienteId}` : apiUrl;
-    
-    fetch(url, {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(cliente)
-    })
-    .then(response => response.json())
-    .then(data => {
-        modalCliente.hide();
-        cargarClientes();
-        document.getElementById('formCliente').reset();
-    })
-    .catch(error => console.error('Error al guardar cliente:', error));
-}
-
-// Función para editar un cliente
-function editarCliente(event) {
-    const clienteId = event.currentTarget.getAttribute('data-id');
-    const cliente = clientes.find(c => c.id == clienteId);
-    
-    document.getElementById('clienteId').value = cliente.id;
-    document.getElementById('nombre').value = cliente.nombre;
-    document.getElementById('contacto').value = cliente.contacto;
-    document.getElementById('tipo').value = cliente.tipo;
-    
-    document.getElementById('modalTitle').textContent = 'Editar Cliente';
-    modalCliente.show();
-}
-
-// Función para confirmar eliminación
-function confirmarEliminar(event) {
-    clienteIdEliminar = event.currentTarget.getAttribute('data-id');
-    modalConfirmar.show();
-}
-
-// Evento para el botón de confirmar eliminación
-document.getElementById('btnConfirmarEliminar').addEventListener('click', eliminarCliente);
-
-// Función para eliminar un cliente
-function eliminarCliente() {
-    fetch(`${apiUrl}/${clienteIdEliminar}`, {
-        method: 'DELETE'
-    })
-    .then(response => {
-        modalConfirmar.hide();
-        cargarClientes();
-    })
-    .catch(error => console.error('Error al eliminar cliente:', error));
-}
-
-// Resetear el formulario cuando se abre el modal para crear un nuevo cliente
-document.querySelector('[data-bs-target="#modalCliente"]').addEventListener('click', () => {
-    document.getElementById('formCliente').reset();
-    document.getElementById('clienteId').value = '';
-    document.getElementById('modalTitle').textContent = 'Nuevo Cliente';
-});
-
 --- File: .\templates\index.html ---
 <!DOCTYPE html>
 <html lang="es">
@@ -501,358 +281,218 @@ document.querySelector('[data-bs-target="#modalCliente"]').addEventListener('cli
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión Inmobiliaria</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .container { max-width: 800px; }
+        .form-section { margin-bottom: 20px; }
+        .list-section { margin-top: 20px; }
+        table { font-size: 14px; }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">Gestión Inmobiliaria</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/propiedades_ui">Propiedades</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/clientes_ui">Clientes</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
     <div class="container mt-4">
-        <div class="jumbotron">
-            <h1 class="display-4">Bienvenido al Sistema de Gestión Inmobiliaria</h1>
-            <p class="lead">Administra propiedades y clientes de manera sencilla.</p>
-            <hr class="my-4">
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Gestión de Propiedades</h5>
-                            <p class="card-text">Administra tu cartera de propiedades en venta y alquiler.</p>
-                            <a href="/propiedades_ui" class="btn btn-primary">Ir a Propiedades</a>
-                        </div>
-                    </div>
+        <h1 class="text-center mb-4">Gestión Inmobiliaria</h1>
+
+        <!-- Selector de acción -->
+        <div class="form-section">
+            <label for="accion" class="form-label fw-bold">¿Qué querés cargar?</label>
+            <select id="accion" class="form-select mb-3" onchange="mostrarFormulario()">
+                <option value="propiedad">Cargar Propiedad</option>
+                <option value="cliente">Cargar Cliente</option>
+            </select>
+
+            <!-- Formulario para Propiedad -->
+            <form id="formPropiedad" class="form-section">
+                <div class="mb-3">
+                    <label for="direccion" class="form-label">Dirección</label>
+                    <input type="text" class="form-control" id="direccion" required>
                 </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Gestión de Clientes</h5>
-                            <p class="card-text">Administra tu base de datos de clientes compradores y vendedores.</p>
-                            <a href="/clientes_ui" class="btn btn-primary">Ir a Clientes</a>
-                        </div>
-                    </div>
+                <div class="mb-3">
+                    <label for="precio" class="form-label">Precio</label>
+                    <input type="number" class="form-control" id="precio" required>
                 </div>
-            </div>
+                <div class="mb-3">
+                    <label for="tipo" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipo" required>
+                        <option value="Venta">Venta</option>
+                        <option value="Alquiler">Alquiler</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select class="form-select" id="estado" required>
+                        <option value="Disponible">Disponible</option>
+                        <option value="Reservado">Reservado</option>
+                        <option value="Vendido">Vendido</option>
+                        <option value="Alquilado">Alquilado</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="propietario" class="form-label">Propietario</label>
+                    <select class="form-select" id="propietario">
+                        <option value="">Sin propietario</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="interesados" class="form-label">Interesados</label>
+                    <select class="form-select" id="interesados" multiple>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Propiedad</button>
+            </form>
+
+            <!-- Formulario para Cliente -->
+            <form id="formCliente" class="form-section" style="display: none;">
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="nombre" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contacto" class="form-label">Contacto (teléfono o email)</label>
+                    <input type="text" class="form-control" id="contacto" required>
+                </div>
+                <div class="mb-3">
+                    <label for="tipoCliente" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipoCliente" required>
+                        <option value="propietario">Propietario</option>
+                        <option value="interesado">Interesado</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Cliente</button>
+            </form>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
-
---- File: .\templates\propiedades.html ---
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Propiedades</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">Gestión Inmobiliaria</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/propiedades_ui">Propiedades</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/clientes_ui">Clientes</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Gestión de Propiedades</h1>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPropiedad">
-                <i class="bi bi-plus-circle"></i> Nueva Propiedad
-            </button>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped" id="tablaPropiedades">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Dirección</th>
-                                <th>Precio</th>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Los datos se cargarán aquí mediante JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Nueva/Editar Propiedad -->
-    <div class="modal fade" id="modalPropiedad" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Nueva Propiedad</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formPropiedad">
-                        <input type="hidden" id="propiedadId">
-                        <div class="mb-3">
-                            <label for="direccion" class="form-label">Dirección</label>
-                            <input type="text" class="form-control" id="direccion" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="precio" class="form-label">Precio</label>
-                            <input type="number" class="form-control" id="precio" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="tipo" class="form-label">Tipo</label>
-                            <select class="form-select" id="tipo" required>
-                                <option value="">Seleccionar...</option>
-                                <option value="Venta">Venta</option>
-                                <option value="Alquiler">Alquiler</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="estado" class="form-label">Estado</label>
-                            <select class="form-select" id="estado" required>
-                                <option value="">Seleccionar...</option>
-                                <option value="Disponible">Disponible</option>
-                                <option value="Reservado">Reservado</option>
-                                <option value="Vendido">Vendido</option>
-                                <option value="Alquilado">Alquilado</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnGuardar">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Confirmación para Eliminar -->
-    <div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirmar Eliminación</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>¿Está seguro de que desea eliminar esta propiedad?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">Eliminar</button>
-                </div>
-            </div>
+        <!-- Lista de propiedades cargadas -->
+        <div class="list-section">
+            <h3>Propiedades Cargadas</h3>
+            <table class="table table-striped" id="tablaPropiedades">
+                <thead>
+                    <tr>
+                        <th>Dirección</th>
+                        <th>Precio</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Variables globales
         let propiedades = [];
-        let propiedadIdEliminar = null;
-        const apiUrl = '/api/propiedades';
-        const modalPropiedad = new bootstrap.Modal(document.getElementById('modalPropiedad'));
-        const modalConfirmar = new bootstrap.Modal(document.getElementById('modalConfirmar'));
-
-        // Cargar propiedades al cargar la página
-        document.addEventListener('DOMContentLoaded', cargarPropiedades);
-
-        // Configurar evento de guardar propiedad
-        document.getElementById('btnGuardar').addEventListener('click', guardarPropiedad);
-        document.getElementById('btnConfirmarEliminar').addEventListener('click', eliminarPropiedad);
-
-        // Función para cargar propiedades
+        let clientes = [];
+    
+        // Cargar clientes para los selects
+        function cargarClientes() {
+            fetch('/api/clientes')
+                .then(response => response.json())
+                .then(data => {
+                    clientes = data;
+                    const propietarioSelect = document.getElementById('propietario');
+                    const interesadosSelect = document.getElementById('interesados');
+                    propietarioSelect.innerHTML = '<option value="">Sin propietario</option>';
+                    interesadosSelect.innerHTML = '';
+                    clientes.forEach(cliente => {
+                        propietarioSelect.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`;
+                        interesadosSelect.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`;
+                    });
+                })
+                .catch(error => console.error('Error al cargar clientes:', error));
+        }
+    
+        // Mostrar el formulario correcto según la selección
+        function mostrarFormulario() {
+            const accion = document.getElementById('accion').value;
+            document.getElementById('formPropiedad').style.display = accion === 'propiedad' ? 'block' : 'none';
+            document.getElementById('formCliente').style.display = accion === 'cliente' ? 'block' : 'none';
+        }
+    
+        // Cargar propiedades y clientes al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarPropiedades();
+            cargarClientes();
+            document.getElementById('formPropiedad').addEventListener('submit', guardarPropiedad);
+            document.getElementById('formCliente').addEventListener('submit', guardarCliente);
+        });
+    
+        // Cargar propiedades
         function cargarPropiedades() {
-            fetch(apiUrl)
+            fetch('/api/propiedades')
                 .then(response => response.json())
                 .then(data => {
                     propiedades = data;
                     mostrarPropiedades();
                 })
-                .catch(error => {
-                    console.error('Error al cargar propiedades:', error);
-                    alert('Error al cargar propiedades. Revisa la consola para más detalles.');
-                });
+                .catch(error => console.error('Error al cargar propiedades:', error));
         }
-
-        // Función para mostrar propiedades en la tabla
+    
+        // Mostrar propiedades en la tabla
         function mostrarPropiedades() {
             const tbody = document.querySelector('#tablaPropiedades tbody');
             tbody.innerHTML = '';
-
-            propiedades.forEach(propiedad => {
+            propiedades.forEach(prop => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${propiedad.id}</td>
-                    <td>${propiedad.direccion}</td>
-                    <td>$${propiedad.precio.toLocaleString()}</td>
-                    <td>${propiedad.tipo}</td>
-                    <td>
-                        <span class="badge ${getBadgeClass(propiedad.estado)}">${propiedad.estado}</span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-info me-1" onclick="editarPropiedad(${propiedad.id})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="confirmarEliminar(${propiedad.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
+                    <td>${prop.direccion}</td>
+                    <td>$${prop.precio.toLocaleString()}</td>
+                    <td>${prop.tipo}</td>
+                    <td>${prop.estado}</td>
+                    <td>${prop.propietario || 'Sin propietario'}</td>
+                    <td>${prop.interesados.join(', ') || 'Ninguno'}</td>
                 `;
                 tbody.appendChild(row);
             });
         }
-
-        // Función para obtener la clase del badge según el estado
-        function getBadgeClass(estado) {
-            switch (estado) {
-                case 'Disponible': return 'bg-success';
-                case 'Reservado': return 'bg-warning';
-                case 'Vendido': return 'bg-danger';
-                case 'Alquilado': return 'bg-info';
-                default: return 'bg-secondary';
-            }
-        }
-
-        // Función para abrir el modal de nueva propiedad
-        function nuevaPropiedad() {
-            document.getElementById('modalTitle').textContent = 'Nueva Propiedad';
-            document.getElementById('formPropiedad').reset();
-            document.getElementById('propiedadId').value = '';
-            modalPropiedad.show();
-        }
-
-        // Función para editar una propiedad
-        function editarPropiedad(id) {
-            document.getElementById('modalTitle').textContent = 'Editar Propiedad';
-            
-            const propiedad = propiedades.find(p => p.id === id);
-            document.getElementById('propiedadId').value = propiedad.id;
-            document.getElementById('direccion').value = propiedad.direccion;
-            document.getElementById('precio').value = propiedad.precio;
-            document.getElementById('tipo').value = propiedad.tipo;
-            document.getElementById('estado').value = propiedad.estado;
-            document.getElementById('descripcion').value = propiedad.descripcion;
-            
-            modalPropiedad.show();
-        }
-
-        // Función para guardar una propiedad (nueva o editada)
-        function guardarPropiedad() {
-            const propiedadId = document.getElementById('propiedadId').value;
-            
+    
+        // Guardar propiedad
+        function guardarPropiedad(e) {
+            e.preventDefault();
             const propiedad = {
                 direccion: document.getElementById('direccion').value,
                 precio: parseFloat(document.getElementById('precio').value),
                 tipo: document.getElementById('tipo').value,
                 estado: document.getElementById('estado').value,
-                descripcion: document.getElementById('descripcion').value
+                propietario_id: document.getElementById('propietario').value || null,
+                interesados_ids: Array.from(document.getElementById('interesados').selectedOptions).map(opt => parseInt(opt.value))
             };
-
-            // Validar campos requeridos
-            if (!propiedad.direccion || !propiedad.precio || !propiedad.tipo || !propiedad.estado) {
-                alert('Por favor, complete todos los campos requeridos.');
-                return;
-            }
-
-            // Determinar si es una nueva propiedad o una edición
-            const url = propiedadId ? `${apiUrl}/${propiedadId}` : apiUrl;
-            const method = propiedadId ? 'PUT' : 'POST';
-
-            fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+    
+            fetch('/api/propiedades', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(propiedad)
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                modalPropiedad.hide();
+                document.getElementById('formPropiedad').reset();
                 cargarPropiedades();
-                alert(propiedadId ? 'Propiedad actualizada correctamente.' : 'Propiedad agregada correctamente.');
+                alert('Propiedad guardada');
             })
-            .catch(error => {
-                console.error('Error al guardar propiedad:', error);
-                alert('Error al guardar propiedad. Revisa la consola para más detalles.');
-            });
+            .catch(error => console.error('Error al guardar propiedad:', error));
         }
-
-        // Función para confirmar eliminación
-        function confirmarEliminar(id) {
-            propiedadIdEliminar = id;
-            modalConfirmar.show();
-        }
-
-        // Función para eliminar una propiedad
-        function eliminarPropiedad() {
-            if (!propiedadIdEliminar) return;
-
-            fetch(`${apiUrl}/${propiedadIdEliminar}`, {
-                method: 'DELETE'
+    
+        // Guardar cliente
+        function guardarCliente(e) {
+            e.preventDefault();
+            const cliente = {
+                nombre: document.getElementById('nombre').value,
+                contacto: document.getElementById('contacto').value,
+                tipo: document.getElementById('tipoCliente').value
+            };
+    
+            fetch('/api/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cliente)
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                modalConfirmar.hide();
-                cargarPropiedades();
-                alert('Propiedad eliminada correctamente.');
+                document.getElementById('formCliente').reset();
+                cargarClientes();
+                alert('Cliente guardado');
             })
-            .catch(error => {
-                console.error('Error al eliminar propiedad:', error);
-                alert('Error al eliminar propiedad. Revisa la consola para más detalles.');
-            });
+            .catch(error => console.error('Error al guardar cliente:', error));
         }
     </script>
 </body>
-</html> 
+</html>
