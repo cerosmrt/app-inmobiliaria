@@ -3,207 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Inmobiliaria</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Gestión Clientes</title>
     <style>
-        .container { max-width: 800px; }
-        .form-section { margin-bottom: 20px; }
-        .list-section { margin-top: 20px; }
-        table { font-size: 14px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 20px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .btn-add {
+            font-size: 12px;
+            padding: 4px 8px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+        .filterbox {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .filterbox input, .filterbox select {
+            font-size: 12px;
+            padding: 2px;
+            border: 1px solid #ccc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 4px;
+            text-align: left;
+        }
+        th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .editable-text:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+        .editable-select:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+        .edit-container {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        input, select {
+            font-size: 12px;
+            padding: 2px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .new-row {
+            background-color: #d4edda;
+        }
+        .btn-action {
+            font-size: 10px;
+            padding: 2px 4px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-save {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-cancel {
+            background-color: #dc3545;
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <h1 class="text-center mb-4">Gestión Inmobiliaria</h1>
+    <div class="container">
+        <h1>Gestión Clientes</h1>
+        <button class="btn-add" onclick="agregarFilaCliente()">Añadir cliente</button>
 
-        <!-- Selector de acción -->
-        <div class="form-section">
-            <label for="accion" class="form-label fw-bold">¿Qué querés cargar?</label>
-            <select id="accion" class="form-select mb-3" onchange="mostrarFormulario()">
-                <option value="propiedad">Cargar Propiedad</option>
-                <option value="cliente">Cargar Cliente</option>
+        <div class="filterbox">
+            <input type="text" id="filtroTexto" placeholder="Nombre o Apellido" onkeyup="filtrarClientes()">
+            <select id="filtroOperacion" onchange="filtrarClientes()">
+                <option value="">Operación</option>
+                <option value="venta">Venta</option>
+                <option value="renta">Renta</option>
+                <option value="ambas">Ambas</option>
             </select>
-
-            <!-- Formulario para Propiedad -->
-            <form id="formPropiedad" class="form-section">
-                <div class="mb-3">
-                    <label for="direccion" class="form-label">Dirección</label>
-                    <input type="text" class="form-control" id="direccion" required>
-                </div>
-                <div class="mb-3">
-                    <label for="precio" class="form-label">Precio</label>
-                    <input type="number" class="form-control" id="precio" required>
-                </div>
-                <div class="mb-3">
-                    <label for="tipo" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipo" required>
-                        <option value="Venta">Venta</option>
-                        <option value="Alquiler">Alquiler</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="estado" class="form-label">Estado</label>
-                    <select class="form-select" id="estado" required>
-                        <option value="Disponible">Disponible</option>
-                        <option value="Reservado">Reservado</option>
-                        <option value="Vendido">Vendido</option>
-                        <option value="Alquilado">Alquilado</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="propietario" class="form-label">Propietario</label>
-                    <select class="form-select" id="propietario">
-                        <option value="">Sin propietario</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="interesados" class="form-label">Interesados</label>
-                    <select class="form-select" id="interesados" multiple>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Guardar Propiedad</button>
-            </form>
-
-            <!-- Formulario para Cliente -->
-            <form id="formCliente" class="form-section" style="display: none;">
-                <div class="mb-3">
-                    <label for="nombre" class="form-label">Nombre</label>
-                    <input type="text" class="form-control" id="nombre" required>
-                </div>
-                <div class="mb-3">
-                    <label for="contacto" class="form-label">Contacto (teléfono o email)</label>
-                    <input type="text" class="form-control" id="contacto" required>
-                </div>
-                <div class="mb-3">
-                    <label for="tipoCliente" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipoCliente" required>
-                        <option value="propietario">Propietario</option>
-                        <option value="interesado">Interesado</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Guardar Cliente</button>
-            </form>
+            <input type="number" id="filtroAmbientes" placeholder="Ambientes" onkeyup="filtrarClientes()">
         </div>
 
-        <!-- Lista de propiedades cargadas -->
-        <div class="list-section">
-            <h3>Propiedades Cargadas</h3>
-            <table class="table table-striped" id="tablaPropiedades">
-                <thead>
-                    <tr>
-                        <th>Dirección</th>
-                        <th>Precio</th>
-                        <th>Tipo</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+        <table id="tablaClientes">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Tipo</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>USD</th>
+                    <th>Amb</th>
+                    <th>Op</th>
+                    <th>Acc</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let propiedades = [];
         let clientes = [];
-    
-        // Cargar clientes para los selects
+
+        // Cargar clientes
         function cargarClientes() {
             fetch('/api/clientes')
                 .then(response => response.json())
                 .then(data => {
                     clientes = data;
-                    const propietarioSelect = document.getElementById('propietario');
-                    const interesadosSelect = document.getElementById('interesados');
-                    propietarioSelect.innerHTML = '<option value="">Sin propietario</option>';
-                    interesadosSelect.innerHTML = '';
-                    clientes.forEach(cliente => {
-                        propietarioSelect.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`;
-                        interesadosSelect.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`;
-                    });
-                })
-                .catch(error => console.error('Error al cargar clientes:', error));
+                    filtrarClientes(); // Mostrar con filtros aplicados desde el arranque
+                });
         }
-    
-        // Mostrar el formulario correcto según la selección
-        function mostrarFormulario() {
-            const accion = document.getElementById('accion').value;
-            document.getElementById('formPropiedad').style.display = accion === 'propiedad' ? 'block' : 'none';
-            document.getElementById('formCliente').style.display = accion === 'cliente' ? 'block' : 'none';
-        }
-    
-        // Cargar propiedades y clientes al iniciar
-        document.addEventListener('DOMContentLoaded', () => {
-            cargarPropiedades();
-            cargarClientes();
-            document.getElementById('formPropiedad').addEventListener('submit', guardarPropiedad);
-            document.getElementById('formCliente').addEventListener('submit', guardarCliente);
-        });
-    
-        // Cargar propiedades
-        function cargarPropiedades() {
-            fetch('/api/propiedades')
-                .then(response => response.json())
-                .then(data => {
-                    propiedades = data;
-                    mostrarPropiedades();
-                })
-                .catch(error => console.error('Error al cargar propiedades:', error));
-        }
-    
-        // Mostrar propiedades en la tabla
-        function mostrarPropiedades() {
-            const tbody = document.querySelector('#tablaPropiedades tbody');
+
+        // Mostrar clientes con filtros
+        function filtrarClientes() {
+            const texto = document.getElementById('filtroTexto').value.toLowerCase();
+            const operacion = document.getElementById('filtroOperacion').value;
+            const ambientes = document.getElementById('filtroAmbientes').value;
+
+            const clientesFiltrados = clientes.filter(cliente => {
+                const matchTexto = cliente.nombre.toLowerCase().includes(texto) || cliente.apellido.toLowerCase().includes(texto);
+                const matchOperacion = !operacion || cliente.operacion === operacion;
+                const matchAmbientes = !ambientes || cliente.ambientes == ambientes;
+                return matchTexto && matchOperacion && matchAmbientes;
+            });
+
+            const tbody = document.querySelector('#tablaClientes tbody');
             tbody.innerHTML = '';
-            propiedades.forEach(prop => {
+            clientesFiltrados.forEach(cliente => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${prop.direccion}</td>
-                    <td>$${prop.precio.toLocaleString()}</td>
-                    <td>${prop.tipo}</td>
-                    <td>${prop.estado}</td>
-                    <td>${prop.propietario || 'Sin propietario'}</td>
-                    <td>${prop.interesados.join(', ') || 'Ninguno'}</td>
+                    <td class="editable-text" data-field="nombre" data-id="${cliente.id}">${cliente.nombre}</td>
+                    <td class="editable-text" data-field="apellido" data-id="${cliente.id}">${cliente.apellido}</td>
+                    <td class="editable-text" data-field="telefono" data-id="${cliente.id}">${cliente.telefono}</td>
+                    <td class="editable-text" data-field="email" data-id="${cliente.id}">${cliente.email || ''}</td>
+                    <td class="editable-select" data-field="tipo" data-id="${cliente.id}">${cliente.tipo}</td>
+                    <td class="editable-text" data-field="rango_min" data-id="${cliente.id}">${cliente.rango_min || ''}</td>
+                    <td class="editable-text" data-field="rango_max" data-id="${cliente.id}">${cliente.rango_max || ''}</td>
+                    <td>${cliente.es_usd ? 'USD' : 'ARS'}</td>
+                    <td class="editable-text" data-field="ambientes" data-id="${cliente.id}">${cliente.ambientes || ''}</td>
+                    <td class="editable-select" data-field="operacion" data-id="${cliente.id}">${cliente.operacion || ''}</td>
+                    <td>
+                        <button class="btn-action btn-cancel" onclick="eliminarCliente(${cliente.id})">X</button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
+            agregarEventosEdicionTexto('tablaClientes');
+            agregarEventosEdicionSelect('tablaClientes');
         }
-    
-        // Guardar propiedad
-        function guardarPropiedad(e) {
-            e.preventDefault();
-            const propiedad = {
-                direccion: document.getElementById('direccion').value,
-                precio: parseFloat(document.getElementById('precio').value),
-                tipo: document.getElementById('tipo').value,
-                estado: document.getElementById('estado').value,
-                propietario_id: document.getElementById('propietario').value || null,
-                interesados_ids: Array.from(document.getElementById('interesados').selectedOptions).map(opt => parseInt(opt.value))
-            };
-    
-            fetch('/api/propiedades', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(propiedad)
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('formPropiedad').reset();
-                cargarPropiedades();
-                alert('Propiedad guardada');
-            })
-            .catch(error => console.error('Error al guardar propiedad:', error));
+
+        // Agregar fila vacía para cliente
+        function agregarFilaCliente() {
+            const tbody = document.querySelector('#tablaClientes tbody');
+            const row = document.createElement('tr');
+            row.classList.add('new-row');
+            row.innerHTML = `
+                <td class="editable-text" data-field="nombre"><input type="text" placeholder="Nombre"></td>
+                <td class="editable-text" data-field="apellido"><input type="text" placeholder="Apellido"></td>
+                <td class="editable-text" data-field="telefono"><input type="text" placeholder="Teléfono"></td>
+                <td class="editable-text" data-field="email"><input type="text" placeholder="Email"></td>
+                <td class="editable-select" data-field="tipo">
+                    <div class="edit-container">
+                        <select>
+                            <option value="interesado">Interesado</option>
+                            <option value="propietario">Propietario</option>
+                        </select>
+                    </div>
+                </td>
+                <td class="editable-text" data-field="rango_min"><input type="number" placeholder="Min"></td>
+                <td class="editable-text" data-field="rango_max"><input type="number" placeholder="Max"></td>
+                <td><input type="checkbox" data-field="es_usd"></td>
+                <td class="editable-text" data-field="ambientes"><input type="number" placeholder="Amb"></td>
+                <td class="editable-select" data-field="operacion">
+                    <div class="edit-container">
+                        <select>
+                            <option value="venta">Venta</option>
+                            <option value="renta">Renta</option>
+                            <option value="ambas">Ambas</option>
+                        </select>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn-action btn-save" onclick="guardarNuevoCliente(this)">✔</button>
+                    <button class="btn-action btn-cancel" onclick="this.parentElement.parentElement.remove()">X</button>
+                </td>
+            `;
+            tbody.insertBefore(row, tbody.firstChild);
         }
-    
-        // Guardar cliente
-        function guardarCliente(e) {
-            e.preventDefault();
+
+        // Guardar nuevo cliente
+        function guardarNuevoCliente(button) {
+            const row = button.parentElement.parentElement;
             const cliente = {
-                nombre: document.getElementById('nombre').value,
-                contacto: document.getElementById('contacto').value,
-                tipo: document.getElementById('tipoCliente').value
+                nombre: row.querySelector('[data-field="nombre"] input').value,
+                apellido: row.querySelector('[data-field="apellido"] input').value,
+                telefono: row.querySelector('[data-field="telefono"] input').value,
+                email: row.querySelector('[data-field="email"] input').value || null,
+                tipo: row.querySelector('[data-field="tipo"] select').value,
+                rango_min: parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
+                rango_max: parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
+                es_usd: row.querySelector('[data-field="es_usd"]').checked,
+                ambientes: parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
+                operacion: row.querySelector('[data-field="operacion"] select').value
             };
-    
+            if (!cliente.nombre || !cliente.apellido || !cliente.telefono) {
+                alert('Completá Nombre, Apellido y Teléfono, loco!');
+                return;
+            }
             fetch('/api/clientes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -211,12 +244,119 @@
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('formCliente').reset();
                 cargarClientes();
-                alert('Cliente guardado');
+                alert('Cliente agregado');
             })
-            .catch(error => console.error('Error al guardar cliente:', error));
+            .catch(error => alert('Error: ' + error));
         }
+
+        // Eliminar cliente
+        function eliminarCliente(id) {
+            if (confirm('¿Seguro querés borrar este cliente?')) {
+                fetch(`/api/clientes/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        cargarClientes();
+                        alert('Cliente borrado');
+                    })
+                    .catch(error => alert('Error: ' + error));
+            }
+        }
+
+        // Edición de texto con doble clic
+        function agregarEventosEdicionTexto(tablaId) {
+            document.querySelectorAll(`#${tablaId} .editable-text`).forEach(cell => {
+                cell.addEventListener('dblclick', function() {
+                    if (this.querySelector('input')) return;
+                    const id = this.dataset.id;
+                    const field = this.dataset.field;
+                    const oldValue = this.textContent;
+                    const input = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
+                    this.innerHTML = input;
+                    const inputElement = this.querySelector('input');
+                    inputElement.focus();
+
+                    inputElement.addEventListener('blur', function() {
+                        const newValue = this.value.trim();
+                        if (newValue !== oldValue) {
+                            actualizarDato(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue, tablaId);
+                        } else {
+                            cell.textContent = oldValue;
+                        }
+                    });
+
+                    inputElement.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            this.blur();
+                        }
+                    });
+                });
+            });
+        }
+
+        // Edición de selects con clic simple
+        function agregarEventosEdicionSelect(tablaId) {
+            document.querySelectorAll(`#${tablaId} .editable-select`).forEach(cell => {
+                cell.addEventListener('click', function() {
+                    if (this.querySelector('select')) return;
+                    const id = this.dataset.id;
+                    const field = this.dataset.field;
+                    const oldValue = this.textContent;
+                    let input;
+
+                    if (field === 'tipo') {
+                        input = `<select>
+                            <option value="interesado" ${oldValue === 'interesado' ? 'selected' : ''}>Interesado</option>
+                            <option value="propietario" ${oldValue === 'propietario' ? 'selected' : ''}>Propietario</option>
+                        </select>`;
+                    } else if (field === 'operacion') {
+                        input = `<select>
+                            <option value="venta" ${oldValue === 'venta' ? 'selected' : ''}>Venta</option>
+                            <option value="renta" ${oldValue === 'renta' ? 'selected' : ''}>Renta</option>
+                            <option value="ambas" ${oldValue === 'ambas' ? 'selected' : ''}>Ambas</option>
+                        </select>`;
+                    }
+
+                    this.innerHTML = `<div class="edit-container">${input}<button class="btn-action btn-save" onclick="guardarSelect(${id}, '${field}', this.previousElementSibling, '${tablaId}')">✔</button></div>`;
+                });
+            });
+        }
+
+        // Guardar valor del select
+        function guardarSelect(id, field, selectElement, tablaId) {
+            const newValue = selectElement.value;
+            const oldValue = clientes.find(c => c.id == id)[field];
+            if (newValue !== oldValue) {
+                actualizarDato(id, field, newValue, tablaId);
+            } else {
+                const cell = selectElement.parentElement.parentElement;
+                cell.textContent = newValue;
+            }
+        }
+
+        // Actualizar dato
+        function actualizarDato(id, field, value, tablaId) {
+            const data = clientes.find(c => c.id == id);
+            if (field === 'rango_min' || field === 'rango_max' || field === 'ambientes') {
+                data[field] = value ? parseFloat(value) : null;
+            } else {
+                data[field] = value;
+            }
+            delete data.id;
+            fetch(`/api/clientes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                cargarClientes();
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        // Iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarClientes();
+        });
     </script>
 </body>
 </html>

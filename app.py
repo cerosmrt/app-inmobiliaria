@@ -53,13 +53,14 @@ def add_propiedad():
     data = request.get_json()
     nueva_propiedad = Propiedad(
         direccion=data['direccion'],
-        precio=data['precio'],
+        rango_min=data['rango_min'],
+        rango_max=data['rango_max'],
+        es_usd=data.get('es_usd', False),
+        ambientes=data.get('ambientes'),
         tipo=data['tipo'],
         estado=data['estado'],
-        descripcion=data.get('descripcion', ''),
-        propietario_id=data.get('propietario_id')  # Nuevo: ID del propietario
+        propietario_id=data.get('propietario_id')
     )
-    # Agregar interesados si se pasan
     if 'interesados_ids' in data:
         interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
         nueva_propiedad.interesados = interesados
@@ -81,12 +82,13 @@ def update_propiedad(id):
     if propiedad:
         data = request.get_json()
         propiedad.direccion = data['direccion']
-        propiedad.precio = data['precio']
+        propiedad.rango_min = data['rango_min']
+        propiedad.rango_max = data['rango_max']
+        propiedad.es_usd = data.get('es_usd', False)
+        propiedad.ambientes = data.get('ambientes')
         propiedad.tipo = data['tipo']
         propiedad.estado = data['estado']
-        propiedad.descripcion = data.get('descripcion', '')
-        propiedad.propietario_id = data.get('propietario_id')  # Actualizar propietario
-        # Actualizar interesados
+        propiedad.propietario_id = data.get('propietario_id')
         if 'interesados_ids' in data:
             interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
             propiedad.interesados = interesados
@@ -109,13 +111,21 @@ def get_clientes():
     clientes = Cliente.query.all()
     return jsonify([cliente.as_dict() for cliente in clientes])
 
+# Ruta para agregar cliente
 @app.route('/api/clientes', methods=['POST'])
 def add_cliente():
     data = request.get_json()
     nuevo_cliente = Cliente(
         nombre=data['nombre'],
-        contacto=data['contacto'],
-        tipo=data['tipo']
+        apellido=data['apellido'],
+        telefono=data['telefono'],
+        email=data.get('email'),
+        tipo=data['tipo'],
+        rango_min=data.get('rango_min'),
+        rango_max=data.get('rango_max'),
+        es_usd=data.get('es_usd', False),
+        ambientes=data.get('ambientes'),
+        operacion=data.get('operacion')
     )
     db.session.add(nuevo_cliente)
     db.session.commit()
@@ -128,14 +138,22 @@ def get_cliente(id):
         return jsonify(cliente.as_dict())
     return jsonify({"message": "Cliente no encontrado"}), 404
 
+# Ruta para actualizar cliente
 @app.route('/api/clientes/<int:id>', methods=['PUT'])
 def update_cliente(id):
     cliente = Cliente.query.get(id)
     if cliente:
         data = request.get_json()
         cliente.nombre = data['nombre']
-        cliente.contacto = data['contacto']
+        cliente.apellido = data['apellido']
+        cliente.telefono = data['telefono']
+        cliente.email = data.get('email')
         cliente.tipo = data['tipo']
+        cliente.rango_min = data.get('rango_min')
+        cliente.rango_max = data.get('rango_max')
+        cliente.es_usd = data.get('es_usd', False)
+        cliente.ambientes = data.get('ambientes')
+        cliente.operacion = data.get('operacion')
         db.session.commit()
         return jsonify({"message": "Cliente actualizado"})
     return jsonify({"message": "Cliente no encontrado"}), 404
