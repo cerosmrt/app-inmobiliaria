@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_migrate import Migrate
 from models import db, Propiedad, Cliente
 import os
+from werkzeug.utils import secure_filename
 
 # Inicializa la aplicación Flask
 app = Flask(__name__)
@@ -9,6 +10,17 @@ app = Flask(__name__)
 # Configuración de la base de datos SQLite
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inmobiliaria.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configuración para subir fotos
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Inicializa SQLAlchemy con la app
 db.init_app(app)
@@ -47,7 +59,6 @@ def get_propiedades():
     propiedades = query.all()
     return jsonify([prop.as_dict() for prop in propiedades])
 
-# Ruta para agregar propiedad
 @app.route('/api/propiedades', methods=['POST'])
 def add_propiedad():
     data = request.get_json()
@@ -75,7 +86,6 @@ def get_propiedad(id):
         return jsonify(propiedad.as_dict())
     return jsonify({"message": "Propiedad no encontrada"}), 404
 
-# Ruta para actualizar propiedad
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 def update_propiedad(id):
     propiedad = Propiedad.query.get(id)
@@ -111,7 +121,6 @@ def get_clientes():
     clientes = Cliente.query.all()
     return jsonify([cliente.as_dict() for cliente in clientes])
 
-# Ruta para agregar cliente
 @app.route('/api/clientes', methods=['POST'])
 def add_cliente():
     data = request.get_json()
@@ -125,7 +134,8 @@ def add_cliente():
         rango_max=data.get('rango_max'),
         es_usd=data.get('es_usd', False),
         ambientes=data.get('ambientes'),
-        operacion=data.get('operacion')
+        operacion=data.get('operacion'),
+        descripcion=data.get('descripcion', '')
     )
     db.session.add(nuevo_cliente)
     db.session.commit()
@@ -138,7 +148,6 @@ def get_cliente(id):
         return jsonify(cliente.as_dict())
     return jsonify({"message": "Cliente no encontrado"}), 404
 
-# Ruta para actualizar cliente
 @app.route('/api/clientes/<int:id>', methods=['PUT'])
 def update_cliente(id):
     cliente = Cliente.query.get(id)
@@ -154,6 +163,7 @@ def update_cliente(id):
         cliente.es_usd = data.get('es_usd', False)
         cliente.ambientes = data.get('ambientes')
         cliente.operacion = data.get('operacion')
+        cliente.descripcion = data.get('descripcion')
         db.session.commit()
         return jsonify({"message": "Cliente actualizado"})
     return jsonify({"message": "Cliente no encontrado"}), 404
@@ -166,6 +176,37 @@ def delete_cliente(id):
         db.session.commit()
         return jsonify({"message": "Cliente eliminado"})
     return jsonify({"message": "Cliente no encontrado"}), 404
+
+@app.route('/api/clientes/<int:id>/upload', methods=['POST'])
+def upload_foto(id):
+    cliente = Cliente.query.get(id)
+    if not cliente:
+        return jsonify({"message": "Cliente no encontrado"}), 404
+    
+    if 'file' not in request.files:
+        return jsonify({"message": "No se envió archivo"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"message": "Archivo vacío"}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{id}_{filename}")
+        file.save(filepath)
+        
+        if cliente.fotos:
+            cliente.fotos += f",{filepath}"
+        else:
+            cliente.fotos = filepath
+        db.session.commit()
+        return jsonify(cliente.as_dict()), 200
+    
+    return jsonify({"message": "Formato no permitido"}), 400
+
+@app.route('/cliente/<int:id>')
+def cliente_perfil(id):
+    return render_template('perfil.html', cliente_id=id)
 
 # Crea las tablas en la base de datos si no existen
 with app.app_context():

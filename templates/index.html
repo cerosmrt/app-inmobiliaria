@@ -5,97 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión Clientes</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 10px;
-            background-color: #f0f0f0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1 {
-            font-size: 20px;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .btn-add {
-            font-size: 12px;
-            padding: 4px 8px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-bottom: 5px;
-        }
-        .filterbox {
-            margin-bottom: 10px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .filterbox input, .filterbox select {
-            font-size: 12px;
-            padding: 2px;
-            border: 1px solid #ccc;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 4px;
-            text-align: left;
-        }
-        th {
-            background-color: #e0e0e0;
-            font-weight: bold;
-        }
-        .editable-text:hover {
-            background-color: #e9ecef;
-            cursor: pointer;
-        }
-        .editable-select:hover {
-            background-color: #e9ecef;
-            cursor: pointer;
-        }
-        .edit-container {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-        }
-        input, select {
-            font-size: 12px;
-            padding: 2px;
-            border: 1px solid #ccc;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .new-row {
-            background-color: #d4edda;
-        }
-        .btn-action {
-            font-size: 10px;
-            padding: 2px 4px;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-save {
-            background-color: #28a745;
-            color: white;
-        }
-        .btn-cancel {
-            background-color: #dc3545;
-            color: white;
-        }
+        body { font-family: Arial, sans-serif; margin: 10px; background-color: #f0f0f0; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 20px; text-align: center; margin-bottom: 10px; }
+        .btn-add { font-size: 12px; padding: 4px 8px; background-color: #28a745; color: white; border: none; cursor: pointer; margin-bottom: 5px; }
+        .filterbox { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
+        .filterbox input, .filterbox select { font-size: 12px; padding: 2px; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+        th { background-color: #e0e0e0; font-weight: bold; }
+        .editable-text:hover, .editable-select:hover { background-color: #e9ecef; cursor: pointer; }
+        .edit-container { display: flex; align-items: center; gap: 2px; }
+        input, select { font-size: 12px; padding: 2px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+        .new-row { background-color: #d4edda; }
+        .btn-action { font-size: 10px; padding: 2px 4px; border: none; cursor: pointer; }
+        .btn-save { background-color: #28a745; color: white; }
+        .btn-cancel { background-color: #dc3545; color: white; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Gestión Clientes</h1>
         <button class="btn-add" onclick="agregarFilaCliente()">Añadir cliente</button>
+        <button class="btn-add" onclick="imprimirTabla()">Imprimir</button>
 
         <div class="filterbox">
             <input type="text" id="filtroTexto" placeholder="Nombre o Apellido" onkeyup="filtrarClientes()">
@@ -111,8 +43,7 @@
         <table id="tablaClientes">
             <thead>
                 <tr>
-                    <th>Nombre</th>
-                    <th>Apellido</th>
+                    <th>Cliente</th>
                     <th>Teléfono</th>
                     <th>Email</th>
                     <th>Tipo</th>
@@ -120,8 +51,8 @@
                     <th>Max</th>
                     <th>USD</th>
                     <th>Amb</th>
-                    <th>Op</th>
-                    <th>Acc</th>
+                    <th>Operación</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -137,11 +68,11 @@
                 .then(response => response.json())
                 .then(data => {
                     clientes = data;
-                    filtrarClientes(); // Mostrar con filtros aplicados desde el arranque
+                    filtrarClientes();
                 });
         }
 
-        // Mostrar clientes con filtros
+        // Filtrar y mostrar clientes
         function filtrarClientes() {
             const texto = document.getElementById('filtroTexto').value.toLowerCase();
             const operacion = document.getElementById('filtroOperacion').value;
@@ -159,14 +90,13 @@
             clientesFiltrados.forEach(cliente => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="editable-text" data-field="nombre" data-id="${cliente.id}">${cliente.nombre}</td>
-                    <td class="editable-text" data-field="apellido" data-id="${cliente.id}">${cliente.apellido}</td>
+                    <td><a href="/cliente/${cliente.id}" class="editable-text" data-field="nombre" data-id="${cliente.id}">${cliente.nombre} ${cliente.apellido}</a></td>
                     <td class="editable-text" data-field="telefono" data-id="${cliente.id}">${cliente.telefono}</td>
                     <td class="editable-text" data-field="email" data-id="${cliente.id}">${cliente.email || ''}</td>
                     <td class="editable-select" data-field="tipo" data-id="${cliente.id}">${cliente.tipo}</td>
                     <td class="editable-text" data-field="rango_min" data-id="${cliente.id}">${cliente.rango_min || ''}</td>
                     <td class="editable-text" data-field="rango_max" data-id="${cliente.id}">${cliente.rango_max || ''}</td>
-                    <td>${cliente.es_usd ? 'USD' : 'ARS'}</td>
+                    <td><input type="checkbox" data-field="es_usd" data-id="${cliente.id}" ${cliente.es_usd ? 'checked' : ''} onchange="actualizarDato(${cliente.id}, 'es_usd', this.checked)"></td>
                     <td class="editable-text" data-field="ambientes" data-id="${cliente.id}">${cliente.ambientes || ''}</td>
                     <td class="editable-select" data-field="operacion" data-id="${cliente.id}">${cliente.operacion || ''}</td>
                     <td>
@@ -175,40 +105,35 @@
                 `;
                 tbody.appendChild(row);
             });
-            agregarEventosEdicionTexto('tablaClientes');
-            agregarEventosEdicionSelect('tablaClientes');
+            agregarEventosEdicionTexto();
+            agregarEventosEdicionSelect();
         }
 
-        // Agregar fila vacía para cliente
+        // Agregar fila para nuevo cliente
         function agregarFilaCliente() {
             const tbody = document.querySelector('#tablaClientes tbody');
             const row = document.createElement('tr');
             row.classList.add('new-row');
             row.innerHTML = `
-                <td class="editable-text" data-field="nombre"><input type="text" placeholder="Nombre"></td>
-                <td class="editable-text" data-field="apellido"><input type="text" placeholder="Apellido"></td>
+                <td class="editable-text" data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>
                 <td class="editable-text" data-field="telefono"><input type="text" placeholder="Teléfono"></td>
                 <td class="editable-text" data-field="email"><input type="text" placeholder="Email"></td>
                 <td class="editable-select" data-field="tipo">
-                    <div class="edit-container">
-                        <select>
-                            <option value="interesado">Interesado</option>
-                            <option value="propietario">Propietario</option>
-                        </select>
-                    </div>
+                    <select>
+                        <option value="interesado">Interesado</option>
+                        <option value="propietario">Propietario</option>
+                    </select>
                 </td>
                 <td class="editable-text" data-field="rango_min"><input type="number" placeholder="Min"></td>
                 <td class="editable-text" data-field="rango_max"><input type="number" placeholder="Max"></td>
                 <td><input type="checkbox" data-field="es_usd"></td>
                 <td class="editable-text" data-field="ambientes"><input type="number" placeholder="Amb"></td>
                 <td class="editable-select" data-field="operacion">
-                    <div class="edit-container">
-                        <select>
-                            <option value="venta">Venta</option>
-                            <option value="renta">Renta</option>
-                            <option value="ambas">Ambas</option>
-                        </select>
-                    </div>
+                    <select>
+                        <option value="venta">Venta</option>
+                        <option value="renta">Renta</option>
+                        <option value="ambas">Ambas</option>
+                    </select>
                 </td>
                 <td>
                     <button class="btn-action btn-save" onclick="guardarNuevoCliente(this)">✔</button>
@@ -221,9 +146,10 @@
         // Guardar nuevo cliente
         function guardarNuevoCliente(button) {
             const row = button.parentElement.parentElement;
+            const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
             const cliente = {
-                nombre: row.querySelector('[data-field="nombre"] input').value,
-                apellido: row.querySelector('[data-field="apellido"] input').value,
+                nombre: nombreCompleto[0] || '',
+                apellido: nombreCompleto.slice(1).join(' ') || '',
                 telefono: row.querySelector('[data-field="telefono"] input').value,
                 email: row.querySelector('[data-field="email"] input').value || null,
                 tipo: row.querySelector('[data-field="tipo"] select').value,
@@ -231,10 +157,11 @@
                 rango_max: parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
                 es_usd: row.querySelector('[data-field="es_usd"]').checked,
                 ambientes: parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
-                operacion: row.querySelector('[data-field="operacion"] select').value
+                operacion: row.querySelector('[data-field="operacion"] select').value,
+                descripcion: ''
             };
             if (!cliente.nombre || !cliente.apellido || !cliente.telefono) {
-                alert('Completá Nombre, Apellido y Teléfono, loco!');
+                alert('Completá Nombre, Apellido y Teléfono.');
                 return;
             }
             fetch('/api/clientes', {
@@ -243,7 +170,7 @@
                 body: JSON.stringify(cliente)
             })
             .then(response => response.json())
-            .then(data => {
+            .then(() => {
                 cargarClientes();
                 alert('Cliente agregado');
             })
@@ -262,14 +189,14 @@
             }
         }
 
-        // Edición de texto con doble clic
-        function agregarEventosEdicionTexto(tablaId) {
-            document.querySelectorAll(`#${tablaId} .editable-text`).forEach(cell => {
-                cell.addEventListener('dblclick', function() {
-                    if (this.querySelector('input')) return;
+        // Edición de texto
+        function agregarEventosEdicionTexto() {
+            document.querySelectorAll('.editable-text').forEach(cell => {
+                cell.addEventListener('dblclick', function(e) {
+                    if (this.querySelector('input') || e.target.tagName === 'A') return;
                     const id = this.dataset.id;
                     const field = this.dataset.field;
-                    const oldValue = this.textContent;
+                    const oldValue = this.textContent.trim();
                     const input = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
                     this.innerHTML = input;
                     const inputElement = this.querySelector('input');
@@ -278,85 +205,93 @@
                     inputElement.addEventListener('blur', function() {
                         const newValue = this.value.trim();
                         if (newValue !== oldValue) {
-                            actualizarDato(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue, tablaId);
+                            if (field === 'nombre') {
+                                const [nombre, ...apellidoParts] = newValue.split(' ');
+                                const apellido = apellidoParts.join(' ');
+                                actualizarDato(id, 'nombre', nombre);
+                                if (apellido) actualizarDato(id, 'apellido', apellido);
+                            } else {
+                                actualizarDato(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
+                            }
                         } else {
-                            cell.textContent = oldValue;
+                            cell.innerHTML = id ? `<a href="/cliente/${id}">${oldValue}</a>` : oldValue;
                         }
                     });
 
                     inputElement.addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            this.blur();
-                        }
+                        if (e.key === 'Enter') this.blur();
                     });
                 });
             });
         }
 
-        // Edición de selects con clic simple
-        function agregarEventosEdicionSelect(tablaId) {
-            document.querySelectorAll(`#${tablaId} .editable-select`).forEach(cell => {
+        // Edición de selects
+        function agregarEventosEdicionSelect() {
+            document.querySelectorAll('.editable-select').forEach(cell => {
                 cell.addEventListener('click', function() {
                     if (this.querySelector('select')) return;
                     const id = this.dataset.id;
                     const field = this.dataset.field;
                     const oldValue = this.textContent;
-                    let input;
-
-                    if (field === 'tipo') {
-                        input = `<select>
-                            <option value="interesado" ${oldValue === 'interesado' ? 'selected' : ''}>Interesado</option>
-                            <option value="propietario" ${oldValue === 'propietario' ? 'selected' : ''}>Propietario</option>
-                        </select>`;
-                    } else if (field === 'operacion') {
-                        input = `<select>
-                            <option value="venta" ${oldValue === 'venta' ? 'selected' : ''}>Venta</option>
-                            <option value="renta" ${oldValue === 'renta' ? 'selected' : ''}>Renta</option>
-                            <option value="ambas" ${oldValue === 'ambas' ? 'selected' : ''}>Ambas</option>
-                        </select>`;
-                    }
-
-                    this.innerHTML = `<div class="edit-container">${input}<button class="btn-action btn-save" onclick="guardarSelect(${id}, '${field}', this.previousElementSibling, '${tablaId}')">✔</button></div>`;
+                    const options = field === 'tipo' 
+                        ? '<option value="interesado">Interesado</option><option value="propietario">Propietario</option>'
+                        : '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
+                    this.innerHTML = `<select onchange="actualizarDato(${id}, '${field}', this.value)">${options}</select>`;
+                    const select = this.querySelector('select');
+                    select.value = oldValue;
+                    select.focus();
                 });
             });
         }
 
-        // Guardar valor del select
-        function guardarSelect(id, field, selectElement, tablaId) {
-            const newValue = selectElement.value;
-            const oldValue = clientes.find(c => c.id == id)[field];
-            if (newValue !== oldValue) {
-                actualizarDato(id, field, newValue, tablaId);
-            } else {
-                const cell = selectElement.parentElement.parentElement;
-                cell.textContent = newValue;
-            }
-        }
-
         // Actualizar dato
-        function actualizarDato(id, field, value, tablaId) {
-            const data = clientes.find(c => c.id == id);
-            if (field === 'rango_min' || field === 'rango_max' || field === 'ambientes') {
-                data[field] = value ? parseFloat(value) : null;
-            } else {
-                data[field] = value;
-            }
-            delete data.id;
+        function actualizarDato(id, field, value) {
+            const data = { [field]: value };
             fetch(`/api/clientes/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-            .then(() => {
-                cargarClientes();
-            })
+            .then(() => cargarClientes())
             .catch(error => alert('Error: ' + error));
         }
 
+        // Imprimir tabla
+        function imprimirTabla() {
+            const tabla = document.getElementById('tablaClientes').outerHTML;
+            const filtros = `
+                <p>Filtros aplicados: 
+                    Nombre/Apellido: ${document.getElementById('filtroTexto').value || 'Ninguno'}, 
+                    Operación: ${document.getElementById('filtroOperacion').value || 'Ninguno'}, 
+                    Ambientes: ${document.getElementById('filtroAmbientes').value || 'Ninguno'}
+                </p>
+            `;
+            const ventanaImpresion = window.open('', '_blank');
+            ventanaImpresion.document.write(`
+                <html>
+                <head>
+                    <title>Gestión Clientes - Impresión</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+                        th { background-color: #e0e0e0; font-weight: bold; }
+                        a { text-decoration: none; color: black; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Gestión Clientes</h1>
+                    ${filtros}
+                    ${tabla}
+                </body>
+                </html>
+            `);
+            ventanaImpresion.document.close();
+            ventanaImpresion.print();
+        }
+
         // Iniciar
-        document.addEventListener('DOMContentLoaded', () => {
-            cargarClientes();
-        });
+        document.addEventListener('DOMContentLoaded', cargarClientes);
     </script>
 </body>
 </html>

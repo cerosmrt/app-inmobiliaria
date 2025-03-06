@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Cliente</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { font-size: 24px; }
+        textarea { width: 100%; height: 100px; }
+        .fotos { margin-top: 20px; }
+        .fotos img { max-width: 200px; margin: 5px; }
+        .info { margin-bottom: 20px; }
+        .info p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Perfil de Cliente</h1>
+        <div class="info" id="cliente-info"></div>
+        <label>Descripción:</label>
+        <textarea id="descripcion"></textarea>
+        <button onclick="guardarDescripcion()">Guardar</button>
+        <div>
+            <input type="file" id="foto" accept=".jpg,.jpeg">
+            <button onclick="subirFoto()">Subir Foto</button>
+        </div>
+        <div class="fotos" id="fotos"></div>
+        <a href="/">Volver</a>
+    </div>
+
+    <script>
+        const clienteId = {{ cliente_id }};
+
+        function cargarPerfil() {
+            fetch(`/api/clientes/${clienteId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('cliente-info').innerHTML = `
+                        <p><strong>Nombre:</strong> ${data.nombre} ${data.apellido}</p>
+                        <p><strong>Teléfono:</strong> ${data.telefono}</p>
+                        <p><strong>Email:</strong> ${data.email || '-'}</p>
+                        <p><strong>Tipo:</strong> ${data.tipo}</p>
+                        <p><strong>Rango Mínimo:</strong> ${data.rango_min || '-'}</p>
+                        <p><strong>Rango Máximo:</strong> ${data.rango_max || '-'}</p>
+                        <p><strong>Moneda USD:</strong> ${data.es_usd ? 'Sí' : 'No'}</p>
+                        <p><strong>Ambientes:</strong> ${data.ambientes || '-'}</p>
+                        <p><strong>Operación:</strong> ${data.operacion || '-'}</p>
+                    `;
+                    document.getElementById('descripcion').value = data.descripcion || '';
+                    const fotosDiv = document.getElementById('fotos');
+                    fotosDiv.innerHTML = '';
+                    data.fotos.forEach(foto => {
+                        const img = document.createElement('img');
+                        img.src = `/${foto}`;
+                        fotosDiv.appendChild(img);
+                    });
+                })
+                .catch(error => alert('Error al cargar el perfil: ' + error));
+        }
+
+        function guardarDescripcion() {
+            const descripcion = document.getElementById('descripcion').value;
+            fetch(`/api/clientes/${clienteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ descripcion })
+            })
+            .then(() => {
+                alert('Descripción guardada');
+                cargarPerfil();
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function subirFoto() {
+            const fileInput = document.getElementById('foto');
+            if (!fileInput.files[0]) {
+                alert('Seleccioná una foto primero.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            fetch(`/api/clientes/${clienteId}/upload`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(() => {
+                cargarPerfil();
+                fileInput.value = '';
+                alert('Foto subida');
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarPerfil);
+    </script>
+</body>
+</html>

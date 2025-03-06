@@ -1,4 +1,3 @@
-# models.py
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -14,11 +13,11 @@ class Propiedad(db.Model):
     __tablename__ = 'propiedades'
     id = db.Column(db.Integer, primary_key=True, index=True)
     direccion = db.Column(db.String, index=True)
-    rango_min = db.Column(db.Float, nullable=True)  # Precio mínimo
-    rango_max = db.Column(db.Float, nullable=True)  # Precio máximo
-    es_usd = db.Column(db.Boolean, default=False)   # True si es en USD
-    ambientes = db.Column(db.Integer, nullable=True)  # Cantidad de ambientes
-    tipo = db.Column(db.String)  # "venta" o "renta"
+    rango_min = db.Column(db.Float, nullable=True)
+    rango_max = db.Column(db.Float, nullable=True)
+    es_usd = db.Column(db.Boolean, default=False)
+    ambientes = db.Column(db.Integer, nullable=True)
+    tipo = db.Column(db.String)
     estado = db.Column(db.String)
     propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
     propietario = db.relationship('Cliente', backref='propiedades', foreign_keys=[propietario_id])
@@ -46,12 +45,14 @@ class Cliente(db.Model):
     apellido = db.Column(db.String, nullable=False)
     telefono = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=True)
-    tipo = db.Column(db.String, nullable=False)  # "interesado" o "propietario"
-    rango_min = db.Column(db.Float, nullable=True)  # Precio mínimo
-    rango_max = db.Column(db.Float, nullable=True)  # Precio máximo
-    es_usd = db.Column(db.Boolean, default=False)   # True si es en USD
-    ambientes = db.Column(db.Integer, nullable=True)  # Cantidad de ambientes
-    operacion = db.Column(db.String, nullable=True)   # "venta", "renta", "ambas"
+    tipo = db.Column(db.String, nullable=False)
+    rango_min = db.Column(db.Float, nullable=True)
+    rango_max = db.Column(db.Float, nullable=True)
+    es_usd = db.Column(db.Boolean, default=False)
+    ambientes = db.Column(db.Integer, nullable=True)
+    operacion = db.Column(db.String, nullable=True)
+    descripcion = db.Column(db.Text, nullable=True)
+    fotos = db.Column(db.String, nullable=True)
 
     def as_dict(self):
         return {
@@ -65,5 +66,7 @@ class Cliente(db.Model):
             'rango_max': self.rango_max,
             'es_usd': self.es_usd,
             'ambientes': self.ambientes,
-            'operacion': self.operacion
+            'operacion': self.operacion,
+            'descripcion': self.descripcion,
+            'fotos': self.fotos.split(',') if self.fotos else []
         }
