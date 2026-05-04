@@ -69,7 +69,7 @@
 
                     const detalleDiv = document.getElementById('detalle-cliente');
                     if (data.tipo === 'propietario') {
-                        cargarPropiedadesPropietario(data.nombre + ' ' + data.apellido, detalleDiv);
+                        cargarPropiedadesPropietario(data, detalleDiv);
                     } else if (data.tipo === 'interesado') {
                         cargarPropiedadesInteresado(data, detalleDiv);
                     }
@@ -79,8 +79,8 @@
                 });
         }
 
-        function cargarPropiedadesPropietario(propietario, detalleDiv) {
-            fetch(`/api/propiedades?propietario=${encodeURIComponent(propietario)}`)
+        function cargarPropiedadesPropietario(data, detalleDiv) {
+            fetch(`/api/propiedades?propietario=${encodeURIComponent(data.nombre + ' ' + data.apellido)}`)
                 .then(response => {
                     if (!response.ok) throw new Error('Error al cargar propiedades');
                     return response.json();
@@ -117,7 +117,7 @@
                             </table>
                         ` : '<p>No hay propiedades asociadas.</p>'}
                         <h2>Notas</h2>
-                        <textarea id="descripcion">${propiedades[0]?.propietario_descripcion || ''}</textarea>
+                        <textarea id="descripcion">${data.descripcion || ''}</textarea>
                         <button onclick="guardarDescripcion()">Guardar Notas</button>
                         <div class="fotos-section">
                             <h2>Fotos</h2>
