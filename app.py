@@ -13,7 +13,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configuración para subir fotos
 UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -119,6 +119,27 @@ def update_propiedad(id):
         db.session.commit()
         return jsonify({"message": "Propiedad actualizada"})
     return jsonify({"message": "Propiedad no encontrada"}), 404
+
+@app.route('/api/propiedades/<int:id>/matches', methods=['GET'])
+def get_matches(id):
+    propiedad = Propiedad.query.get(id)
+    if not propiedad:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+
+    query = Cliente.query.filter(Cliente.tipo == 'interesado')
+
+    if propiedad.rango_min is not None and propiedad.rango_max is not None:
+        query = query.filter(
+            db.or_(Cliente.rango_max == None, Cliente.rango_max >= propiedad.rango_min),
+            db.or_(Cliente.rango_min == None, Cliente.rango_min <= propiedad.rango_max)
+        )
+
+    if propiedad.ambientes:
+        query = query.filter(
+            db.or_(Cliente.ambientes == None, Cliente.ambientes == propiedad.ambientes)
+        )
+
+    return jsonify([c.as_dict() for c in query.all()])
 
 @app.route('/api/propiedades/<int:id>', methods=['DELETE'])
 def delete_propiedad(id):
