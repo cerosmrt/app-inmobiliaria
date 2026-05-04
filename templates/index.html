@@ -5,579 +5,731 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inmobiliaria</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 10px; background-color: #f0f0f0; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        h1 { font-size: 20px; text-align: center; margin-bottom: 10px; }
-        .tab-nav { display: flex; gap: 4px; margin-bottom: 10px; }
-        .tab-btn { font-size: 13px; padding: 6px 18px; border: 1px solid #ccc; background: #ddd; cursor: pointer; border-bottom: none; }
-        .tab-btn.active { background: #fff; font-weight: bold; border-bottom: 1px solid #fff; }
-        .btn-add { font-size: 12px; padding: 4px 8px; background-color: #28a745; color: white; border: none; cursor: pointer; margin-bottom: 5px; }
-        .btn-reset { font-size: 12px; padding: 4px 8px; background-color: #dc3545; color: white; border: none; cursor: pointer; margin-bottom: 5px; }
-        .filterbox { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .filterbox input, .filterbox select { font-size: 12px; padding: 2px; border: 1px solid #ccc; }
-        .toggle-box { margin-bottom: 10px; display: flex; gap: 20px; }
-        .toggle-box label { font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
-        th { background-color: #e0e0e0; font-weight: bold; }
-        .editable-text:hover, .editable-select:hover { background-color: #e9ecef; cursor: pointer; }
-        input, select { font-size: 12px; padding: 2px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-        .new-row { background-color: #d4edda; }
-        .btn-action { font-size: 10px; padding: 2px 4px; border: none; cursor: pointer; }
-        .btn-save { background-color: #28a745; color: white; }
-        .btn-cancel { background-color: #dc3545; color: white; }
-        .btn-match { background-color: #007bff; color: white; }
-        a:visited { color: inherit; }
-        .estado-disponible { color: #28a745; font-weight: bold; }
-        .estado-vendida { color: #dc3545; }
-        .estado-rentada { color: #fd7e14; }
-        /* Modal de matches */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        :root {
+            --navy: #1e3a5f;
+            --blue: #2563eb;
+            --bg: #f1f5f9;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --muted: #64748b;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
+
+        /* ── Header ── */
+        .app-header {
+            background: var(--navy); color: white;
+            padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        .app-header .icon { font-size: 26px; }
+        .app-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+        .app-header .sub { font-size: 11px; opacity: 0.6; display: block; margin-top: 1px; }
+
+        .container { max-width: 1500px; margin: 0 auto; padding: 20px; }
+
+        /* ── Tabs ── */
+        .tab-nav { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 18px; }
+        .tab-btn {
+            font-size: 14px; padding: 10px 28px; border: none; background: none;
+            cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent;
+            margin-bottom: -2px; font-weight: 500; transition: color 0.15s;
+        }
+        .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
+        .tab-btn:hover:not(.active) { color: var(--text); }
+
+        /* ── Toolbar ── */
+        .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+        .btn {
+            font-size: 13px; padding: 7px 16px; border: none; border-radius: 6px;
+            cursor: pointer; font-weight: 600; transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn-green  { background: #16a34a; color: white; }
+        .btn-blue   { background: #2563eb; color: white; }
+        .btn-print  { background: #0369a1; color: white; }
+        .btn-gray   { background: #94a3b8; color: white; }
+
+        /* ── Filter bar ── */
+        .filterbox {
+            background: white; padding: 10px 16px; border-radius: 8px;
+            border: 1px solid var(--border); margin-bottom: 14px;
+            display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .filterbox input[type="text"],
+        .filterbox input[type="number"],
+        .filterbox select {
+            font-size: 13px; padding: 5px 9px; border: 1px solid var(--border);
+            border-radius: 5px; width: auto; color: var(--text);
+        }
+        .filterbox input:focus, .filterbox select:focus { outline: 2px solid var(--blue); }
+        .filterbox label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        .filterbox .sep { width: 1px; height: 22px; background: var(--border); }
+
+        /* ── Table ── */
+        .table-wrap {
+            border-radius: 10px; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
+        thead th {
+            background: #334155; color: white; padding: 10px 11px;
+            text-align: left; font-weight: 600; font-size: 11px;
+            letter-spacing: 0.5px; text-transform: uppercase;
+            position: sticky; top: 0; z-index: 5; white-space: nowrap;
+        }
+        thead th.sortable { cursor: pointer; }
+        thead th.sortable:hover { background: #475569; }
+        thead th.sorted { background: #1d4ed8; }
+        .sort-icon { font-size: 10px; margin-left: 2px; opacity: 0.9; }
+        td { padding: 8px 11px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
+        tbody tr:nth-child(even) td { background: #f8fafc; }
+        tbody tr:hover td { background: #dbeafe !important; transition: background 0.1s; }
+        tbody tr.new-row td { background: #dcfce7 !important; }
+
+        /* editable cell hint */
+        .editable-text:not(:has(input)):hover,
+        .editable-select:not(:has(select)):hover,
+        .editable-select-prop:not(:has(select)):hover {
+            background: #fef9c3 !important; cursor: text;
+        }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-block; padding: 3px 11px; border-radius: 20px;
+            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .badge-disponible { background: #dcfce7; color: #15803d; }
+        .badge-vendida    { background: #fee2e2; color: #b91c1c; }
+        .badge-rentada    { background: #fff7ed; color: #c2410c; }
+        .badge-propietario { background: #e0f2fe; color: #0369a1; }
+        .badge-interesado  { background: #f3e8ff; color: #7c3aed; }
+
+        /* ── Action buttons ── */
+        .btn-action {
+            font-size: 11px; padding: 4px 8px; border: none;
+            border-radius: 4px; cursor: pointer; font-weight: 600; margin: 1px;
+        }
+        .btn-save   { background: #16a34a; color: white; }
+        .btn-cancel { background: #dc2626; color: white; }
+        .btn-match  { background: #2563eb; color: white; }
+        .btn-note   { background: #d97706; color: white; }
+
+        /* ── Links ── */
+        a { color: #1d4ed8; text-decoration: none; }
+        a:visited { color: #1d4ed8; }
+        a:hover { text-decoration: underline; }
+        .wa-link { color: #16a34a !important; font-size: 15px; text-decoration: none !important; }
+        .wa-link:hover { opacity: 0.75; }
+
+        /* ── Inputs inside table cells ── */
+        td input[type="text"], td input[type="number"], td select {
+            font-size: 12px; padding: 3px 6px; border: 1px solid var(--border);
+            border-radius: 3px; width: 100%;
+        }
+
+        /* ── Modals ── */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15,23,42,0.55); z-index: 100;
+            justify-content: center; align-items: center;
+        }
         .modal-overlay.active { display: flex; }
-        .modal-box { background: white; padding: 20px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; border-radius: 4px; }
-        .modal-box h3 { margin-top: 0; font-size: 16px; }
-        .modal-close { float: right; cursor: pointer; font-size: 18px; background: none; border: none; }
+        .modal-box {
+            background: white; padding: 24px; max-width: 760px; width: 92%;
+            max-height: 84vh; overflow-y: auto; border-radius: 10px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+            animation: fadeIn 0.15s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
+        }
+        .modal-header h3 { margin: 0; font-size: 16px; color: var(--navy); }
+        .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); padding: 0; line-height: 1; }
+        .modal-close:hover { color: #dc2626; }
+        .modal-footer { margin-top: 14px; display: flex; justify-content: flex-end; gap: 8px; }
+        .notes-textarea {
+            width: 100%; font-size: 14px; padding: 10px 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            resize: vertical; font-family: inherit; min-height: 130px; color: var(--text);
+        }
+        .notes-textarea:focus { outline: 2px solid var(--blue); border-color: transparent; }
+
+        /* ── Print ── */
         @media print {
-            .tab-nav, .filterbox, .toggle-box, .btn-add, .btn-reset, .btn-action, .no-print { display: none !important; }
-            body { background: white; }
+            .app-header { background: #334155 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .tab-nav, .toolbar, .filterbox, .btn-action, .no-print { display: none !important; }
+            body { background: white; font-size: 11px; }
+            .table-wrap { box-shadow: none; border: 1px solid #ccc; border-radius: 0; }
+            thead th { background: #334155 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static; }
+            .badge { border: 1px solid currentColor; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+
+<header class="app-header">
+    <span class="icon">🏠</span>
+    <div>
         <h1>Inmobiliaria</h1>
+        <span class="sub">Gestión de clientes y propiedades</span>
+    </div>
+</header>
 
-        <div class="tab-nav">
-            <button class="tab-btn active" onclick="mostrarTab('clientes')">Clientes</button>
-            <button class="tab-btn" onclick="mostrarTab('propiedades')">Propiedades</button>
+<div class="container">
+
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="mostrarTab('clientes', this)">Clientes</button>
+        <button class="tab-btn" onclick="mostrarTab('propiedades', this)">Propiedades</button>
+    </div>
+
+    <!-- ═══ TAB CLIENTES ═══ -->
+    <div id="tab-clientes">
+        <div class="toolbar no-print">
+            <button class="btn btn-green" onclick="agregarFilaCliente()">+ Agregar cliente</button>
+            <button class="btn btn-print" onclick="imprimirTabla('tablaClientes', 'Clientes')">🖨 Imprimir</button>
+            <button class="btn btn-gray"  onclick="resetFiltrosClientes()">✕ Limpiar filtros</button>
         </div>
 
-        <!-- TAB CLIENTES -->
-        <div id="tab-clientes">
-            <div class="no-print">
-                <button class="btn-add" onclick="agregarFilaCliente()">Añadir cliente</button>
-                <button class="btn-add" onclick="imprimirTabla('tablaClientes', 'Clientes')">Imprimir</button>
-                <button class="btn-reset" onclick="resetFiltrosClientes()">Limpiar filtros</button>
-            </div>
+        <div class="filterbox no-print">
+            <input type="text" id="filtroTexto" placeholder="🔍 Nombre o Apellido" onkeyup="filtrarClientes()" style="min-width:200px">
+            <div class="sep"></div>
+            <select id="filtroOperacion" onchange="filtrarClientes()">
+                <option value="">Todas las operaciones</option>
+                <option value="venta">Venta</option>
+                <option value="renta">Renta</option>
+                <option value="ambas">Ambas</option>
+            </select>
+            <input type="number" id="filtroAmbientes" placeholder="Ambientes" onkeyup="filtrarClientes()" style="width:90px">
+            <div class="sep"></div>
+            <label><input type="checkbox" id="togglePropietarios" onchange="filtrarClientes()"> Propietarios</label>
+            <label><input type="checkbox" id="toggleInteresados"  onchange="filtrarClientes()"> Interesados</label>
+        </div>
 
-            <div class="toggle-box no-print">
-                <label><input type="checkbox" id="togglePropietarios" onchange="filtrarClientes()"> Propietarios</label>
-                <label><input type="checkbox" id="toggleInteresados" onchange="filtrarClientes()"> Interesados</label>
-            </div>
-
-            <div class="filterbox no-print">
-                <input type="text" id="filtroTexto" placeholder="Nombre o Apellido" onkeyup="filtrarClientes()">
-                <select id="filtroOperacion" onchange="filtrarClientes()">
-                    <option value="">Operación</option>
-                    <option value="venta">Venta</option>
-                    <option value="renta">Renta</option>
-                    <option value="ambas">Ambas</option>
-                </select>
-                <input type="number" id="filtroAmbientes" placeholder="Ambientes" onkeyup="filtrarClientes()">
-            </div>
-
+        <div class="table-wrap">
             <table id="tablaClientes">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Teléfono</th>
-                        <th>Email</th>
-                        <th>Tipo</th>
-                        <th>Min</th>
-                        <th>Max</th>
-                        <th>USD</th>
-                        <th>Amb</th>
-                        <th>Operación</th>
-                        <th class="no-print">Acciones</th>
-                    </tr>
-                </thead>
+                <thead><tr>
+                    <th class="sortable" data-sort="clientes" data-field="nombre"    onclick="sortBy(this)">Cliente <span class="sort-icon"></span></th>
+                    <th>Teléfono</th>
+                    <th class="sortable" data-sort="clientes" data-field="email"     onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="clientes" data-field="tipo"      onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="clientes" data-field="rango_min" onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="clientes" data-field="rango_max" onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
+                    <th>USD</th>
+                    <th class="sortable" data-sort="clientes" data-field="ambientes" onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="clientes" data-field="operacion" onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
+                    <th class="no-print">Acciones</th>
+                </tr></thead>
                 <tbody></tbody>
             </table>
         </div>
+    </div>
 
-        <!-- TAB PROPIEDADES -->
-        <div id="tab-propiedades" style="display:none">
-            <div class="no-print">
-                <button class="btn-add" onclick="agregarFilaPropiedad()">Añadir propiedad</button>
-                <button class="btn-add" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">Imprimir</button>
-                <button class="btn-reset" onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
-            </div>
+    <!-- ═══ TAB PROPIEDADES ═══ -->
+    <div id="tab-propiedades" style="display:none">
+        <div class="toolbar no-print">
+            <button class="btn btn-green" onclick="agregarFilaPropiedad()">+ Agregar propiedad</button>
+            <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">🖨 Imprimir</button>
+            <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">✕ Limpiar filtros</button>
+        </div>
 
-            <div class="filterbox no-print">
-                <input type="text" id="filtroDireccion" placeholder="Dirección" onkeyup="filtrarPropiedades()">
-                <select id="filtroTipo" onchange="filtrarPropiedades()">
-                    <option value="">Tipo</option>
-                    <option value="casa">Casa</option>
-                    <option value="departamento">Departamento</option>
-                    <option value="local">Local</option>
-                    <option value="terreno">Terreno</option>
-                    <option value="otro">Otro</option>
-                </select>
-                <select id="filtroEstado" onchange="filtrarPropiedades()">
-                    <option value="">Estado</option>
-                    <option value="disponible">Disponible</option>
-                    <option value="vendida">Vendida</option>
-                    <option value="rentada">Rentada</option>
-                </select>
-                <input type="number" id="filtroAmbiendesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()">
-            </div>
+        <div class="filterbox no-print">
+            <input type="text" id="filtroDireccion" placeholder="🔍 Dirección" onkeyup="filtrarPropiedades()" style="min-width:200px">
+            <div class="sep"></div>
+            <select id="filtroTipo" onchange="filtrarPropiedades()">
+                <option value="">Todos los tipos</option>
+                <option value="casa">Casa</option>
+                <option value="departamento">Departamento</option>
+                <option value="local">Local</option>
+                <option value="terreno">Terreno</option>
+                <option value="otro">Otro</option>
+            </select>
+            <select id="filtroEstado" onchange="filtrarPropiedades()">
+                <option value="">Todos los estados</option>
+                <option value="disponible">Disponible</option>
+                <option value="vendida">Vendida</option>
+                <option value="rentada">Rentada</option>
+            </select>
+            <input type="number" id="filtroAmbiendesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()" style="width:90px">
+        </div>
 
+        <div class="table-wrap">
             <table id="tablaPropiedades">
-                <thead>
-                    <tr>
-                        <th>Dirección</th>
-                        <th>Tipo</th>
-                        <th>Estado</th>
-                        <th>Min</th>
-                        <th>Max</th>
-                        <th>USD</th>
-                        <th>Amb</th>
-                        <th>Propietario</th>
-                        <th>Interesados</th>
-                        <th>Fecha estado</th>
-                        <th class="no-print">Acciones</th>
-                    </tr>
-                </thead>
+                <thead><tr>
+                    <th class="sortable" data-sort="propiedades" data-field="direccion"   onclick="sortBy(this)">Dirección <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="tipo"        onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="estado"      onclick="sortBy(this)">Estado <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="rango_min"   onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="rango_max"   onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
+                    <th>USD</th>
+                    <th class="sortable" data-sort="propiedades" data-field="ambientes"   onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="propietario" onclick="sortBy(this)">Propietario <span class="sort-icon"></span></th>
+                    <th>Interesados</th>
+                    <th class="sortable" data-sort="propiedades" data-field="fecha_estado" onclick="sortBy(this)">Fecha estado <span class="sort-icon"></span></th>
+                    <th class="no-print">Acciones</th>
+                </tr></thead>
                 <tbody></tbody>
             </table>
         </div>
     </div>
 
-    <!-- Modal compradores compatibles -->
-    <div id="modal-matches" class="modal-overlay">
-        <div class="modal-box">
-            <button class="modal-close" onclick="cerrarModal()">✕</button>
+</div>
+
+<!-- ── Modal: compradores compatibles ── -->
+<div id="modal-matches" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
             <h3 id="modal-titulo">Compradores compatibles</h3>
-            <div id="modal-contenido"></div>
+            <button class="modal-close" onclick="cerrarModal('modal-matches')">✕</button>
+        </div>
+        <div id="modal-contenido"></div>
+    </div>
+</div>
+
+<!-- ── Modal: notas de propiedad ── -->
+<div id="modal-notes" class="modal-overlay">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-header">
+            <h3>📝 Notas de la propiedad</h3>
+            <button class="modal-close" onclick="cerrarModal('modal-notes')">✕</button>
+        </div>
+        <textarea id="notas-textarea" class="notes-textarea" placeholder="Escribí notas sobre esta propiedad..."></textarea>
+        <div class="modal-footer">
+            <button class="btn btn-gray"  onclick="cerrarModal('modal-notes')">Cancelar</button>
+            <button class="btn btn-green" onclick="guardarNotas()">Guardar</button>
         </div>
     </div>
+</div>
 
-    <script>
-        let clientes = [];
-        let propiedades = [];
+<script>
+    let clientes = [];
+    let propiedades = [];
+    let sortClientes    = { field: null, dir: 1 };
+    let sortPropiedades = { field: null, dir: 1 };
+    let notasPropiedadId = null;
 
-        // ── TABS ─────────────────────────────────────────────────────────────
-        function mostrarTab(tab) {
-            document.getElementById('tab-clientes').style.display = tab === 'clientes' ? '' : 'none';
-            document.getElementById('tab-propiedades').style.display = tab === 'propiedades' ? '' : 'none';
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
-        }
+    // ── TABS ──────────────────────────────────────────────────────────────────
+    function mostrarTab(tab, btn) {
+        document.getElementById('tab-clientes').style.display    = tab === 'clientes'    ? '' : 'none';
+        document.getElementById('tab-propiedades').style.display = tab === 'propiedades' ? '' : 'none';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
+    }
 
-        // ── PRINT ─────────────────────────────────────────────────────────────
-        function imprimirTabla(tablaId, titulo) {
-            const tabla = document.getElementById(tablaId).outerHTML;
-            const ventana = window.open('', '_blank');
-            const fecha = new Date().toLocaleDateString('es-AR');
-            ventana.document.write(`
-                <html><head><title>${titulo} - ${fecha}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; }
-                    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                    th, td { border: 1px solid #ccc; padding: 3px 5px; text-align: left; }
-                    th { background-color: #e0e0e0; }
-                    a { text-decoration: none; color: black; }
-                    .no-print { display: none; }
-                </style></head>
-                <body>
-                    <h2 style="font-size:16px">${titulo} — ${fecha}</h2>
-                    ${tabla}
-                </body></html>
-            `);
-            ventana.document.close();
-            ventana.print();
-        }
+    // ── SORT ──────────────────────────────────────────────────────────────────
+    function sortBy(th) {
+        const tabla = th.dataset.sort;
+        const field = th.dataset.field;
+        const s = tabla === 'clientes' ? sortClientes : sortPropiedades;
+        if (s.field === field) s.dir *= -1;
+        else { s.field = field; s.dir = 1; }
 
-        // ── CLIENTES ──────────────────────────────────────────────────────────
-        function cargarClientes() {
-            fetch('/api/clientes')
-                .then(r => r.json())
-                .then(data => {
-                    clientes = data.sort((a, b) => (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido));
-                    filtrarClientes();
-                });
-        }
-
-        function filtrarClientes() {
-            const texto = document.getElementById('filtroTexto').value.toLowerCase();
-            const operacion = document.getElementById('filtroOperacion').value;
-            const ambientes = document.getElementById('filtroAmbientes').value;
-            const showProp = document.getElementById('togglePropietarios').checked;
-            const showInt = document.getElementById('toggleInteresados').checked;
-
-            const filtrados = clientes.filter(c => {
-                const matchTexto = c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
-                const matchOp = !operacion || c.operacion === operacion;
-                const matchAmb = !ambientes || c.ambientes == ambientes;
-                const matchTipo = (!showProp && !showInt) ||
-                    (showProp && !showInt && c.tipo === 'propietario') ||
-                    (!showProp && showInt && c.tipo === 'interesado') ||
-                    (showProp && showInt);
-                return matchTexto && matchOp && matchAmb && matchTipo;
-            });
-
-            const tbody = document.querySelector('#tablaClientes tbody');
-            tbody.innerHTML = '';
-            filtrados.forEach(c => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><a href="/cliente/${c.id}" class="editable-text" data-field="nombre" data-id="${c.id}">${c.nombre} ${c.apellido}</a></td>
-                    <td class="editable-text" data-field="telefono" data-id="${c.id}">${c.telefono}</td>
-                    <td class="editable-text" data-field="email" data-id="${c.id}">${c.email || ''}</td>
-                    <td class="editable-select" data-field="tipo" data-id="${c.id}">${c.tipo}</td>
-                    <td class="editable-text" data-field="rango_min" data-id="${c.id}">${c.rango_min || ''}</td>
-                    <td class="editable-text" data-field="rango_max" data-id="${c.id}">${c.rango_max || ''}</td>
-                    <td><input type="checkbox" data-field="es_usd" data-id="${c.id}" ${c.es_usd ? 'checked' : ''} onchange="actualizarCliente(${c.id}, 'es_usd', this.checked)"></td>
-                    <td class="editable-text" data-field="ambientes" data-id="${c.id}">${c.ambientes || ''}</td>
-                    <td class="editable-select" data-field="operacion" data-id="${c.id}">${c.operacion || ''}</td>
-                    <td class="no-print">
-                        <button class="btn-action btn-cancel" onclick="eliminarCliente(${c.id})">X</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            agregarEventosEdicionTextoClientes();
-            agregarEventosEdicionSelectClientes();
-        }
-
-        function resetFiltrosClientes() {
-            document.getElementById('togglePropietarios').checked = false;
-            document.getElementById('toggleInteresados').checked = false;
-            document.getElementById('filtroTexto').value = '';
-            document.getElementById('filtroOperacion').value = '';
-            document.getElementById('filtroAmbientes').value = '';
-            filtrarClientes();
-        }
-
-        function agregarFilaCliente() {
-            const tbody = document.querySelector('#tablaClientes tbody');
-            const row = document.createElement('tr');
-            row.classList.add('new-row');
-            row.innerHTML = `
-                <td class="editable-text" data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>
-                <td class="editable-text" data-field="telefono"><input type="text" placeholder="Teléfono"></td>
-                <td class="editable-text" data-field="email"><input type="text" placeholder="Email"></td>
-                <td class="editable-select" data-field="tipo">
-                    <select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select>
-                </td>
-                <td class="editable-text" data-field="rango_min"><input type="number" placeholder="Min"></td>
-                <td class="editable-text" data-field="rango_max"><input type="number" placeholder="Max"></td>
-                <td><input type="checkbox" data-field="es_usd"></td>
-                <td class="editable-text" data-field="ambientes"><input type="number" placeholder="Amb"></td>
-                <td class="editable-select" data-field="operacion">
-                    <select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select>
-                </td>
-                <td class="no-print">
-                    <button class="btn-action btn-save" onclick="guardarNuevoCliente(this)">✔</button>
-                    <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">X</button>
-                </td>
-            `;
-            tbody.insertBefore(row, tbody.firstChild);
-        }
-
-        function guardarNuevoCliente(btn) {
-            const row = btn.closest('tr');
-            const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
-            const cliente = {
-                nombre: nombreCompleto[0] || '',
-                apellido: nombreCompleto.slice(1).join(' ') || '',
-                telefono: row.querySelector('[data-field="telefono"] input').value,
-                email: row.querySelector('[data-field="email"] input').value || null,
-                tipo: row.querySelector('[data-field="tipo"] select').value,
-                rango_min: parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
-                rango_max: parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
-                es_usd: row.querySelector('[data-field="es_usd"]').checked,
-                ambientes: parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
-                operacion: row.querySelector('[data-field="operacion"] select').value,
-                descripcion: ''
-            };
-            if (!cliente.nombre || !cliente.apellido || !cliente.telefono) {
-                alert('Completá Nombre, Apellido y Teléfono.');
-                return;
-            }
-            fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cliente) })
-                .then(r => r.json())
-                .then(() => { cargarClientes(); alert('Cliente agregado'); })
-                .catch(e => alert('Error: ' + e));
-        }
-
-        function eliminarCliente(id) {
-            if (confirm('¿Seguro querés borrar este cliente?')) {
-                fetch(`/api/clientes/${id}`, { method: 'DELETE' })
-                    .then(() => { cargarClientes(); })
-                    .catch(e => alert('Error: ' + e));
-            }
-        }
-
-        function actualizarCliente(id, field, value) {
-            fetch(`/api/clientes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
-                .then(() => cargarClientes())
-                .catch(e => alert('Error: ' + e));
-        }
-
-        function agregarEventosEdicionTextoClientes() {
-            document.querySelectorAll('#tablaClientes .editable-text').forEach(cell => {
-                cell.addEventListener('dblclick', function(e) {
-                    if (this.querySelector('input') || e.target.tagName === 'A') return;
-                    const id = this.dataset.id;
-                    const field = this.dataset.field;
-                    const oldValue = this.textContent.trim();
-                    this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
-                    const input = this.querySelector('input');
-                    input.focus();
-                    const save = () => {
-                        const newValue = input.value.trim();
-                        if (newValue !== oldValue) {
-                            if (field === 'nombre') {
-                                const [nombre, ...rest] = newValue.split(' ');
-                                actualizarCliente(id, 'nombre', nombre);
-                                if (rest.length) actualizarCliente(id, 'apellido', rest.join(' '));
-                            } else {
-                                actualizarCliente(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
-                            }
-                        } else {
-                            this.innerHTML = id ? `<a href="/cliente/${id}">${oldValue}</a>` : oldValue;
-                        }
-                    };
-                    input.addEventListener('blur', save);
-                    input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
-                });
-            });
-        }
-
-        function agregarEventosEdicionSelectClientes() {
-            document.querySelectorAll('#tablaClientes .editable-select').forEach(cell => {
-                cell.addEventListener('click', function() {
-                    if (this.querySelector('select')) return;
-                    const id = this.dataset.id;
-                    const field = this.dataset.field;
-                    const oldValue = this.textContent.trim();
-                    const options = field === 'tipo'
-                        ? '<option value="interesado">Interesado</option><option value="propietario">Propietario</option>'
-                        : '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
-                    this.innerHTML = `<select>${options}</select>`;
-                    const sel = this.querySelector('select');
-                    sel.value = oldValue;
-                    sel.focus();
-                    sel.addEventListener('change', () => actualizarCliente(id, field, sel.value));
-                });
-            });
-        }
-
-        // ── PROPIEDADES ───────────────────────────────────────────────────────
-        function cargarPropiedades() {
-            fetch('/api/propiedades')
-                .then(r => r.json())
-                .then(data => {
-                    propiedades = data.sort((a, b) => a.direccion.localeCompare(b.direccion));
-                    filtrarPropiedades();
-                });
-        }
-
-        function filtrarPropiedades() {
-            const dir = document.getElementById('filtroDireccion').value.toLowerCase();
-            const tipo = document.getElementById('filtroTipo').value;
-            const estado = document.getElementById('filtroEstado').value;
-            const amb = document.getElementById('filtroAmbiendesProp').value;
-
-            const filtradas = propiedades.filter(p => {
-                const matchDir = !dir || p.direccion.toLowerCase().includes(dir);
-                const matchTipo = !tipo || p.tipo === tipo;
-                const matchEstado = !estado || p.estado === estado;
-                const matchAmb = !amb || p.ambientes == amb;
-                return matchDir && matchTipo && matchEstado && matchAmb;
-            });
-
-            const tbody = document.querySelector('#tablaPropiedades tbody');
-            tbody.innerHTML = '';
-            filtradas.forEach(p => {
-                const estadoClass = p.estado === 'disponible' ? 'estado-disponible' : p.estado === 'vendida' ? 'estado-vendida' : 'estado-rentada';
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="editable-text" data-field="direccion" data-id="${p.id}">${p.direccion}</td>
-                    <td class="editable-select-prop" data-field="tipo" data-id="${p.id}">${p.tipo || ''}</td>
-                    <td class="editable-select-prop ${estadoClass}" data-field="estado" data-id="${p.id}">${p.estado || ''}</td>
-                    <td class="editable-text" data-field="rango_min" data-id="${p.id}">${p.rango_min || ''}</td>
-                    <td class="editable-text" data-field="rango_max" data-id="${p.id}">${p.rango_max || ''}</td>
-                    <td><input type="checkbox" ${p.es_usd ? 'checked' : ''} onchange="actualizarPropiedad(${p.id}, 'es_usd', this.checked)"></td>
-                    <td class="editable-text" data-field="ambientes" data-id="${p.id}">${p.ambientes || ''}</td>
-                    <td>${p.propietario || '-'}</td>
-                    <td>${p.interesados.join(', ') || '-'}</td>
-                    <td>${p.fecha_estado || '-'}</td>
-                    <td class="no-print">
-                        <button class="btn-action btn-match" onclick="verMatches(${p.id}, '${p.direccion.replace(/'/g, "\\'")}')">⚡</button>
-                        <button class="btn-action btn-cancel" onclick="eliminarPropiedad(${p.id})">X</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            agregarEventosEdicionTextoPropiedades();
-            agregarEventosEdicionSelectPropiedades();
-        }
-
-        function resetFiltrosPropiedades() {
-            document.getElementById('filtroDireccion').value = '';
-            document.getElementById('filtroTipo').value = '';
-            document.getElementById('filtroEstado').value = '';
-            document.getElementById('filtroAmbiendesProp').value = '';
-            filtrarPropiedades();
-        }
-
-        function agregarFilaPropiedad() {
-            const propietarios = clientes.filter(c => c.tipo === 'propietario');
-            const optsPropietarios = propietarios.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('');
-            const tbody = document.querySelector('#tablaPropiedades tbody');
-            const row = document.createElement('tr');
-            row.classList.add('new-row');
-            row.innerHTML = `
-                <td><input type="text" placeholder="Dirección"></td>
-                <td><select>
-                    <option value="casa">Casa</option>
-                    <option value="departamento">Departamento</option>
-                    <option value="local">Local</option>
-                    <option value="terreno">Terreno</option>
-                    <option value="otro">Otro</option>
-                </select></td>
-                <td><select>
-                    <option value="disponible">Disponible</option>
-                    <option value="vendida">Vendida</option>
-                    <option value="rentada">Rentada</option>
-                </select></td>
-                <td><input type="number" placeholder="Min"></td>
-                <td><input type="number" placeholder="Max"></td>
-                <td><input type="checkbox"></td>
-                <td><input type="number" placeholder="Amb"></td>
-                <td><select><option value="">-- Sin propietario --</option>${optsPropietarios}</select></td>
-                <td>-</td>
-                <td class="no-print">
-                    <button class="btn-action btn-save" onclick="guardarNuevaPropiedad(this)">✔</button>
-                    <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">X</button>
-                </td>
-            `;
-            tbody.insertBefore(row, tbody.firstChild);
-        }
-
-        function guardarNuevaPropiedad(btn) {
-            const row = btn.closest('tr');
-            const tds = row.querySelectorAll('td');
-            const propiedad = {
-                direccion: tds[0].querySelector('input').value,
-                tipo: tds[1].querySelector('select').value,
-                estado: tds[2].querySelector('select').value,
-                rango_min: parseFloat(tds[3].querySelector('input').value) || null,
-                rango_max: parseFloat(tds[4].querySelector('input').value) || null,
-                es_usd: tds[5].querySelector('input').checked,
-                ambientes: parseInt(tds[6].querySelector('input').value) || null,
-                propietario_id: parseInt(tds[7].querySelector('select').value) || null
-            };
-            if (!propiedad.direccion) { alert('Ingresá la dirección.'); return; }
-            fetch('/api/propiedades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(propiedad) })
-                .then(r => r.json())
-                .then(() => { cargarPropiedades(); alert('Propiedad agregada'); })
-                .catch(e => alert('Error: ' + e));
-        }
-
-        function eliminarPropiedad(id) {
-            if (confirm('¿Seguro querés borrar esta propiedad?')) {
-                fetch(`/api/propiedades/${id}`, { method: 'DELETE' })
-                    .then(() => cargarPropiedades())
-                    .catch(e => alert('Error: ' + e));
-            }
-        }
-
-        function actualizarPropiedad(id, field, value) {
-            fetch(`/api/propiedades/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
-                .then(() => cargarPropiedades())
-                .catch(e => alert('Error: ' + e));
-        }
-
-        function agregarEventosEdicionTextoPropiedades() {
-            document.querySelectorAll('#tablaPropiedades .editable-text').forEach(cell => {
-                cell.addEventListener('dblclick', function() {
-                    if (this.querySelector('input')) return;
-                    const id = this.dataset.id;
-                    const field = this.dataset.field;
-                    const oldValue = this.textContent.trim();
-                    this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
-                    const input = this.querySelector('input');
-                    input.focus();
-                    input.addEventListener('blur', () => {
-                        const newValue = input.value.trim();
-                        if (newValue !== oldValue) {
-                            actualizarPropiedad(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
-                        } else {
-                            this.textContent = oldValue;
-                        }
-                    });
-                    input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
-                });
-            });
-        }
-
-        function agregarEventosEdicionSelectPropiedades() {
-            document.querySelectorAll('#tablaPropiedades .editable-select-prop').forEach(cell => {
-                cell.addEventListener('click', function() {
-                    if (this.querySelector('select')) return;
-                    const id = this.dataset.id;
-                    const field = this.dataset.field;
-                    const oldValue = this.textContent.trim();
-                    const options = field === 'tipo'
-                        ? ['casa', 'departamento', 'local', 'terreno', 'otro'].map(v => `<option value="${v}">${v}</option>`).join('')
-                        : ['disponible', 'vendida', 'rentada'].map(v => `<option value="${v}">${v}</option>`).join('');
-                    this.innerHTML = `<select>${options}</select>`;
-                    const sel = this.querySelector('select');
-                    sel.value = oldValue;
-                    sel.focus();
-                    sel.addEventListener('change', () => actualizarPropiedad(id, field, sel.value));
-                });
-            });
-        }
-
-        // ── MATCHES ───────────────────────────────────────────────────────────
-        function verMatches(propId, direccion) {
-            fetch(`/api/propiedades/${propId}/matches`)
-                .then(r => r.json())
-                .then(matches => {
-                    document.getElementById('modal-titulo').textContent = `Compradores compatibles — ${direccion}`;
-                    if (matches.length === 0) {
-                        document.getElementById('modal-contenido').innerHTML = '<p>No hay interesados compatibles con esta propiedad.</p>';
-                    } else {
-                        document.getElementById('modal-contenido').innerHTML = `
-                            <table>
-                                <thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Min</th><th>Max</th><th>USD</th><th>Amb</th><th>Operación</th></tr></thead>
-                                <tbody>
-                                    ${matches.map(m => `
-                                        <tr>
-                                            <td><a href="/cliente/${m.id}">${m.nombre} ${m.apellido}</a></td>
-                                            <td>${m.telefono}</td>
-                                            <td>${m.email || '-'}</td>
-                                            <td>${m.rango_min || '-'}</td>
-                                            <td>${m.rango_max || '-'}</td>
-                                            <td>${m.es_usd ? 'Sí' : 'No'}</td>
-                                            <td>${m.ambientes || '-'}</td>
-                                            <td>${m.operacion || '-'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        `;
-                    }
-                    document.getElementById('modal-matches').classList.add('active');
-                })
-                .catch(e => alert('Error al buscar compradores: ' + e));
-        }
-
-        function cerrarModal() {
-            document.getElementById('modal-matches').classList.remove('active');
-        }
-
-        document.getElementById('modal-matches').addEventListener('click', e => {
-            if (e.target === document.getElementById('modal-matches')) cerrarModal();
+        document.querySelectorAll(`th[data-sort="${tabla}"]`).forEach(t => {
+            const icon = t.querySelector('.sort-icon');
+            const active = t.dataset.field === field;
+            if (icon) icon.textContent = active ? (s.dir === 1 ? '▴' : '▾') : '';
+            t.classList.toggle('sorted', active);
         });
 
-        // ── INIT ──────────────────────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', cargarClientes);
-    </script>
+        if (tabla === 'clientes') filtrarClientes();
+        else filtrarPropiedades();
+    }
+
+    function applySort(arr, s) {
+        if (!s.field) return arr;
+        return [...arr].sort((a, b) => {
+            const va = a[s.field] ?? '';
+            const vb = b[s.field] ?? '';
+            if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * s.dir;
+            return String(va).localeCompare(String(vb), 'es', { numeric: true }) * s.dir;
+        });
+    }
+
+    // ── PRINT ─────────────────────────────────────────────────────────────────
+    function imprimirTabla(tablaId, titulo) {
+        const tabla = document.getElementById(tablaId).outerHTML;
+        const fecha = new Date().toLocaleDateString('es-AR');
+        const v = window.open('', '_blank');
+        v.document.write(`<html><head><title>${titulo} — ${fecha}</title>
+        <style>
+            body { font-family: Arial, sans-serif; font-size: 11px; }
+            h2 { font-size: 14px; margin-bottom: 2px; }
+            p  { color: #64748b; margin: 0 0 10px; font-size: 11px; }
+            table { width: 100%; border-collapse: collapse; }
+            th { background: #334155; color: white; padding: 5px 7px; text-align: left; font-size: 10px; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            td { padding: 4px 7px; border-bottom: 1px solid #e2e8f0; }
+            tr:nth-child(even) td { background: #f8fafc; }
+            .no-print { display: none; }
+            .badge { border: 1px solid currentColor; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
+            a { color: black; text-decoration: none; }
+            .wa-link { display: none; }
+        </style></head>
+        <body><h2>${titulo}</h2><p>${fecha}</p>${tabla}</body></html>`);
+        v.document.close(); v.print();
+    }
+
+    // ── WHATSAPP ──────────────────────────────────────────────────────────────
+    function waLink(phone) {
+        const d = String(phone).replace(/\D/g, '');
+        const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
+        return `https://wa.me/${intl}`;
+    }
+
+    // ── MODALS ────────────────────────────────────────────────────────────────
+    function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+    });
+
+    // ── NOTAS PROPIEDAD ───────────────────────────────────────────────────────
+    function abrirNotas(propId) {
+        notasPropiedadId = propId;
+        const p = propiedades.find(x => x.id === propId);
+        document.getElementById('notas-textarea').value = p?.descripcion || '';
+        document.getElementById('modal-notes').classList.add('active');
+        setTimeout(() => document.getElementById('notas-textarea').focus(), 100);
+    }
+
+    function guardarNotas() {
+        const texto = document.getElementById('notas-textarea').value;
+        fetch(`/api/propiedades/${notasPropiedadId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ descripcion: texto })
+        }).then(() => { cerrarModal('modal-notes'); cargarPropiedades(); })
+          .catch(e => alert('Error: ' + e));
+    }
+
+    // ── CLIENTES ──────────────────────────────────────────────────────────────
+    function cargarClientes() {
+        fetch('/api/clientes').then(r => r.json()).then(data => {
+            clientes = data.sort((a, b) => (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido, 'es'));
+            filtrarClientes();
+        });
+    }
+
+    function filtrarClientes() {
+        const texto     = document.getElementById('filtroTexto').value.toLowerCase();
+        const operacion = document.getElementById('filtroOperacion').value;
+        const ambientes = document.getElementById('filtroAmbientes').value;
+        const showProp  = document.getElementById('togglePropietarios').checked;
+        const showInt   = document.getElementById('toggleInteresados').checked;
+
+        let filtrados = clientes.filter(c => {
+            const matchTexto = c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
+            const matchOp    = !operacion || c.operacion === operacion;
+            const matchAmb   = !ambientes || c.ambientes == ambientes;
+            const matchTipo  = (!showProp && !showInt)
+                || (showProp && !showInt && c.tipo === 'propietario')
+                || (!showProp && showInt && c.tipo === 'interesado')
+                || (showProp && showInt);
+            return matchTexto && matchOp && matchAmb && matchTipo;
+        });
+        filtrados = applySort(filtrados, sortClientes);
+
+        const tbody = document.querySelector('#tablaClientes tbody');
+        tbody.innerHTML = '';
+        filtrados.forEach(c => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><a href="/cliente/${c.id}">${c.nombre} ${c.apellido}</a></td>
+                <td class="editable-text" data-field="telefono" data-id="${c.id}">
+                    ${c.telefono}&nbsp;<a href="${waLink(c.telefono)}" target="_blank" class="wa-link" title="Abrir en WhatsApp" onclick="event.stopPropagation()">💬</a>
+                </td>
+                <td class="editable-text" data-field="email"     data-id="${c.id}">${c.email || ''}</td>
+                <td class="editable-select" data-field="tipo"    data-id="${c.id}"><span class="badge badge-${c.tipo}">${c.tipo}</span></td>
+                <td class="editable-text" data-field="rango_min" data-id="${c.id}">${c.rango_min || ''}</td>
+                <td class="editable-text" data-field="rango_max" data-id="${c.id}">${c.rango_max || ''}</td>
+                <td><input type="checkbox" ${c.es_usd ? 'checked' : ''} onchange="actualizarCliente(${c.id}, 'es_usd', this.checked)"></td>
+                <td class="editable-text" data-field="ambientes" data-id="${c.id}">${c.ambientes || ''}</td>
+                <td class="editable-select" data-field="operacion" data-id="${c.id}">${c.operacion || ''}</td>
+                <td class="no-print">
+                    <button class="btn-action btn-cancel" onclick="eliminarCliente(${c.id})">✕</button>
+                </td>`;
+            tbody.appendChild(row);
+        });
+        agregarEventosEdicionTextoClientes();
+        agregarEventosEdicionSelectClientes();
+    }
+
+    function resetFiltrosClientes() {
+        ['togglePropietarios','toggleInteresados'].forEach(id => document.getElementById(id).checked = false);
+        ['filtroTexto','filtroOperacion','filtroAmbientes'].forEach(id => document.getElementById(id).value = '');
+        filtrarClientes();
+    }
+
+    function agregarFilaCliente() {
+        const tbody = document.querySelector('#tablaClientes tbody');
+        const row = document.createElement('tr');
+        row.classList.add('new-row');
+        row.innerHTML = `
+            <td data-field="nombre">   <input type="text"   placeholder="Nombre Apellido"></td>
+            <td data-field="telefono"> <input type="text"   placeholder="Teléfono"></td>
+            <td data-field="email">    <input type="text"   placeholder="Email"></td>
+            <td data-field="tipo">     <select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select></td>
+            <td data-field="rango_min"><input type="number" placeholder="Min"></td>
+            <td data-field="rango_max"><input type="number" placeholder="Max"></td>
+            <td><input type="checkbox" data-field="es_usd"></td>
+            <td data-field="ambientes"><input type="number" placeholder="Amb"></td>
+            <td data-field="operacion"><select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select></td>
+            <td class="no-print">
+                <button class="btn-action btn-save"   onclick="guardarNuevoCliente(this)">✔</button>
+                <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">✕</button>
+            </td>`;
+        tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    function guardarNuevoCliente(btn) {
+        const row = btn.closest('tr');
+        const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
+        const cliente = {
+            nombre:     nombreCompleto[0] || '',
+            apellido:   nombreCompleto.slice(1).join(' ') || '',
+            telefono:   row.querySelector('[data-field="telefono"] input').value,
+            email:      row.querySelector('[data-field="email"] input').value || null,
+            tipo:       row.querySelector('[data-field="tipo"] select').value,
+            rango_min:  parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
+            rango_max:  parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
+            es_usd:     row.querySelector('[data-field="es_usd"]').checked,
+            ambientes:  parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
+            operacion:  row.querySelector('[data-field="operacion"] select').value,
+            descripcion: ''
+        };
+        if (!cliente.nombre || !cliente.apellido || !cliente.telefono) { alert('Completá Nombre, Apellido y Teléfono.'); return; }
+        fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cliente) })
+            .then(r => r.json()).then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+    }
+
+    function eliminarCliente(id) {
+        if (confirm('¿Seguro querés borrar este cliente?')) {
+            fetch(`/api/clientes/${id}`, { method: 'DELETE' }).then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+        }
+    }
+
+    function actualizarCliente(id, field, value) {
+        fetch(`/api/clientes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
+            .then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+    }
+
+    function agregarEventosEdicionTextoClientes() {
+        document.querySelectorAll('#tablaClientes .editable-text').forEach(cell => {
+            cell.addEventListener('dblclick', function(e) {
+                if (this.querySelector('input') || e.target.tagName === 'A') return;
+                const id = this.dataset.id, field = this.dataset.field;
+                const oldValue = this.textContent.trim();
+                this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
+                const input = this.querySelector('input');
+                input.focus();
+                input.addEventListener('blur', () => {
+                    const newValue = input.value.trim();
+                    if (newValue !== oldValue) {
+                        if (field === 'nombre') {
+                            const [nombre, ...rest] = newValue.split(' ');
+                            actualizarCliente(id, 'nombre', nombre);
+                            if (rest.length) actualizarCliente(id, 'apellido', rest.join(' '));
+                        } else {
+                            actualizarCliente(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
+                        }
+                    } else { cargarClientes(); }
+                });
+                input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
+            });
+        });
+    }
+
+    function agregarEventosEdicionSelectClientes() {
+        document.querySelectorAll('#tablaClientes .editable-select').forEach(cell => {
+            cell.addEventListener('click', function() {
+                if (this.querySelector('select')) return;
+                const id = this.dataset.id, field = this.dataset.field;
+                const oldValue = field === 'tipo'
+                    ? this.querySelector('.badge')?.textContent.trim()
+                    : this.textContent.trim();
+                const options = field === 'tipo'
+                    ? '<option value="interesado">Interesado</option><option value="propietario">Propietario</option>'
+                    : '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
+                this.innerHTML = `<select>${options}</select>`;
+                const sel = this.querySelector('select');
+                sel.value = oldValue; sel.focus();
+                sel.addEventListener('change', () => actualizarCliente(id, field, sel.value));
+            });
+        });
+    }
+
+    // ── PROPIEDADES ───────────────────────────────────────────────────────────
+    function cargarPropiedades() {
+        fetch('/api/propiedades').then(r => r.json()).then(data => {
+            propiedades = data.sort((a, b) => a.direccion.localeCompare(b.direccion, 'es'));
+            filtrarPropiedades();
+        });
+    }
+
+    function filtrarPropiedades() {
+        const dir    = document.getElementById('filtroDireccion').value.toLowerCase();
+        const tipo   = document.getElementById('filtroTipo').value;
+        const estado = document.getElementById('filtroEstado').value;
+        const amb    = document.getElementById('filtroAmbiendesProp').value;
+
+        let filtradas = propiedades.filter(p =>
+            (!dir    || p.direccion.toLowerCase().includes(dir))
+         && (!tipo   || p.tipo   === tipo)
+         && (!estado || p.estado === estado)
+         && (!amb    || p.ambientes == amb)
+        );
+        filtradas = applySort(filtradas, sortPropiedades);
+
+        const tbody = document.querySelector('#tablaPropiedades tbody');
+        tbody.innerHTML = '';
+        filtradas.forEach(p => {
+            const row = document.createElement('tr');
+            const hasNotes = p.descripcion && p.descripcion.trim().length > 0;
+            row.innerHTML = `
+                <td class="editable-text"       data-field="direccion" data-id="${p.id}">${p.direccion}</td>
+                <td class="editable-select-prop" data-field="tipo"     data-id="${p.id}">${p.tipo || ''}</td>
+                <td class="editable-select-prop" data-field="estado"   data-id="${p.id}">
+                    <span class="badge badge-${p.estado}">${p.estado || ''}</span>
+                </td>
+                <td class="editable-text" data-field="rango_min" data-id="${p.id}">${p.rango_min || ''}</td>
+                <td class="editable-text" data-field="rango_max" data-id="${p.id}">${p.rango_max || ''}</td>
+                <td><input type="checkbox" ${p.es_usd ? 'checked' : ''} onchange="actualizarPropiedad(${p.id}, 'es_usd', this.checked)"></td>
+                <td class="editable-text" data-field="ambientes" data-id="${p.id}">${p.ambientes || ''}</td>
+                <td>${p.propietario || '-'}</td>
+                <td>${p.interesados.join(', ') || '-'}</td>
+                <td>${p.fecha_estado || '-'}</td>
+                <td class="no-print">
+                    <button class="btn-action btn-match" onclick="verMatches(${p.id}, '${p.direccion.replace(/'/g, "\\'")}')" title="Compradores compatibles">⚡</button>
+                    <button class="btn-action btn-note"  onclick="abrirNotas(${p.id})" title="${hasNotes ? 'Ver/editar notas' : 'Agregar notas'}" style="${hasNotes ? 'background:#b45309' : ''}">📝</button>
+                    <button class="btn-action btn-cancel" onclick="eliminarPropiedad(${p.id})">✕</button>
+                </td>`;
+            tbody.appendChild(row);
+        });
+        agregarEventosEdicionTextoPropiedades();
+        agregarEventosEdicionSelectPropiedades();
+    }
+
+    function resetFiltrosPropiedades() {
+        ['filtroDireccion','filtroTipo','filtroEstado','filtroAmbiendesProp'].forEach(id => document.getElementById(id).value = '');
+        filtrarPropiedades();
+    }
+
+    function agregarFilaPropiedad() {
+        const propietarios = clientes.filter(c => c.tipo === 'propietario');
+        const optsProp = propietarios.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('');
+        const tbody = document.querySelector('#tablaPropiedades tbody');
+        const row = document.createElement('tr');
+        row.classList.add('new-row');
+        row.innerHTML = `
+            <td><input type="text" placeholder="Dirección"></td>
+            <td><select><option value="casa">Casa</option><option value="departamento">Departamento</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>
+            <td><select><option value="disponible">Disponible</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option></select></td>
+            <td><input type="number" placeholder="Min"></td>
+            <td><input type="number" placeholder="Max"></td>
+            <td><input type="checkbox"></td>
+            <td><input type="number" placeholder="Amb"></td>
+            <td><select><option value="">-- Sin propietario --</option>${optsProp}</select></td>
+            <td>-</td><td>-</td>
+            <td class="no-print">
+                <button class="btn-action btn-save"   onclick="guardarNuevaPropiedad(this)">✔</button>
+                <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">✕</button>
+            </td>`;
+        tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    function guardarNuevaPropiedad(btn) {
+        const tds = btn.closest('tr').querySelectorAll('td');
+        const propiedad = {
+            direccion:     tds[0].querySelector('input').value,
+            tipo:          tds[1].querySelector('select').value,
+            estado:        tds[2].querySelector('select').value,
+            rango_min:     parseFloat(tds[3].querySelector('input').value) || null,
+            rango_max:     parseFloat(tds[4].querySelector('input').value) || null,
+            es_usd:        tds[5].querySelector('input').checked,
+            ambientes:     parseInt(tds[6].querySelector('input').value) || null,
+            propietario_id: parseInt(tds[7].querySelector('select').value) || null
+        };
+        if (!propiedad.direccion) { alert('Ingresá la dirección.'); return; }
+        fetch('/api/propiedades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(propiedad) })
+            .then(r => r.json()).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+    }
+
+    function eliminarPropiedad(id) {
+        if (confirm('¿Seguro querés borrar esta propiedad?')) {
+            fetch(`/api/propiedades/${id}`, { method: 'DELETE' }).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+        }
+    }
+
+    function actualizarPropiedad(id, field, value) {
+        fetch(`/api/propiedades/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
+            .then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+    }
+
+    function agregarEventosEdicionTextoPropiedades() {
+        document.querySelectorAll('#tablaPropiedades .editable-text').forEach(cell => {
+            cell.addEventListener('dblclick', function() {
+                if (this.querySelector('input')) return;
+                const id = this.dataset.id, field = this.dataset.field;
+                const oldValue = this.textContent.trim();
+                this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
+                const input = this.querySelector('input');
+                input.focus();
+                input.addEventListener('blur', () => {
+                    const newValue = input.value.trim();
+                    if (newValue !== oldValue)
+                        actualizarPropiedad(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
+                    else this.textContent = oldValue;
+                });
+                input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
+            });
+        });
+    }
+
+    function agregarEventosEdicionSelectPropiedades() {
+        document.querySelectorAll('#tablaPropiedades .editable-select-prop').forEach(cell => {
+            cell.addEventListener('click', function() {
+                if (this.querySelector('select')) return;
+                const id = this.dataset.id, field = this.dataset.field;
+                const oldValue = field === 'estado'
+                    ? this.querySelector('.badge')?.textContent.trim()
+                    : this.textContent.trim();
+                const options = field === 'tipo'
+                    ? ['casa','departamento','local','terreno','otro'].map(v => `<option value="${v}">${v}</option>`).join('')
+                    : ['disponible','vendida','rentada'].map(v => `<option value="${v}">${v}</option>`).join('');
+                this.innerHTML = `<select>${options}</select>`;
+                const sel = this.querySelector('select');
+                sel.value = oldValue; sel.focus();
+                sel.addEventListener('change', () => actualizarPropiedad(id, field, sel.value));
+            });
+        });
+    }
+
+    // ── MATCHES ───────────────────────────────────────────────────────────────
+    function verMatches(propId, direccion) {
+        fetch(`/api/propiedades/${propId}/matches`).then(r => r.json()).then(matches => {
+            document.getElementById('modal-titulo').textContent = `Compradores compatibles — ${direccion}`;
+            document.getElementById('modal-contenido').innerHTML = matches.length === 0
+                ? '<p style="color:#64748b;margin:0">No hay interesados compatibles con esta propiedad.</p>'
+                : `<div class="table-wrap"><table>
+                    <thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Min</th><th>Max</th><th>USD</th><th>Amb</th><th>Operación</th></tr></thead>
+                    <tbody>${matches.map(m => `<tr>
+                        <td><a href="/cliente/${m.id}">${m.nombre} ${m.apellido}</a></td>
+                        <td>${m.telefono} <a href="${waLink(m.telefono)}" target="_blank" class="wa-link" title="WhatsApp">💬</a></td>
+                        <td>${m.email || '-'}</td>
+                        <td>${m.rango_min || '-'}</td><td>${m.rango_max || '-'}</td>
+                        <td>${m.es_usd ? 'Sí' : 'No'}</td>
+                        <td>${m.ambientes || '-'}</td>
+                        <td>${m.operacion || '-'}</td>
+                    </tr>`).join('')}</tbody>
+                   </table></div>`;
+            document.getElementById('modal-matches').classList.add('active');
+        }).catch(e => alert('Error: ' + e));
+    }
+
+    document.addEventListener('DOMContentLoaded', cargarClientes);
+</script>
 </body>
 </html>
