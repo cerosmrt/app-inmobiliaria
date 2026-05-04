@@ -105,14 +105,14 @@ def update_propiedad(id):
     propiedad = Propiedad.query.get(id)
     if propiedad:
         data = request.get_json()
-        propiedad.direccion = data['direccion']
-        propiedad.rango_min = data['rango_min']
-        propiedad.rango_max = data['rango_max']
-        propiedad.es_usd = data.get('es_usd', False)
-        propiedad.ambientes = data.get('ambientes')
-        propiedad.tipo = data['tipo']
-        propiedad.estado = data['estado']
-        propiedad.propietario_id = data.get('propietario_id')
+        propiedad.direccion = data.get('direccion', propiedad.direccion)
+        propiedad.rango_min = data.get('rango_min', propiedad.rango_min)
+        propiedad.rango_max = data.get('rango_max', propiedad.rango_max)
+        propiedad.es_usd = data.get('es_usd', propiedad.es_usd)
+        propiedad.ambientes = data.get('ambientes', propiedad.ambientes)
+        propiedad.tipo = data.get('tipo', propiedad.tipo)
+        propiedad.estado = data.get('estado', propiedad.estado)
+        propiedad.propietario_id = data.get('propietario_id', propiedad.propietario_id)
         if 'interesados_ids' in data:
             interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
             propiedad.interesados = interesados
@@ -194,17 +194,17 @@ def update_cliente(id):
     cliente = Cliente.query.get(id)
     if cliente:
         data = request.get_json()
-        cliente.nombre = data['nombre']
-        cliente.apellido = data['apellido']
-        cliente.telefono = data['telefono']
-        cliente.email = data.get('email')
-        cliente.tipo = data['tipo']
-        cliente.rango_min = data.get('rango_min')
-        cliente.rango_max = data.get('rango_max')
-        cliente.es_usd = data.get('es_usd', False)
-        cliente.ambientes = data.get('ambientes')
-        cliente.operacion = data.get('operacion')
-        cliente.descripcion = data.get('descripcion')
+        cliente.nombre = data.get('nombre', cliente.nombre)
+        cliente.apellido = data.get('apellido', cliente.apellido)
+        cliente.telefono = data.get('telefono', cliente.telefono)
+        cliente.email = data.get('email', cliente.email)
+        cliente.tipo = data.get('tipo', cliente.tipo)
+        cliente.rango_min = data.get('rango_min', cliente.rango_min)
+        cliente.rango_max = data.get('rango_max', cliente.rango_max)
+        cliente.es_usd = data.get('es_usd', cliente.es_usd)
+        cliente.ambientes = data.get('ambientes', cliente.ambientes)
+        cliente.operacion = data.get('operacion', cliente.operacion)
+        cliente.descripcion = data.get('descripcion', cliente.descripcion)
         db.session.commit()
         return jsonify({"message": "Cliente actualizado"})
     return jsonify({"message": "Cliente no encontrado"}), 404
