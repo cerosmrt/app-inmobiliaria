@@ -52,9 +52,23 @@ def get_propiedades():
     if tipo:
         query = query.filter(Propiedad.tipo.ilike(f'%{tipo}%'))
     if propietario:
-        query = query.join(Cliente, Propiedad.propietario).filter(Cliente.nombre.ilike(f'%{propietario}%'))
+        # Separar nombre y apellido del parámetro propietario
+        propietario_parts = propietario.split()
+        nombre = propietario_parts[0]
+        apellido = ' '.join(propietario_parts[1:]) if len(propietario_parts) > 1 else ''
+        query = query.join(Cliente, Propiedad.propietario).filter(
+            Cliente.nombre.ilike(f'%{nombre}%'),
+            Cliente.apellido.ilike(f'%{apellido}%') if apellido else True
+        )
     if interesado:
-        query = query.join(Propiedad.interesados).filter(Cliente.nombre.ilike(f'%{interesado}%'))
+        # Similar para interesados
+        interesado_parts = interesado.split()
+        nombre = interesado_parts[0]
+        apellido = ' '.join(interesado_parts[1:]) if len(interesado_parts) > 1 else ''
+        query = query.join(Propiedad.interesados).filter(
+            Cliente.nombre.ilike(f'%{nombre}%'),
+            Cliente.apellido.ilike(f'%{apellido}%') if apellido else True
+        )
     
     propiedades = query.all()
     return jsonify([prop.as_dict() for prop in propiedades])
@@ -114,6 +128,33 @@ def delete_propiedad(id):
         db.session.commit()
         return jsonify({"message": "Propiedad eliminada"})
     return jsonify({"message": "Propiedad no encontrada"}), 404
+
+@app.route('/api/propiedades/<int:id>/upload', methods=['POST'])
+def upload_foto_propiedad(id):
+    propiedad = Propiedad.query.get(id)
+    if not propiedad:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    
+    if 'file' not in request.files:
+        return jsonify({"message": "No se envió archivo"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"message": "Archivo vacío"}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"prop_{id}_{filename}")
+        file.save(filepath)
+        
+        if propiedad.fotos:
+            propiedad.fotos += f",{filepath}"
+        else:
+            propiedad.fotos = filepath
+        db.session.commit()
+        return jsonify(propiedad.as_dict()), 200
+    
+    return jsonify({"message": "Formato no permitido"}), 400
 
 # Rutas API para clientes
 @app.route('/api/clientes', methods=['GET'])

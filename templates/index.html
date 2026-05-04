@@ -9,8 +9,11 @@
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { font-size: 20px; text-align: center; margin-bottom: 10px; }
         .btn-add { font-size: 12px; padding: 4px 8px; background-color: #28a745; color: white; border: none; cursor: pointer; margin-bottom: 5px; }
+        .btn-reset { font-size: 12px; padding: 4px 8px; background-color: #dc3545; color: white; border: none; cursor: pointer; margin-bottom: 5px; }
         .filterbox { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
         .filterbox input, .filterbox select { font-size: 12px; padding: 2px; border: 1px solid #ccc; }
+        .toggle-box { margin-bottom: 10px; display: flex; gap: 20px; }
+        .toggle-box label { font-size: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
         th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
         th { background-color: #e0e0e0; font-weight: bold; }
@@ -21,6 +24,7 @@
         .btn-action { font-size: 10px; padding: 2px 4px; border: none; cursor: pointer; }
         .btn-save { background-color: #28a745; color: white; }
         .btn-cancel { background-color: #dc3545; color: white; }
+        a:visited { color: inherit; }
     </style>
 </head>
 <body>
@@ -28,6 +32,12 @@
         <h1>Gestión Clientes</h1>
         <button class="btn-add" onclick="agregarFilaCliente()">Añadir cliente</button>
         <button class="btn-add" onclick="imprimirTabla()">Imprimir</button>
+        <button class="btn-reset" onclick="resetFiltros()">Clear All Filters</button>
+
+        <div class="toggle-box">
+            <label><input type="checkbox" id="togglePropietarios" onchange="filtrarClientes()"> Propietarios</label>
+            <label><input type="checkbox" id="toggleInteresados" onchange="filtrarClientes()"> Interesados</label>
+        </div>
 
         <div class="filterbox">
             <input type="text" id="filtroTexto" placeholder="Nombre o Apellido" onkeyup="filtrarClientes()">
@@ -67,7 +77,7 @@
             fetch('/api/clientes')
                 .then(response => response.json())
                 .then(data => {
-                    clientes = data;
+                    clientes = data.sort((a, b) => (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido));
                     filtrarClientes();
                 });
         }
@@ -77,12 +87,18 @@
             const texto = document.getElementById('filtroTexto').value.toLowerCase();
             const operacion = document.getElementById('filtroOperacion').value;
             const ambientes = document.getElementById('filtroAmbientes').value;
+            const togglePropietarios = document.getElementById('togglePropietarios').checked;
+            const toggleInteresados = document.getElementById('toggleInteresados').checked;
 
             const clientesFiltrados = clientes.filter(cliente => {
                 const matchTexto = cliente.nombre.toLowerCase().includes(texto) || cliente.apellido.toLowerCase().includes(texto);
                 const matchOperacion = !operacion || cliente.operacion === operacion;
                 const matchAmbientes = !ambientes || cliente.ambientes == ambientes;
-                return matchTexto && matchOperacion && matchAmbientes;
+                const matchTipo = (!togglePropietarios && !toggleInteresados) ||
+                                 (togglePropietarios && !toggleInteresados && cliente.tipo === 'propietario') ||
+                                 (!togglePropietarios && toggleInteresados && cliente.tipo === 'interesado') ||
+                                 (togglePropietarios && toggleInteresados);
+                return matchTexto && matchOperacion && matchAmbientes && matchTipo;
             });
 
             const tbody = document.querySelector('#tablaClientes tbody');
@@ -107,6 +123,16 @@
             });
             agregarEventosEdicionTexto();
             agregarEventosEdicionSelect();
+        }
+
+        // Resetear todos los filtros
+        function resetFiltros() {
+            document.getElementById('togglePropietarios').checked = false;
+            document.getElementById('toggleInteresados').checked = false;
+            document.getElementById('filtroTexto').value = '';
+            document.getElementById('filtroOperacion').value = '';
+            document.getElementById('filtroAmbientes').value = '';
+            filtrarClientes();
         }
 
         // Agregar fila para nuevo cliente

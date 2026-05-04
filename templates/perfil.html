@@ -6,58 +6,186 @@
     <title>Perfil de Cliente</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         h1 { font-size: 24px; }
+        h2 { font-size: 18px; margin-top: 20px; }
         textarea { width: 100%; height: 100px; }
-        .fotos { margin-top: 20px; }
-        .fotos img { max-width: 200px; margin: 5px; }
-        .info { margin-bottom: 20px; }
-        .info p { margin: 5px 0; }
+        .info { margin-bottom: 20px; width: 25%; float: left; }
+        .detalle { margin-left: 30%; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 4px; }
+        th { background-color: #e0e0e0; }
+        .fotos-section { margin-top: 20px; }
+        .propiedad-fotos { margin-bottom: 20px; }
+        .propiedad-fotos h3 { font-size: 16px; margin: 10px 0; }
+        .fotos-container { display: flex; flex-wrap: wrap; gap: 10px; }
+        .foto-preview { cursor: pointer; }
+        .foto-preview img { max-width: 100px; max-height: 100px; object-fit: cover; border: 1px solid #ccc; }
+        .btn-small { font-size: 10px; padding: 2px 4px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
+        .modal-content { position: relative; }
+        .modal img { max-width: 90%; max-height: 80vh; }
+        .modal.active { display: flex; }
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); font-size: 30px; color: white; background: rgba(0,0,0,0.5); border: none; padding: 10px; cursor: pointer; }
+        .prev-btn { left: 20px; }
+        .next-btn { right: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Perfil de Cliente</h1>
         <div class="info" id="cliente-info"></div>
-        <label>Descripción:</label>
-        <textarea id="descripcion"></textarea>
-        <button onclick="guardarDescripcion()">Guardar</button>
-        <div>
-            <input type="file" id="foto" accept=".jpg,.jpeg">
-            <button onclick="subirFoto()">Subir Foto</button>
-        </div>
-        <div class="fotos" id="fotos"></div>
+        <div class="detalle" id="detalle-cliente"></div>
         <a href="/">Volver</a>
+    </div>
+
+    <!-- Modal para el visor de fotos -->
+    <div id="foto-modal" class="modal">
+        <div class="modal-content">
+            <button class="nav-btn prev-btn" onclick="cambiarFoto(-1)">❮</button>
+            <img id="modal-image" src="" alt="Foto en pantalla grande">
+            <button class="nav-btn next-btn" onclick="cambiarFoto(1)">❯</button>
+        </div>
     </div>
 
     <script>
         const clienteId = {{ cliente_id }};
+        let fotosActuales = [];
+        let indiceFotoActual = 0;
 
         function cargarPerfil() {
             fetch(`/api/clientes/${clienteId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Cliente no encontrado');
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('cliente-info').innerHTML = `
                         <p><strong>Nombre:</strong> ${data.nombre} ${data.apellido}</p>
                         <p><strong>Teléfono:</strong> ${data.telefono}</p>
                         <p><strong>Email:</strong> ${data.email || '-'}</p>
                         <p><strong>Tipo:</strong> ${data.tipo}</p>
+                    `;
+
+                    const detalleDiv = document.getElementById('detalle-cliente');
+                    if (data.tipo === 'propietario') {
+                        cargarPropiedadesPropietario(data.nombre + ' ' + data.apellido, detalleDiv);
+                    } else if (data.tipo === 'interesado') {
+                        cargarPropiedadesInteresado(data, detalleDiv);
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('cliente-info').innerHTML = `<p>Error al cargar el perfil: ${error.message}</p>`;
+                });
+        }
+
+        function cargarPropiedadesPropietario(propietario, detalleDiv) {
+            fetch(`/api/propiedades?propietario=${encodeURIComponent(propietario)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar propiedades');
+                    return response.json();
+                })
+                .then(propiedades => {
+                    detalleDiv.innerHTML = `
+                        <h2>Propiedades</h2>
+                        ${propiedades.length > 0 ? `
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Dirección</th>
+                                        <th>Tipo</th>
+                                        <th>Min</th>
+                                        <th>Max</th>
+                                        <th>USD</th>
+                                        <th>Ambientes</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${propiedades.map(prop => `
+                                        <tr>
+                                            <td>${prop.direccion}</td>
+                                            <td>${prop.tipo}</td>
+                                            <td>${prop.rango_min}</td>
+                                            <td>${prop.rango_max}</td>
+                                            <td>${prop.es_usd ? 'Sí' : 'No'}</td>
+                                            <td>${prop.ambientes}</td>
+                                            <td>${prop.estado}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : '<p>No hay propiedades asociadas.</p>'}
+                        <h2>Notas</h2>
+                        <textarea id="descripcion">${propiedades[0]?.propietario_descripcion || ''}</textarea>
+                        <button onclick="guardarDescripcion()">Guardar Notas</button>
+                        <div class="fotos-section">
+                            <h2>Fotos</h2>
+                            ${propiedades.map(prop => `
+                                <div class="propiedad-fotos">
+                                    <h3>${prop.direccion}</h3>
+                                    <input type="file" accept=".jpg,.jpeg" onchange="subirFoto(${prop.id}, this)">
+                                    <div class="fotos-container" data-prop-id="${prop.id}">
+                                        ${prop.fotos.map(f => `
+                                            <div class="foto-preview" onclick="abrirVisor(${prop.id}, '${f}')">
+                                                <img src="/${f}" alt="Foto de ${prop.direccion}" onerror="this.src='/static/placeholder.jpg'">
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    detalleDiv.innerHTML = `<p>Error al cargar propiedades: ${error.message}</p>`;
+                });
+        }
+
+        function cargarPropiedadesInteresado(data, detalleDiv) {
+            fetch(`/api/propiedades?interesado=${encodeURIComponent(data.nombre + ' ' + data.apellido)}`)
+                .then(response => response.json())
+                .then(propiedades => {
+                    detalleDiv.innerHTML = `
+                        <h2>Preferencias</h2>
                         <p><strong>Rango Mínimo:</strong> ${data.rango_min || '-'}</p>
                         <p><strong>Rango Máximo:</strong> ${data.rango_max || '-'}</p>
                         <p><strong>Moneda USD:</strong> ${data.es_usd ? 'Sí' : 'No'}</p>
                         <p><strong>Ambientes:</strong> ${data.ambientes || '-'}</p>
                         <p><strong>Operación:</strong> ${data.operacion || '-'}</p>
+                        <h2>Propiedades de Interés</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Dirección</th>
+                                    <th>Tipo</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                    <th>USD</th>
+                                    <th>Ambientes</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${propiedades.map(prop => `
+                                    <tr>
+                                        <td>${prop.direccion}</td>
+                                        <td>${prop.tipo}</td>
+                                        <td>${prop.rango_min}</td>
+                                        <td>${prop.rango_max}</td>
+                                        <td>${prop.es_usd ? 'Sí' : 'No'}</td>
+                                        <td>${prop.ambientes}</td>
+                                        <td>${prop.estado}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <h2>Notas</h2>
+                        <textarea id="descripcion">${data.descripcion || ''}</textarea>
+                        <button onclick="guardarDescripcion()">Guardar Notas</button>
                     `;
-                    document.getElementById('descripcion').value = data.descripcion || '';
-                    const fotosDiv = document.getElementById('fotos');
-                    fotosDiv.innerHTML = '';
-                    data.fotos.forEach(foto => {
-                        const img = document.createElement('img');
-                        img.src = `/${foto}`;
-                        fotosDiv.appendChild(img);
-                    });
                 })
-                .catch(error => alert('Error al cargar el perfil: ' + error));
+                .catch(error => alert('Error al cargar propiedades de interés: ' + error));
         }
 
         function guardarDescripcion() {
@@ -67,31 +195,56 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ descripcion })
             })
-            .then(() => {
-                alert('Descripción guardada');
-                cargarPerfil();
-            })
+            .then(() => alert('Guardado exitosamente'))
             .catch(error => alert('Error: ' + error));
         }
 
-        function subirFoto() {
-            const fileInput = document.getElementById('foto');
-            if (!fileInput.files[0]) {
-                alert('Seleccioná una foto primero.');
-                return;
-            }
+        function subirFoto(propiedadId, input) {
+            if (!input.files[0]) return;
             const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            fetch(`/api/clientes/${clienteId}/upload`, {
+            formData.append('file', input.files[0]);
+            fetch(`/api/propiedades/${propiedadId}/upload`, {
                 method: 'POST',
                 body: formData
             })
-            .then(() => {
-                cargarPerfil();
-                fileInput.value = '';
-                alert('Foto subida');
+            .then(response => {
+                if (!response.ok) throw new Error('Error al subir la foto');
+                return response.json();
             })
-            .catch(error => alert('Error: ' + error));
+            .then(data => {
+                alert('Foto subida');
+                actualizarFotos(propiedadId, data.fotos); // Actualizar solo las fotos
+            })
+            .catch(error => alert('Error al subir foto: ' + error));
+        }
+
+        function actualizarFotos(propiedadId, fotos) {
+            const fotosContainer = document.querySelector(`.fotos-container[data-prop-id="${propiedadId}"]`);
+            fotosContainer.innerHTML = fotos.map(f => `
+                <div class="foto-preview" onclick="abrirVisor(${propiedadId}, '${f}')">
+                    <img src="/${f}" alt="Foto" onerror="this.src='/static/placeholder.jpg'">
+                </div>
+            `).join('');
+        }
+
+        function abrirVisor(propiedadId, fotoSrc) {
+            const modal = document.getElementById('foto-modal');
+            const modalImage = document.getElementById('modal-image');
+            const fotosContainer = document.querySelector(`.fotos-container[data-prop-id="${propiedadId}"]`);
+            fotosActuales = Array.from(fotosContainer.querySelectorAll('.foto-preview img')).map(img => img.src);
+            indiceFotoActual = fotosActuales.indexOf('/' + fotoSrc); // Ajustamos la ruta
+            modalImage.src = fotosActuales[indiceFotoActual];
+            modal.classList.add('active');
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.classList.remove('active');
+            };
+        }
+
+        function cambiarFoto(direccion) {
+            indiceFotoActual += direccion;
+            if (indiceFotoActual < 0) indiceFotoActual = fotosActuales.length - 1;
+            if (indiceFotoActual >= fotosActuales.length) indiceFotoActual = 0;
+            document.getElementById('modal-image').src = fotosActuales[indiceFotoActual];
         }
 
         document.addEventListener('DOMContentLoaded', cargarPerfil);
