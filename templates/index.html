@@ -134,6 +134,7 @@
                         <th>Amb</th>
                         <th>Propietario</th>
                         <th>Interesados</th>
+                        <th>Fecha estado</th>
                         <th class="no-print">Acciones</th>
                     </tr>
                 </thead>
@@ -403,6 +404,7 @@
                     <td class="editable-text" data-field="ambientes" data-id="${p.id}">${p.ambientes || ''}</td>
                     <td>${p.propietario || '-'}</td>
                     <td>${p.interesados.join(', ') || '-'}</td>
+                    <td>${p.fecha_estado || '-'}</td>
                     <td class="no-print">
                         <button class="btn-action btn-match" onclick="verMatches(${p.id}, '${p.direccion.replace(/'/g, "\\'")}')">⚡</button>
                         <button class="btn-action btn-cancel" onclick="eliminarPropiedad(${p.id})">X</button>

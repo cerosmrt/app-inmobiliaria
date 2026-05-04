@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -19,7 +20,8 @@ class Propiedad(db.Model):
     ambientes = db.Column(db.Integer, nullable=True)
     tipo = db.Column(db.String)
     estado = db.Column(db.String)
-    fotos = db.Column(db.String, nullable=True)  # Nuevo campo para fotos
+    fotos = db.Column(db.String, nullable=True)
+    fecha_estado = db.Column(db.DateTime, nullable=True)
     propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
     propietario = db.relationship('Cliente', backref='propiedades', foreign_keys=[propietario_id])
     interesados = db.relationship('Cliente', secondary=interesados_propiedades, backref='intereses')
@@ -35,6 +37,7 @@ class Propiedad(db.Model):
             'tipo': self.tipo,
             'estado': self.estado,
             'fotos': self.fotos.split(',') if self.fotos else [],
+            'fecha_estado': self.fecha_estado.strftime('%d/%m/%Y') if self.fecha_estado else None,
             'propietario': self.propietario.nombre + ' ' + self.propietario.apellido if self.propietario else None,
             'interesados': [c.nombre + ' ' + c.apellido for c in self.interesados]
         }

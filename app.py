@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_migrate import Migrate
 from models import db, Propiedad, Cliente
 import os
+from datetime import datetime
 from werkzeug.utils import secure_filename
 
 # Inicializa la aplicación Flask
@@ -111,7 +112,10 @@ def update_propiedad(id):
         propiedad.es_usd = data.get('es_usd', propiedad.es_usd)
         propiedad.ambientes = data.get('ambientes', propiedad.ambientes)
         propiedad.tipo = data.get('tipo', propiedad.tipo)
-        propiedad.estado = data.get('estado', propiedad.estado)
+        nuevo_estado = data.get('estado', propiedad.estado)
+        if nuevo_estado != propiedad.estado:
+            propiedad.fecha_estado = datetime.utcnow()
+        propiedad.estado = nuevo_estado
         propiedad.propietario_id = data.get('propietario_id', propiedad.propietario_id)
         if 'interesados_ids' in data:
             interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
