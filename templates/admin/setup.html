@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración inicial — Moret Inmobiliaria</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .brand { text-align: center; margin-bottom: 24px; }
+        .brand .moret { font-size: 32px; font-weight: 800; color: #C41230; }
+        .brand .sub { font-size: 11px; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+        h2 { font-size: 16px; color: #333; margin-bottom: 6px; text-align: center; }
+        p { font-size: 13px; color: #666; text-align: center; margin-bottom: 24px; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input {
+            width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
+            border-radius: 7px; font-size: 14px; color: #333;
+            outline: none; margin-bottom: 16px;
+        }
+        input:focus { border-color: #C41230; }
+        .btn { width: 100%; padding: 12px; background: #C41230; color: white; border: none; border-radius: 7px; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .btn:hover { background: #a50e28; }
+        .error { background: #fee2e2; color: #b91c1c; border-radius: 6px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="brand">
+        <div class="moret">Moret</div>
+        <div class="sub">Inmobiliaria — Configuración inicial</div>
+    </div>
+    <h2>Crear cuenta de administrador</h2>
+    <p>Este formulario solo está disponible si no hay administradores registrados.</p>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="POST">
+        <label>Usuario</label>
+        <input type="text" name="username" placeholder="Ej: roberto" autofocus required>
+        <label>Contraseña</label>
+        <input type="password" name="password" placeholder="Contraseña segura" required>
+        <button type="submit" class="btn">Crear cuenta</button>
+    </form>
+</div>
+</body>
+</html>

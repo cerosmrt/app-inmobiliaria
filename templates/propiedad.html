@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propiedad — Moret Inmobiliaria</title>
+    <style>
+        :root {
+            --red: #C41230;
+            --red-dark: #9e0d24;
+            --dark: #1a1a1a;
+            --border: #e5e5e5;
+            --text: #1a1a1a;
+            --muted: #666;
+            --bg: #f8f8f8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); background: var(--bg); }
+        a { text-decoration: none; color: inherit; }
+
+        /* ── HEADER ── */
+        .header {
+            background: white; border-bottom: 2px solid var(--red);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .header-inner {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 64px;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo img { height: 42px; width: auto; object-fit: contain; }
+        .logo-text .roberto { font-size: 9px; letter-spacing: 3px; color: #888; text-transform: uppercase; }
+        .logo-text .moret { font-size: 24px; font-weight: 900; color: var(--red); letter-spacing: -1px; line-height: 1; }
+        .logo-text .inmobiliaria { font-size: 9px; letter-spacing: 3px; color: #555; text-transform: uppercase; }
+        .back-btn {
+            display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+            color: #555; background: var(--bg); padding: 7px 14px; border-radius: 6px;
+            border: 1px solid var(--border); transition: all 0.15s;
+        }
+        .back-btn:hover { background: white; color: var(--red); border-color: var(--red); }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+
+        /* ── BREADCRUMB ── */
+        .breadcrumb { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+        .breadcrumb a { color: var(--red); }
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        /* ── LAYOUT ── */
+        .layout { display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-items: start; }
+
+        /* ── GALLERY ── */
+        .gallery { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .gallery-main {
+            position: relative; aspect-ratio: 16/9; background: #f0f0f0;
+            cursor: pointer; overflow: hidden;
+        }
+        .gallery-main img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .gallery-main:hover img { transform: scale(1.02); }
+        .gallery-main .no-photo {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 10px; color: #bbb;
+        }
+        .gallery-main .no-photo span:first-child { font-size: 52px; }
+        .gallery-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 100%; display: flex; justify-content: space-between; padding: 0 10px;
+            pointer-events: none;
+        }
+        .nav-btn {
+            pointer-events: all; background: rgba(0,0,0,0.5); color: white;
+            border: none; width: 36px; height: 36px; border-radius: 50%;
+            font-size: 16px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: background 0.15s;
+        }
+        .nav-btn:hover { background: rgba(0,0,0,0.8); }
+        .gallery-count {
+            position: absolute; bottom: 10px; right: 10px;
+            background: rgba(0,0,0,0.6); color: white;
+            font-size: 11px; padding: 3px 10px; border-radius: 20px;
+        }
+        .gallery-thumbs {
+            display: flex; gap: 6px; padding: 10px;
+            overflow-x: auto; background: #fafafa; border-top: 1px solid var(--border);
+        }
+        .gallery-thumbs::-webkit-scrollbar { height: 4px; }
+        .gallery-thumbs::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+        .thumb {
+            flex-shrink: 0; width: 72px; height: 54px; border-radius: 5px;
+            overflow: hidden; cursor: pointer; border: 2px solid transparent;
+            transition: border-color 0.15s;
+        }
+        .thumb.active { border-color: var(--red); }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ── DETAILS PANEL ── */
+        .details { display: flex; flex-direction: column; gap: 20px; }
+        .detail-card {
+            background: white; border-radius: 12px; padding: 22px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+
+        .prop-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .badge {
+            font-size: 11px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.5px; padding: 4px 12px; border-radius: 4px;
+        }
+        .badge-venta    { background: var(--red); color: white; }
+        .badge-alquiler { background: var(--dark); color: white; }
+        .badge-disponible { background: #dcfce7; color: #15803d; }
+        .badge-vendida    { background: #fee2e2; color: #b91c1c; }
+        .badge-rentada    { background: #fff7ed; color: #c2410c; }
+        .badge-tipo       { background: #f1f5f9; color: #475569; }
+
+        .prop-price { font-size: 32px; font-weight: 900; color: var(--red); margin-bottom: 6px; line-height: 1; }
+        .prop-price .currency { font-size: 18px; font-weight: 600; color: #999; margin-right: 4px; }
+        .prop-price .consultar { font-size: 22px; color: #555; }
+        .prop-address { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--dark); }
+        .prop-barrio { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+
+        .prop-specs {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+        }
+        .spec-item {
+            background: var(--bg); border-radius: 8px; padding: 12px 14px;
+        }
+        .spec-item .spec-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+        .spec-item .spec-value { font-size: 16px; font-weight: 700; color: var(--dark); }
+
+        .prop-desc { font-size: 14px; line-height: 1.7; color: #444; white-space: pre-wrap; }
+
+        /* ── CONTACT CARD ── */
+        .contact-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: var(--dark); }
+        .contact-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .btn-wa {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #25d366; color: white; font-weight: 700; font-size: 14px;
+            padding: 12px; border-radius: 8px; transition: background 0.2s;
+        }
+        .btn-wa:hover { background: #1da851; }
+        .btn-tel {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #f1f5f9; color: var(--dark); font-weight: 700; font-size: 14px;
+            padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .btn-tel:hover { background: var(--dark); color: white; }
+
+        .divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; color: var(--muted); font-size: 12px; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        /* ── CONTACT FORM ── */
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
+        .form-group input,
+        .form-group textarea {
+            width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+            border-radius: 7px; font-size: 13px; color: var(--text);
+            font-family: inherit; outline: none; transition: border-color 0.15s;
+            background: white;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus { border-color: var(--red); }
+        .form-group textarea { resize: vertical; min-height: 90px; }
+        .btn-enviar {
+            width: 100%; padding: 12px; background: var(--red); color: white;
+            border: none; border-radius: 7px; font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .btn-enviar:hover { background: var(--red-dark); }
+        .btn-enviar:disabled { background: #aaa; cursor: not-allowed; }
+        .form-success {
+            background: #dcfce7; color: #15803d; border-radius: 7px;
+            padding: 12px 14px; font-size: 13px; font-weight: 600;
+            text-align: center; display: none;
+        }
+        .form-error {
+            background: #fee2e2; color: #b91c1c; border-radius: 7px;
+            padding: 10px 14px; font-size: 12px; margin-bottom: 10px; display: none;
+        }
+
+        /* ── LIGHTBOX ── */
+        .lightbox {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            z-index: 200; align-items: center; justify-content: center;
+        }
+        .lightbox.active { display: flex; }
+        .lb-img { max-width: 90vw; max-height: 88vh; border-radius: 4px; display: block; }
+        .lb-close {
+            position: absolute; top: 16px; right: 20px; background: none; border: none;
+            color: white; font-size: 28px; cursor: pointer; line-height: 1;
+        }
+        .lb-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 100%; display: flex; justify-content: space-between; padding: 0 14px;
+        }
+        .lb-btn {
+            background: rgba(255,255,255,0.15); color: white; border: none;
+            width: 44px; height: 44px; border-radius: 50%; font-size: 18px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .lb-btn:hover { background: rgba(255,255,255,0.3); }
+
+        @media (max-width: 768px) {
+            .layout { grid-template-columns: 1fr; }
+            .details { order: -1; }
+            .prop-specs { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-inner">
+        <a href="/" class="logo">
+            <img src="/static/logo.png" alt="Moret Inmobiliaria" onerror="this.style.display='none'">
+            <div class="logo-text">
+                <div class="roberto">Roberto</div>
+                <div class="moret">Moret</div>
+                <div class="inmobiliaria">Inmobiliaria</div>
+            </div>
+        </a>
+        <a href="/" class="back-btn">← Volver a propiedades</a>
+    </div>
+</header>
+
+<div class="container">
+    <div class="breadcrumb">
+        <a href="/">Inicio</a> / <a href="/">Propiedades</a> / <span id="bc-dir">Cargando...</span>
+    </div>
+
+    <div class="layout" id="layout">
+        <div style="text-align:center;padding:60px;color:#aaa">Cargando propiedad...</div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox">
+    <button class="lb-close" onclick="closeLightbox()">✕</button>
+    <div class="lb-nav">
+        <button class="lb-btn" onclick="lbNav(-1)">❮</button>
+        <button class="lb-btn" onclick="lbNav(1)">❯</button>
+    </div>
+    <img id="lb-img" class="lb-img" src="" alt="">
+</div>
+
+<script>
+    const propiedadId = {{ propiedad_id }};
+    let fotos = [];
+    let fotoActual = 0;
+
+    function waLink(phone) {
+        const d = String(phone).replace(/\D/g, '');
+        const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
+        return `https://wa.me/${intl}`;
+    }
+
+    const TELEFONO = '+54 9 11 1234-5678';
+    const WA_NUM   = '5491112345678';
+    const EMAIL    = 'info@moretinmobiliaria.com';
+
+    function formatPrecio(p) {
+        if (p.precio_a_consultar) return `<span class="consultar">A consultar</span>`;
+        if (!p.rango_min) return `<span class="consultar">A consultar</span>`;
+        let str = `<span class="currency">USD</span>${p.rango_min.toLocaleString('es-AR')}`;
+        if (p.rango_max && p.rango_max !== p.rango_min)
+            str += ` <span style="font-size:16px;color:#999">– ${p.rango_max.toLocaleString('es-AR')}</span>`;
+        return str;
+    }
+
+    function cargar() {
+        fetch(`/api/public/propiedades/${propiedadId}`)
+            .then(r => {
+                if (!r.ok) throw new Error('No encontrada');
+                return r.json();
+            })
+            .then(p => renderPropiedad(p))
+            .catch(err => {
+                document.getElementById('layout').innerHTML = `
+                    <div style="text-align:center;padding:60px;color:#888">
+                        <div style="font-size:40px;margin-bottom:12px">🏠</div>
+                        <h2 style="margin-bottom:8px">Propiedad no encontrada</h2>
+                        <p>Es posible que ya no esté disponible. <a href="/" style="color:var(--red)">Ver otras propiedades</a></p>
+                    </div>`;
+            });
+    }
+
+    function renderPropiedad(p) {
+        fotos = p.fotos || [];
+        fotoActual = 0;
+
+        document.title = `${p.direccion} — Moret Inmobiliaria`;
+        document.getElementById('bc-dir').textContent = p.direccion;
+
+        const gal = renderGallery();
+        const msgDefecto = `Hola, me interesa la propiedad en ${p.direccion}${p.barrio ? ' (' + p.barrio + ')' : ''}.`;
+
+        document.getElementById('layout').innerHTML = `
+        <div>
+            ${gal}
+            ${p.descripcion ? `
+            <div class="detail-card" style="margin-top:20px">
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--dark)">Descripción</h3>
+                <p class="prop-desc">${escHtml(p.descripcion)}</p>
+            </div>` : ''}
+        </div>
+        <div class="details">
+            <div class="detail-card">
+                <div class="prop-badges">
+                    ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
+                    ${p.tipo ? `<span class="badge badge-tipo">${p.tipo}</span>` : ''}
+                    ${p.estado ? `<span class="badge badge-${p.estado}">${p.estado}</span>` : ''}
+                </div>
+                <div class="prop-price">${formatPrecio(p)}</div>
+                <div class="prop-address">${p.direccion}</div>
+                ${p.barrio ? `<div class="prop-barrio">📍 ${p.barrio}</div>` : ''}
+                <div class="prop-specs">
+                    ${p.ambientes ? `<div class="spec-item"><div class="spec-label">Ambientes</div><div class="spec-value">🛏 ${p.ambientes}</div></div>` : ''}
+                    ${p.tipo ? `<div class="spec-item"><div class="spec-label">Tipo</div><div class="spec-value">🏠 ${capitalizar(p.tipo)}</div></div>` : ''}
+                    ${p.operacion ? `<div class="spec-item"><div class="spec-label">Operación</div><div class="spec-value">${capitalizar(p.operacion)}</div></div>` : ''}
+                    ${p.barrio ? `<div class="spec-item"><div class="spec-label">Barrio</div><div class="spec-value">📍 ${p.barrio}</div></div>` : ''}
+                </div>
+            </div>
+
+            <div class="detail-card contact-card">
+                <h3>¿Te interesa esta propiedad?</h3>
+                <div class="contact-btns">
+                    <a href="https://wa.me/${WA_NUM}?text=${encodeURIComponent(msgDefecto)}" target="_blank" class="btn-wa">
+                        💬 Consultar por WhatsApp
+                    </a>
+                    <a href="tel:${TELEFONO.replace(/\s/g,'')}" class="btn-tel">
+                        📞 ${TELEFONO}
+                    </a>
+                </div>
+                <div class="divider">o enviá un mensaje</div>
+                <form id="form-consulta" onsubmit="enviarConsulta(event, ${p.id})">
+                    <div class="form-error" id="form-error"></div>
+                    <div class="form-group">
+                        <label>Tu nombre *</label>
+                        <input type="text" name="nombre" placeholder="Juan García" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" name="telefono" placeholder="+54 9 11 xxxx-xxxx">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Mensaje *</label>
+                        <textarea name="mensaje" required>${escHtml(msgDefecto)}</textarea>
+                    </div>
+                    <button type="submit" class="btn-enviar" id="btn-enviar">Enviar consulta</button>
+                    <div class="form-success" id="form-success">
+                        ✓ ¡Mensaje enviado! Nos comunicaremos a la brevedad.
+                    </div>
+                </form>
+            </div>
+        </div>`;
+
+        bindGalleryEvents();
+    }
+
+    function renderGallery() {
+        if (fotos.length === 0) {
+            return `<div class="gallery">
+                <div class="gallery-main"><div class="no-photo"><span>🏠</span><span style="font-size:14px;color:#bbb">Sin fotos disponibles</span></div></div>
+            </div>`;
+        }
+        const mainImg = `<img id="main-img" src="/${fotos[0]}" alt="Foto principal" onclick="openLightbox(0)"
+            onerror="this.parentElement.innerHTML='<div class=no-photo><span>🏠</span></div>'">`;
+        const thumbs = fotos.map((f, i) =>
+            `<div class="thumb ${i === 0 ? 'active' : ''}" data-idx="${i}" onclick="setFoto(${i})">
+                <img src="/${f}" alt="Foto ${i+1}" onerror="this.parentElement.style.display='none'">
+            </div>`).join('');
+        return `
+        <div class="gallery">
+            <div class="gallery-main">
+                ${mainImg}
+                ${fotos.length > 1 ? `<div class="gallery-nav">
+                    <button class="nav-btn" onclick="setFoto(fotoActual - 1)">❮</button>
+                    <button class="nav-btn" onclick="setFoto(fotoActual + 1)">❯</button>
+                </div>` : ''}
+                <div class="gallery-count" id="gallery-count">1 / ${fotos.length}</div>
+            </div>
+            ${fotos.length > 1 ? `<div class="gallery-thumbs">${thumbs}</div>` : ''}
+        </div>`;
+    }
+
+    function bindGalleryEvents() {}
+
+    function setFoto(idx) {
+        if (fotos.length === 0) return;
+        fotoActual = ((idx % fotos.length) + fotos.length) % fotos.length;
+        const img = document.getElementById('main-img');
+        if (img) img.src = '/' + fotos[fotoActual];
+        document.querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('active', i === fotoActual));
+        const cnt = document.getElementById('gallery-count');
+        if (cnt) cnt.textContent = `${fotoActual + 1} / ${fotos.length}`;
+    }
+
+    function openLightbox(idx) {
+        fotoActual = idx;
+        document.getElementById('lb-img').src = '/' + fotos[fotoActual];
+        document.getElementById('lightbox').classList.add('active');
+    }
+
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+
+    function lbNav(dir) {
+        fotoActual = ((fotoActual + dir + fotos.length) % fotos.length);
+        document.getElementById('lb-img').src = '/' + fotos[fotoActual];
+        setFoto(fotoActual);
+    }
+
+    document.getElementById('lightbox').addEventListener('click', function(e) {
+        if (e.target === this) closeLightbox();
+    });
+    document.addEventListener('keydown', e => {
+        if (document.getElementById('lightbox').classList.contains('active')) {
+            if (e.key === 'ArrowLeft') lbNav(-1);
+            if (e.key === 'ArrowRight') lbNav(1);
+            if (e.key === 'Escape') closeLightbox();
+        }
+    });
+
+    function enviarConsulta(event, propId) {
+        event.preventDefault();
+        const form = document.getElementById('form-consulta');
+        const btn = document.getElementById('btn-enviar');
+        const errDiv = document.getElementById('form-error');
+        const okDiv  = document.getElementById('form-success');
+        const data = {
+            nombre:       form.nombre.value.trim(),
+            telefono:     form.telefono.value.trim(),
+            email:        form.email.value.trim(),
+            mensaje:      form.mensaje.value.trim(),
+            propiedad_id: propId
+        };
+        if (!data.nombre || !data.mensaje) {
+            errDiv.textContent = 'Completá tu nombre y el mensaje.';
+            errDiv.style.display = 'block';
+            return;
+        }
+        errDiv.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+        fetch('/api/public/consultas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => {
+            if (!r.ok) throw new Error();
+            form.style.display = 'none';
+            okDiv.style.display = 'block';
+        }).catch(() => {
+            errDiv.textContent = 'Error al enviar. Intentá de nuevo o contactanos por WhatsApp.';
+            errDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Enviar consulta';
+        });
+    }
+
+    function capitalizar(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
+    function escHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    document.addEventListener('DOMContentLoaded', cargar);
+</script>
+</body>
+</html>

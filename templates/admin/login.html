@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso — Moret Inmobiliaria</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            padding: 40px;
+            width: 100%;
+            max-width: 380px;
+        }
+        .brand {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .brand .roberto { font-size: 11px; letter-spacing: 3px; color: #888; text-transform: uppercase; }
+        .brand .moret { font-size: 36px; font-weight: 800; color: #C41230; letter-spacing: -1px; line-height: 1; }
+        .brand .inmobiliaria { font-size: 11px; letter-spacing: 3px; color: #555; text-transform: uppercase; margin-top: 2px; }
+        .brand .divider { width: 40px; height: 3px; background: #C41230; margin: 14px auto 0; border-radius: 2px; }
+        h2 { font-size: 15px; color: #333; margin-bottom: 20px; text-align: center; font-weight: 500; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
+            border-radius: 7px; font-size: 14px; color: #333;
+            outline: none; transition: border-color 0.2s;
+            margin-bottom: 16px;
+        }
+        input:focus { border-color: #C41230; }
+        .btn-login {
+            width: 100%; padding: 12px; background: #C41230; color: white;
+            border: none; border-radius: 7px; font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .btn-login:hover { background: #a50e28; }
+        .error {
+            background: #fee2e2; color: #b91c1c; border-radius: 6px;
+            padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
+        }
+        .setup-link { text-align: center; margin-top: 16px; font-size: 12px; color: #999; }
+        .setup-link a { color: #C41230; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="brand">
+        <div class="roberto">Roberto</div>
+        <div class="moret">Moret</div>
+        <div class="inmobiliaria">Inmobiliaria</div>
+        <div class="divider"></div>
+    </div>
+    <h2>Acceso de administrador</h2>
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+        <label>Usuario</label>
+        <input type="text" name="username" autocomplete="username" autofocus required>
+        <label>Contraseña</label>
+        <input type="password" name="password" autocomplete="current-password" required>
+        <button type="submit" class="btn-login">Ingresar</button>
+    </form>
+    <div class="setup-link">
+        ¿Primera vez? <a href="/admin/setup">Crear cuenta de admin</a>
+    </div>
+</div>
+</body>
+</html>

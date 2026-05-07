@@ -3,733 +3,455 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inmobiliaria</title>
+    <title>Roberto Moret Inmobiliaria — Propiedades en venta y alquiler</title>
     <style>
         :root {
-            --navy: #1e3a5f;
-            --blue: #2563eb;
-            --bg: #f1f5f9;
-            --border: #e2e8f0;
-            --text: #1e293b;
-            --muted: #64748b;
+            --red: #C41230;
+            --red-dark: #9e0d24;
+            --dark: #1a1a1a;
+            --gray: #f5f5f5;
+            --border: #e5e5e5;
+            --text: #1a1a1a;
+            --muted: #666;
         }
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); background: white; }
+        a { text-decoration: none; color: inherit; }
 
-        /* ── Header ── */
-        .app-header {
-            background: var(--navy); color: white;
-            padding: 12px 24px; display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        /* ── HEADER ── */
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            background: white; border-bottom: 2px solid var(--red);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
         }
-        .app-header .icon { font-size: 26px; }
-        .app-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
-        .app-header .sub { font-size: 11px; opacity: 0.6; display: block; margin-top: 1px; }
+        .header-inner {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 68px;
+        }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo img { height: 46px; width: auto; object-fit: contain; }
+        .logo-text { line-height: 1; }
+        .logo-roberto { display: block; font-size: 9px; letter-spacing: 3px; color: #888; text-transform: uppercase; }
+        .logo-moret { display: block; font-size: 26px; font-weight: 900; color: var(--red); letter-spacing: -1px; }
+        .logo-inmobiliaria { display: block; font-size: 9px; letter-spacing: 3px; color: #555; text-transform: uppercase; margin-top: 1px; }
+        .header-nav { display: flex; align-items: center; gap: 6px; }
+        .header-nav a {
+            font-size: 13px; font-weight: 600; padding: 7px 14px;
+            border-radius: 5px; color: #444; transition: color 0.15s, background 0.15s;
+        }
+        .header-nav a:hover { color: var(--red); background: #fff0f2; }
+        .btn-contacto {
+            background: var(--red); color: white !important;
+            border-radius: 5px; padding: 8px 18px !important; font-size: 13px !important;
+            font-weight: 700 !important; transition: background 0.2s !important;
+        }
+        .btn-contacto:hover { background: var(--red-dark) !important; }
 
-        .container { max-width: 1500px; margin: 0 auto; padding: 20px; }
+        /* ── HERO ── */
+        .hero {
+            background: var(--dark);
+            padding: 70px 24px 60px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #2a0a12 0%, #1a1a1a 60%, #0d0d0d 100%);
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
+        .hero-badge {
+            display: inline-block; background: var(--red); color: white;
+            font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+            padding: 5px 16px; border-radius: 3px; margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-size: clamp(28px, 5vw, 46px); font-weight: 900;
+            color: white; line-height: 1.1; margin-bottom: 14px;
+        }
+        .hero h1 span { color: var(--red); }
+        .hero p { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 32px; line-height: 1.5; }
+        .hero-cta {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--red); color: white; font-weight: 700; font-size: 15px;
+            padding: 13px 28px; border-radius: 6px; transition: background 0.2s;
+        }
+        .hero-cta:hover { background: var(--red-dark); }
 
-        /* ── Tabs ── */
-        .tab-nav { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 18px; }
-        .tab-btn {
-            font-size: 14px; padding: 10px 28px; border: none; background: none;
-            cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent;
-            margin-bottom: -2px; font-weight: 500; transition: color 0.15s;
+        /* ── SEARCH BAR ── */
+        .search-section {
+            background: white; border-bottom: 1px solid var(--border);
+            position: sticky; top: 68px; z-index: 90;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
-        .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
-        .tab-btn:hover:not(.active) { color: var(--text); }
+        .search-inner {
+            max-width: 1200px; margin: 0 auto; padding: 14px 24px;
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .search-inner select,
+        .search-inner input {
+            font-size: 13px; padding: 8px 12px; border: 1.5px solid var(--border);
+            border-radius: 6px; color: var(--text); outline: none;
+            background: white; transition: border-color 0.15s;
+        }
+        .search-inner select:focus,
+        .search-inner input:focus { border-color: var(--red); }
+        .search-inner input[type="text"] { min-width: 180px; }
+        .btn-buscar {
+            background: var(--red); color: white; border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 700; padding: 8px 20px;
+            cursor: pointer; transition: background 0.2s; white-space: nowrap;
+        }
+        .btn-buscar:hover { background: var(--red-dark); }
+        .btn-limpiar {
+            background: none; border: 1.5px solid var(--border); color: var(--muted);
+            border-radius: 6px; font-size: 13px; padding: 8px 14px; cursor: pointer;
+            transition: border-color 0.15s; white-space: nowrap;
+        }
+        .btn-limpiar:hover { border-color: #999; color: var(--text); }
+        .results-count { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
 
-        /* ── Toolbar ── */
-        .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-        .btn {
-            font-size: 13px; padding: 7px 16px; border: none; border-radius: 6px;
-            cursor: pointer; font-weight: 600; transition: opacity 0.15s, transform 0.1s;
+        /* ── LISTINGS ── */
+        .listings { max-width: 1200px; margin: 0 auto; padding: 32px 24px 60px; }
+        .listings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
         }
-        .btn:hover { opacity: 0.88; transform: translateY(-1px); }
-        .btn:active { transform: translateY(0); }
-        .btn-green  { background: #16a34a; color: white; }
-        .btn-blue   { background: #2563eb; color: white; }
-        .btn-print  { background: #0369a1; color: white; }
-        .btn-gray   { background: #94a3b8; color: white; }
-
-        /* ── Filter bar ── */
-        .filterbox {
-            background: white; padding: 10px 16px; border-radius: 8px;
-            border: 1px solid var(--border); margin-bottom: 14px;
-            display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        .prop-card {
+            background: white; border-radius: 10px; overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column;
         }
-        .filterbox input[type="text"],
-        .filterbox input[type="number"],
-        .filterbox select {
-            font-size: 13px; padding: 5px 9px; border: 1px solid var(--border);
-            border-radius: 5px; width: auto; color: var(--text);
+        .prop-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .card-photo {
+            position: relative; aspect-ratio: 4/3; background: #f0f0f0;
+            overflow: hidden;
         }
-        .filterbox input:focus, .filterbox select:focus { outline: 2px solid var(--blue); }
-        .filterbox label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; cursor: pointer; }
-        .filterbox .sep { width: 1px; height: 22px; background: var(--border); }
-
-        /* ── Table ── */
-        .table-wrap {
-            border-radius: 10px; overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;
+        .card-photo img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.4s;
         }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
-        thead th {
-            background: #334155; color: white; padding: 10px 11px;
-            text-align: left; font-weight: 600; font-size: 11px;
-            letter-spacing: 0.5px; text-transform: uppercase;
-            position: sticky; top: 0; z-index: 5; white-space: nowrap;
+        .prop-card:hover .card-photo img { transform: scale(1.04); }
+        .card-photo .no-photo {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 8px;
+            color: #bbb; font-size: 13px;
         }
-        thead th.sortable { cursor: pointer; }
-        thead th.sortable:hover { background: #475569; }
-        thead th.sorted { background: #1d4ed8; }
-        .sort-icon { font-size: 10px; margin-left: 2px; opacity: 0.9; }
-        td { padding: 8px 11px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
-        tbody tr:nth-child(even) td { background: #f8fafc; }
-        tbody tr:hover td { background: #dbeafe !important; transition: background 0.1s; }
-        tbody tr.new-row td { background: #dcfce7 !important; }
-
-        /* editable cell hint */
-        .editable-text:not(:has(input)):hover,
-        .editable-select:not(:has(select)):hover,
-        .editable-select-prop:not(:has(select)):hover {
-            background: #fef9c3 !important; cursor: text;
+        .card-photo .no-photo span { font-size: 36px; }
+        .card-badges {
+            position: absolute; top: 10px; left: 10px;
+            display: flex; gap: 5px; flex-wrap: wrap;
         }
-
-        /* ── Badges ── */
         .badge {
-            display: inline-block; padding: 3px 11px; border-radius: 20px;
-            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+            font-size: 10px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.5px; padding: 3px 10px; border-radius: 3px;
         }
-        .badge-disponible { background: #dcfce7; color: #15803d; }
-        .badge-vendida    { background: #fee2e2; color: #b91c1c; }
-        .badge-rentada    { background: #fff7ed; color: #c2410c; }
-        .badge-propietario { background: #e0f2fe; color: #0369a1; }
-        .badge-interesado  { background: #f3e8ff; color: #7c3aed; }
+        .badge-venta    { background: var(--red); color: white; }
+        .badge-alquiler { background: #1a1a1a; color: white; }
+        .badge-tipo     { background: rgba(255,255,255,0.9); color: #333; }
+        .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .card-price {
+            font-size: 22px; font-weight: 900; color: var(--red); margin-bottom: 4px;
+        }
+        .card-price .currency { font-size: 14px; font-weight: 600; color: #888; margin-right: 3px; }
+        .card-price .consultar { font-size: 16px; font-weight: 700; color: #555; }
+        .card-address {
+            font-size: 14px; font-weight: 600; color: var(--dark);
+            margin-bottom: 4px; line-height: 1.3;
+        }
+        .card-barrio { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+        .card-details {
+            display: flex; gap: 14px; font-size: 12px; color: #555;
+            padding: 10px 0; border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+        .card-detail { display: flex; align-items: center; gap: 4px; }
+        .card-detail .icon { font-size: 14px; }
+        .card-footer { padding: 0 16px 16px; }
+        .btn-ver {
+            display: block; text-align: center; width: 100%;
+            background: var(--dark); color: white; font-weight: 700; font-size: 13px;
+            padding: 10px; border-radius: 6px; transition: background 0.2s;
+        }
+        .btn-ver:hover { background: var(--red); }
 
-        /* ── Action buttons ── */
-        .btn-action {
-            font-size: 11px; padding: 4px 8px; border: none;
-            border-radius: 4px; cursor: pointer; font-weight: 600; margin: 1px;
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: var(--muted);
+            grid-column: 1 / -1;
         }
-        .btn-save   { background: #16a34a; color: white; }
-        .btn-cancel { background: #dc2626; color: white; }
-        .btn-match  { background: #2563eb; color: white; }
-        .btn-note   { background: #d97706; color: white; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; display: block; }
+        .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
 
-        /* ── Links ── */
-        a { color: #1d4ed8; text-decoration: none; }
-        a:visited { color: #1d4ed8; }
-        a:hover { text-decoration: underline; }
-        .wa-link { color: #16a34a !important; font-size: 15px; text-decoration: none !important; }
-        .wa-link:hover { opacity: 0.75; }
+        /* ── CONTACT SECTION ── */
+        .contact-section {
+            background: var(--dark); color: white;
+            padding: 60px 24px;
+        }
+        .contact-inner { max-width: 800px; margin: 0 auto; text-align: center; }
+        .contact-inner .label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
+        .contact-inner h2 { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
+        .contact-inner h2 span { color: var(--red); }
+        .contact-inner p { font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 36px; }
+        .contact-cards {
+            display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+        }
+        .contact-card {
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 20px 28px; min-width: 180px;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .contact-card:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); }
+        .contact-card .c-icon { font-size: 26px; margin-bottom: 8px; }
+        .contact-card .c-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.45); margin-bottom: 6px; }
+        .contact-card .c-value { font-size: 15px; font-weight: 600; color: white; }
+        .contact-card.wa { border-color: rgba(37,211,102,0.3); background: rgba(37,211,102,0.07); }
+        .contact-card.wa:hover { background: rgba(37,211,102,0.15); }
+        .contact-card.wa .c-value { color: #4ade80; }
 
-        /* ── Inputs inside table cells ── */
-        td input[type="text"], td input[type="number"], td select {
-            font-size: 12px; padding: 3px 6px; border: 1px solid var(--border);
-            border-radius: 3px; width: 100%;
+        /* ── FOOTER ── */
+        footer {
+            background: #111; color: rgba(255,255,255,0.45);
+            padding: 24px; text-align: center; font-size: 12px;
         }
+        footer .footer-brand { font-size: 18px; font-weight: 800; color: var(--red); margin-bottom: 6px; }
 
-        /* ── Modals ── */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(15,23,42,0.55); z-index: 100;
-            justify-content: center; align-items: center;
+        /* ── LOADING ── */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 4px;
         }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            background: white; padding: 24px; max-width: 760px; width: 92%;
-            max-height: 84vh; overflow-y: auto; border-radius: 10px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.3);
-            animation: fadeIn 0.15s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
-        }
-        .modal-header h3 { margin: 0; font-size: 16px; color: var(--navy); }
-        .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); padding: 0; line-height: 1; }
-        .modal-close:hover { color: #dc2626; }
-        .modal-footer { margin-top: 14px; display: flex; justify-content: flex-end; gap: 8px; }
-        .notes-textarea {
-            width: 100%; font-size: 14px; padding: 10px 12px;
-            border: 1px solid var(--border); border-radius: 6px;
-            resize: vertical; font-family: inherit; min-height: 130px; color: var(--text);
-        }
-        .notes-textarea:focus { outline: 2px solid var(--blue); border-color: transparent; }
+        @keyframes shimmer { to { background-position: -200% 0; } }
 
-        /* ── Print ── */
-        @media print {
-            .app-header { background: #334155 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .tab-nav, .toolbar, .filterbox, .btn-action, .no-print { display: none !important; }
-            body { background: white; font-size: 11px; }
-            .table-wrap { box-shadow: none; border: 1px solid #ccc; border-radius: 0; }
-            thead th { background: #334155 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static; }
-            .badge { border: 1px solid currentColor; }
+        @media (max-width: 640px) {
+            .search-inner { gap: 8px; }
+            .search-inner select,
+            .search-inner input { font-size: 14px; width: 100%; }
+            .results-count { margin-left: 0; }
+            .hero { padding: 48px 20px 40px; }
+            .contact-cards { flex-direction: column; align-items: center; }
+            .contact-card { width: 100%; max-width: 280px; }
         }
     </style>
 </head>
 <body>
 
-<header class="app-header">
-    <span class="icon">🏠</span>
-    <div>
-        <h1>Inmobiliaria</h1>
-        <span class="sub">Gestión de clientes y propiedades</span>
+<!-- ── HEADER ── -->
+<header class="header">
+    <div class="header-inner">
+        <a href="/" class="logo">
+            <img src="/static/logo.png" alt="Moret Inmobiliaria" onerror="this.style.display='none'">
+            <div class="logo-text">
+                <span class="logo-roberto">Roberto</span>
+                <span class="logo-moret">Moret</span>
+                <span class="logo-inmobiliaria">Inmobiliaria</span>
+            </div>
+        </a>
+        <nav class="header-nav">
+            <a href="#propiedades">Propiedades</a>
+            <a href="#contacto" class="btn-contacto">Contacto</a>
+        </nav>
     </div>
 </header>
 
-<div class="container">
-
-    <div class="tab-nav">
-        <button class="tab-btn active" onclick="mostrarTab('clientes', this)">Clientes</button>
-        <button class="tab-btn" onclick="mostrarTab('propiedades', this)">Propiedades</button>
+<!-- ── HERO ── -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">Inmobiliaria de confianza</div>
+        <h1>Tu próxima propiedad<br>te está <span>esperando</span></h1>
+        <p>Encontrá propiedades en venta y alquiler. Más de 30 años de experiencia en el mercado inmobiliario.</p>
+        <a href="#propiedades" class="hero-cta">Ver propiedades →</a>
     </div>
+</section>
 
-    <!-- ═══ TAB CLIENTES ═══ -->
-    <div id="tab-clientes">
-        <div class="toolbar no-print">
-            <button class="btn btn-green" onclick="agregarFilaCliente()">+ Agregar cliente</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaClientes', 'Clientes')">🖨 Imprimir</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosClientes()">✕ Limpiar filtros</button>
-        </div>
-
-        <div class="filterbox no-print">
-            <input type="text" id="filtroTexto" placeholder="🔍 Nombre o Apellido" onkeyup="filtrarClientes()" style="min-width:200px">
-            <div class="sep"></div>
-            <select id="filtroOperacion" onchange="filtrarClientes()">
-                <option value="">Todas las operaciones</option>
-                <option value="venta">Venta</option>
-                <option value="renta">Renta</option>
-                <option value="ambas">Ambas</option>
-            </select>
-            <input type="number" id="filtroAmbientes" placeholder="Ambientes" onkeyup="filtrarClientes()" style="width:90px">
-            <div class="sep"></div>
-            <label><input type="checkbox" id="togglePropietarios" onchange="filtrarClientes()"> Propietarios</label>
-            <label><input type="checkbox" id="toggleInteresados"  onchange="filtrarClientes()"> Interesados</label>
-        </div>
-
-        <div class="table-wrap">
-            <table id="tablaClientes">
-                <thead><tr>
-                    <th class="sortable" data-sort="clientes" data-field="nombre"    onclick="sortBy(this)">Cliente <span class="sort-icon"></span></th>
-                    <th>Teléfono</th>
-                    <th class="sortable" data-sort="clientes" data-field="email"     onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="tipo"      onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="rango_min" onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="rango_max" onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
-                    <th>USD</th>
-                    <th class="sortable" data-sort="clientes" data-field="ambientes" onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="operacion" onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
-                    <th class="no-print">Acciones</th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
+<!-- ── BUSCADOR ── -->
+<section class="search-section" id="propiedades">
+    <div class="search-inner">
+        <select id="f-operacion" onchange="buscar()">
+            <option value="">Venta y Alquiler</option>
+            <option value="venta">Venta</option>
+            <option value="alquiler">Alquiler</option>
+        </select>
+        <select id="f-tipo" onchange="buscar()">
+            <option value="">Todo tipo</option>
+            <option value="casa">Casa</option>
+            <option value="departamento">Departamento</option>
+            <option value="local">Local</option>
+            <option value="terreno">Terreno</option>
+            <option value="otro">Otro</option>
+        </select>
+        <select id="f-ambientes" onchange="buscar()">
+            <option value="">Ambientes</option>
+            <option value="1">1 ambiente</option>
+            <option value="2">2 ambientes</option>
+            <option value="3">3 ambientes</option>
+            <option value="4">4+ ambientes</option>
+        </select>
+        <input type="text" id="f-barrio" placeholder="Barrio o zona" onkeyup="buscarDebounce()">
+        <button class="btn-buscar" onclick="buscar()">Buscar</button>
+        <button class="btn-limpiar" onclick="limpiar()">Limpiar</button>
+        <span class="results-count" id="results-count"></span>
     </div>
+</section>
 
-    <!-- ═══ TAB PROPIEDADES ═══ -->
-    <div id="tab-propiedades" style="display:none">
-        <div class="toolbar no-print">
-            <button class="btn btn-green" onclick="agregarFilaPropiedad()">+ Agregar propiedad</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">🖨 Imprimir</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">✕ Limpiar filtros</button>
+<!-- ── LISTINGS ── -->
+<section class="listings">
+    <div class="listings-grid" id="grid-propiedades">
+        <!-- skeletons -->
+        <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5e5">
+            <div class="skeleton" style="aspect-ratio:4/3"></div>
+            <div style="padding:16px"><div class="skeleton" style="height:22px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:80%"></div></div>
         </div>
-
-        <div class="filterbox no-print">
-            <input type="text" id="filtroDireccion" placeholder="🔍 Dirección" onkeyup="filtrarPropiedades()" style="min-width:200px">
-            <div class="sep"></div>
-            <select id="filtroTipo" onchange="filtrarPropiedades()">
-                <option value="">Todos los tipos</option>
-                <option value="casa">Casa</option>
-                <option value="departamento">Departamento</option>
-                <option value="local">Local</option>
-                <option value="terreno">Terreno</option>
-                <option value="otro">Otro</option>
-            </select>
-            <select id="filtroEstado" onchange="filtrarPropiedades()">
-                <option value="">Todos los estados</option>
-                <option value="disponible">Disponible</option>
-                <option value="vendida">Vendida</option>
-                <option value="rentada">Rentada</option>
-            </select>
-            <input type="number" id="filtroAmbiendesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()" style="width:90px">
+        <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5e5">
+            <div class="skeleton" style="aspect-ratio:4/3"></div>
+            <div style="padding:16px"><div class="skeleton" style="height:22px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:80%"></div></div>
         </div>
-
-        <div class="table-wrap">
-            <table id="tablaPropiedades">
-                <thead><tr>
-                    <th class="sortable" data-sort="propiedades" data-field="direccion"   onclick="sortBy(this)">Dirección <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="tipo"        onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="estado"      onclick="sortBy(this)">Estado <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="rango_min"   onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="rango_max"   onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
-                    <th>USD</th>
-                    <th class="sortable" data-sort="propiedades" data-field="ambientes"   onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="propietario" onclick="sortBy(this)">Propietario <span class="sort-icon"></span></th>
-                    <th>Interesados</th>
-                    <th class="sortable" data-sort="propiedades" data-field="fecha_estado" onclick="sortBy(this)">Fecha estado <span class="sort-icon"></span></th>
-                    <th class="no-print">Acciones</th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
+        <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5e5">
+            <div class="skeleton" style="aspect-ratio:4/3"></div>
+            <div style="padding:16px"><div class="skeleton" style="height:22px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:80%"></div></div>
         </div>
     </div>
+</section>
 
-</div>
-
-<!-- ── Modal: compradores compatibles ── -->
-<div id="modal-matches" class="modal-overlay">
-    <div class="modal-box">
-        <div class="modal-header">
-            <h3 id="modal-titulo">Compradores compatibles</h3>
-            <button class="modal-close" onclick="cerrarModal('modal-matches')">✕</button>
+<!-- ── CONTACTO ── -->
+<section class="contact-section" id="contacto">
+    <div class="contact-inner">
+        <div class="label">Estamos para ayudarte</div>
+        <h2>¿Tenés alguna <span>consulta</span>?</h2>
+        <p>Contactanos por el medio que prefieras. Respondemos a la brevedad.</p>
+        <div class="contact-cards">
+            <a href="https://wa.me/5491112345678" target="_blank" class="contact-card wa">
+                <div class="c-icon">💬</div>
+                <div class="c-label">WhatsApp</div>
+                <div class="c-value">+54 9 11 1234-5678</div>
+            </a>
+            <a href="tel:+541112345678" class="contact-card">
+                <div class="c-icon">📞</div>
+                <div class="c-label">Teléfono</div>
+                <div class="c-value">(011) 1234-5678</div>
+            </a>
+            <a href="mailto:info@moretinmobiliaria.com" class="contact-card">
+                <div class="c-icon">✉️</div>
+                <div class="c-label">Email</div>
+                <div class="c-value">info@moretinmobiliaria.com</div>
+            </a>
         </div>
-        <div id="modal-contenido"></div>
     </div>
-</div>
+</section>
 
-<!-- ── Modal: notas de propiedad ── -->
-<div id="modal-notes" class="modal-overlay">
-    <div class="modal-box" style="max-width:520px">
-        <div class="modal-header">
-            <h3>📝 Notas de la propiedad</h3>
-            <button class="modal-close" onclick="cerrarModal('modal-notes')">✕</button>
-        </div>
-        <textarea id="notas-textarea" class="notes-textarea" placeholder="Escribí notas sobre esta propiedad..."></textarea>
-        <div class="modal-footer">
-            <button class="btn btn-gray"  onclick="cerrarModal('modal-notes')">Cancelar</button>
-            <button class="btn btn-green" onclick="guardarNotas()">Guardar</button>
-        </div>
-    </div>
-</div>
+<!-- ── FOOTER ── -->
+<footer>
+    <div class="footer-brand">Moret</div>
+    <div>Roberto Moret Inmobiliaria — Buenos Aires, Argentina</div>
+    <div style="margin-top:6px">© <span id="footer-year"></span> Todos los derechos reservados</div>
+</footer>
 
 <script>
-    let clientes = [];
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
     let propiedades = [];
-    let sortClientes    = { field: null, dir: 1 };
-    let sortPropiedades = { field: null, dir: 1 };
-    let notasPropiedadId = null;
+    let buscarTimer = null;
 
-    // ── TABS ──────────────────────────────────────────────────────────────────
-    function mostrarTab(tab, btn) {
-        document.getElementById('tab-clientes').style.display    = tab === 'clientes'    ? '' : 'none';
-        document.getElementById('tab-propiedades').style.display = tab === 'propiedades' ? '' : 'none';
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
+    function buscarDebounce() {
+        clearTimeout(buscarTimer);
+        buscarTimer = setTimeout(buscar, 400);
     }
 
-    // ── SORT ──────────────────────────────────────────────────────────────────
-    function sortBy(th) {
-        const tabla = th.dataset.sort;
-        const field = th.dataset.field;
-        const s = tabla === 'clientes' ? sortClientes : sortPropiedades;
-        if (s.field === field) s.dir *= -1;
-        else { s.field = field; s.dir = 1; }
+    function buscar() {
+        const operacion = document.getElementById('f-operacion').value;
+        const tipo      = document.getElementById('f-tipo').value;
+        const ambientes = document.getElementById('f-ambientes').value;
+        const barrio    = document.getElementById('f-barrio').value.trim();
 
-        document.querySelectorAll(`th[data-sort="${tabla}"]`).forEach(t => {
-            const icon = t.querySelector('.sort-icon');
-            const active = t.dataset.field === field;
-            if (icon) icon.textContent = active ? (s.dir === 1 ? '▴' : '▾') : '';
-            t.classList.toggle('sorted', active);
-        });
+        const params = new URLSearchParams();
+        if (operacion) params.set('operacion', operacion);
+        if (tipo)      params.set('tipo', tipo);
+        if (ambientes) params.set('ambientes', ambientes);
+        if (barrio)    params.set('barrio', barrio);
 
-        if (tabla === 'clientes') filtrarClientes();
-        else filtrarPropiedades();
+        fetch('/api/public/propiedades?' + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                propiedades = data;
+                renderGrid(data);
+            })
+            .catch(() => renderError());
     }
 
-    function applySort(arr, s) {
-        if (!s.field) return arr;
-        return [...arr].sort((a, b) => {
-            const va = a[s.field] ?? '';
-            const vb = b[s.field] ?? '';
-            if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * s.dir;
-            return String(va).localeCompare(String(vb), 'es', { numeric: true }) * s.dir;
-        });
+    function limpiar() {
+        ['f-operacion','f-tipo','f-ambientes'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('f-barrio').value = '';
+        buscar();
     }
 
-    // ── PRINT ─────────────────────────────────────────────────────────────────
-    function imprimirTabla(tablaId, titulo) {
-        const tabla = document.getElementById(tablaId).outerHTML;
-        const fecha = new Date().toLocaleDateString('es-AR');
-        const v = window.open('', '_blank');
-        v.document.write(`<html><head><title>${titulo} — ${fecha}</title>
-        <style>
-            body { font-family: Arial, sans-serif; font-size: 11px; }
-            h2 { font-size: 14px; margin-bottom: 2px; }
-            p  { color: #64748b; margin: 0 0 10px; font-size: 11px; }
-            table { width: 100%; border-collapse: collapse; }
-            th { background: #334155; color: white; padding: 5px 7px; text-align: left; font-size: 10px; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            td { padding: 4px 7px; border-bottom: 1px solid #e2e8f0; }
-            tr:nth-child(even) td { background: #f8fafc; }
-            .no-print { display: none; }
-            .badge { border: 1px solid currentColor; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
-            a { color: black; text-decoration: none; }
-            .wa-link { display: none; }
-        </style></head>
-        <body><h2>${titulo}</h2><p>${fecha}</p>${tabla}</body></html>`);
-        v.document.close(); v.print();
-    }
+    function renderGrid(lista) {
+        const grid = document.getElementById('grid-propiedades');
+        const count = document.getElementById('results-count');
+        count.textContent = lista.length > 0 ? `${lista.length} propiedad${lista.length !== 1 ? 'es' : ''}` : '';
 
-    // ── WHATSAPP ──────────────────────────────────────────────────────────────
-    function waLink(phone) {
-        const d = String(phone).replace(/\D/g, '');
-        const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
-        return `https://wa.me/${intl}`;
-    }
-
-    // ── MODALS ────────────────────────────────────────────────────────────────
-    function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-    document.querySelectorAll('.modal-overlay').forEach(m => {
-        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
-    });
-
-    // ── NOTAS PROPIEDAD ───────────────────────────────────────────────────────
-    function abrirNotas(propId) {
-        notasPropiedadId = propId;
-        const p = propiedades.find(x => x.id === propId);
-        document.getElementById('notas-textarea').value = p?.descripcion || '';
-        document.getElementById('modal-notes').classList.add('active');
-        setTimeout(() => document.getElementById('notas-textarea').focus(), 100);
-    }
-
-    function guardarNotas() {
-        const texto = document.getElementById('notas-textarea').value;
-        fetch(`/api/propiedades/${notasPropiedadId}`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descripcion: texto })
-        }).then(() => { cerrarModal('modal-notes'); cargarPropiedades(); })
-          .catch(e => alert('Error: ' + e));
-    }
-
-    // ── CLIENTES ──────────────────────────────────────────────────────────────
-    function cargarClientes() {
-        fetch('/api/clientes').then(r => r.json()).then(data => {
-            clientes = data.sort((a, b) => (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido, 'es'));
-            filtrarClientes();
-        });
-    }
-
-    function filtrarClientes() {
-        const texto     = document.getElementById('filtroTexto').value.toLowerCase();
-        const operacion = document.getElementById('filtroOperacion').value;
-        const ambientes = document.getElementById('filtroAmbientes').value;
-        const showProp  = document.getElementById('togglePropietarios').checked;
-        const showInt   = document.getElementById('toggleInteresados').checked;
-
-        let filtrados = clientes.filter(c => {
-            const matchTexto = c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
-            const matchOp    = !operacion || c.operacion === operacion;
-            const matchAmb   = !ambientes || c.ambientes == ambientes;
-            const matchTipo  = (!showProp && !showInt)
-                || (showProp && !showInt && c.tipo === 'propietario')
-                || (!showProp && showInt && c.tipo === 'interesado')
-                || (showProp && showInt);
-            return matchTexto && matchOp && matchAmb && matchTipo;
-        });
-        filtrados = applySort(filtrados, sortClientes);
-
-        const tbody = document.querySelector('#tablaClientes tbody');
-        tbody.innerHTML = '';
-        filtrados.forEach(c => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><a href="/cliente/${c.id}">${c.nombre} ${c.apellido}</a></td>
-                <td class="editable-text" data-field="telefono" data-id="${c.id}">
-                    ${c.telefono}&nbsp;<a href="${waLink(c.telefono)}" target="_blank" class="wa-link" title="Abrir en WhatsApp" onclick="event.stopPropagation()">💬</a>
-                </td>
-                <td class="editable-text" data-field="email"     data-id="${c.id}">${c.email || ''}</td>
-                <td class="editable-select" data-field="tipo"    data-id="${c.id}"><span class="badge badge-${c.tipo}">${c.tipo}</span></td>
-                <td class="editable-text" data-field="rango_min" data-id="${c.id}">${c.rango_min || ''}</td>
-                <td class="editable-text" data-field="rango_max" data-id="${c.id}">${c.rango_max || ''}</td>
-                <td><input type="checkbox" ${c.es_usd ? 'checked' : ''} onchange="actualizarCliente(${c.id}, 'es_usd', this.checked)"></td>
-                <td class="editable-text" data-field="ambientes" data-id="${c.id}">${c.ambientes || ''}</td>
-                <td class="editable-select" data-field="operacion" data-id="${c.id}">${c.operacion || ''}</td>
-                <td class="no-print">
-                    <button class="btn-action btn-cancel" onclick="eliminarCliente(${c.id})">✕</button>
-                </td>`;
-            tbody.appendChild(row);
-        });
-        agregarEventosEdicionTextoClientes();
-        agregarEventosEdicionSelectClientes();
-    }
-
-    function resetFiltrosClientes() {
-        ['togglePropietarios','toggleInteresados'].forEach(id => document.getElementById(id).checked = false);
-        ['filtroTexto','filtroOperacion','filtroAmbientes'].forEach(id => document.getElementById(id).value = '');
-        filtrarClientes();
-    }
-
-    function agregarFilaCliente() {
-        const tbody = document.querySelector('#tablaClientes tbody');
-        const row = document.createElement('tr');
-        row.classList.add('new-row');
-        row.innerHTML = `
-            <td data-field="nombre">   <input type="text"   placeholder="Nombre Apellido"></td>
-            <td data-field="telefono"> <input type="text"   placeholder="Teléfono"></td>
-            <td data-field="email">    <input type="text"   placeholder="Email"></td>
-            <td data-field="tipo">     <select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select></td>
-            <td data-field="rango_min"><input type="number" placeholder="Min"></td>
-            <td data-field="rango_max"><input type="number" placeholder="Max"></td>
-            <td><input type="checkbox" data-field="es_usd"></td>
-            <td data-field="ambientes"><input type="number" placeholder="Amb"></td>
-            <td data-field="operacion"><select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select></td>
-            <td class="no-print">
-                <button class="btn-action btn-save"   onclick="guardarNuevoCliente(this)">✔</button>
-                <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">✕</button>
-            </td>`;
-        tbody.insertBefore(row, tbody.firstChild);
-    }
-
-    function guardarNuevoCliente(btn) {
-        const row = btn.closest('tr');
-        const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
-        const cliente = {
-            nombre:     nombreCompleto[0] || '',
-            apellido:   nombreCompleto.slice(1).join(' ') || '',
-            telefono:   row.querySelector('[data-field="telefono"] input').value,
-            email:      row.querySelector('[data-field="email"] input').value || null,
-            tipo:       row.querySelector('[data-field="tipo"] select').value,
-            rango_min:  parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
-            rango_max:  parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
-            es_usd:     row.querySelector('[data-field="es_usd"]').checked,
-            ambientes:  parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
-            operacion:  row.querySelector('[data-field="operacion"] select').value,
-            descripcion: ''
-        };
-        if (!cliente.nombre || !cliente.apellido || !cliente.telefono) { alert('Completá Nombre, Apellido y Teléfono.'); return; }
-        fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cliente) })
-            .then(r => r.json()).then(() => cargarClientes()).catch(e => alert('Error: ' + e));
-    }
-
-    function eliminarCliente(id) {
-        if (confirm('¿Seguro querés borrar este cliente?')) {
-            fetch(`/api/clientes/${id}`, { method: 'DELETE' }).then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+        if (lista.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <span class="icon">🔍</span>
+                    <h3>No encontramos propiedades</h3>
+                    <p>Intentá con otros filtros o <a href="#contacto" style="color:var(--red);font-weight:600">contactanos directamente</a>.</p>
+                </div>`;
+            return;
         }
+
+        grid.innerHTML = lista.map(p => {
+            const foto = p.fotos && p.fotos.length > 0 ? p.fotos[0] : null;
+            const precio = p.precio_a_consultar
+                ? `<span class="consultar">A consultar</span>`
+                : p.rango_min
+                    ? `<span class="currency">USD</span>${p.rango_min.toLocaleString('es-AR')}`
+                    : `<span class="consultar">A consultar</span>`;
+
+            return `
+            <article class="prop-card" onclick="window.location.href='/propiedad/${p.id}'" style="cursor:pointer">
+                <div class="card-photo">
+                    ${foto
+                        ? `<img src="/${foto}" alt="${p.direccion}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-photo><span>🏠</span><span>Sin fotos</span></div>'">`
+                        : `<div class="no-photo"><span>🏠</span><span>Sin fotos</span></div>`}
+                    <div class="card-badges">
+                        ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
+                        ${p.tipo ? `<span class="badge badge-tipo">${p.tipo}</span>` : ''}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-price">${precio}</div>
+                    <div class="card-address">${p.direccion}</div>
+                    ${p.barrio ? `<div class="card-barrio">📍 ${p.barrio}</div>` : ''}
+                    <div class="card-details">
+                        ${p.ambientes ? `<span class="card-detail"><span class="icon">🛏</span> ${p.ambientes} amb.</span>` : ''}
+                        ${p.tipo ? `<span class="card-detail"><span class="icon">🏠</span> ${p.tipo}</span>` : ''}
+                        ${p.estado ? `<span class="card-detail" style="margin-left:auto;font-size:11px;color:${p.estado==='disponible'?'#15803d':'#666'}">${p.estado}</span>` : ''}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="/propiedad/${p.id}" class="btn-ver" onclick="event.stopPropagation()">Ver detalles →</a>
+                </div>
+            </article>`;
+        }).join('');
     }
 
-    function actualizarCliente(id, field, value) {
-        fetch(`/api/clientes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
-            .then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+    function renderError() {
+        document.getElementById('grid-propiedades').innerHTML = `
+            <div class="empty-state">
+                <span class="icon">⚠️</span>
+                <h3>Error al cargar propiedades</h3>
+                <p>Por favor recargá la página o intentá más tarde.</p>
+            </div>`;
     }
 
-    function agregarEventosEdicionTextoClientes() {
-        document.querySelectorAll('#tablaClientes .editable-text').forEach(cell => {
-            cell.addEventListener('dblclick', function(e) {
-                if (this.querySelector('input') || e.target.tagName === 'A') return;
-                const id = this.dataset.id, field = this.dataset.field;
-                const oldValue = this.textContent.trim();
-                this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
-                const input = this.querySelector('input');
-                input.focus();
-                input.addEventListener('blur', () => {
-                    const newValue = input.value.trim();
-                    if (newValue !== oldValue) {
-                        if (field === 'nombre') {
-                            const [nombre, ...rest] = newValue.split(' ');
-                            actualizarCliente(id, 'nombre', nombre);
-                            if (rest.length) actualizarCliente(id, 'apellido', rest.join(' '));
-                        } else {
-                            actualizarCliente(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
-                        }
-                    } else { cargarClientes(); }
-                });
-                input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
-            });
-        });
-    }
-
-    function agregarEventosEdicionSelectClientes() {
-        document.querySelectorAll('#tablaClientes .editable-select').forEach(cell => {
-            cell.addEventListener('click', function() {
-                if (this.querySelector('select')) return;
-                const id = this.dataset.id, field = this.dataset.field;
-                const oldValue = field === 'tipo'
-                    ? this.querySelector('.badge')?.textContent.trim()
-                    : this.textContent.trim();
-                const options = field === 'tipo'
-                    ? '<option value="interesado">Interesado</option><option value="propietario">Propietario</option>'
-                    : '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
-                this.innerHTML = `<select>${options}</select>`;
-                const sel = this.querySelector('select');
-                sel.value = oldValue; sel.focus();
-                sel.addEventListener('change', () => actualizarCliente(id, field, sel.value));
-            });
-        });
-    }
-
-    // ── PROPIEDADES ───────────────────────────────────────────────────────────
-    function cargarPropiedades() {
-        fetch('/api/propiedades').then(r => r.json()).then(data => {
-            propiedades = data.sort((a, b) => a.direccion.localeCompare(b.direccion, 'es'));
-            filtrarPropiedades();
-        });
-    }
-
-    function filtrarPropiedades() {
-        const dir    = document.getElementById('filtroDireccion').value.toLowerCase();
-        const tipo   = document.getElementById('filtroTipo').value;
-        const estado = document.getElementById('filtroEstado').value;
-        const amb    = document.getElementById('filtroAmbiendesProp').value;
-
-        let filtradas = propiedades.filter(p =>
-            (!dir    || p.direccion.toLowerCase().includes(dir))
-         && (!tipo   || p.tipo   === tipo)
-         && (!estado || p.estado === estado)
-         && (!amb    || p.ambientes == amb)
-        );
-        filtradas = applySort(filtradas, sortPropiedades);
-
-        const tbody = document.querySelector('#tablaPropiedades tbody');
-        tbody.innerHTML = '';
-        filtradas.forEach(p => {
-            const row = document.createElement('tr');
-            const hasNotes = p.descripcion && p.descripcion.trim().length > 0;
-            row.innerHTML = `
-                <td class="editable-text"       data-field="direccion" data-id="${p.id}">${p.direccion}</td>
-                <td class="editable-select-prop" data-field="tipo"     data-id="${p.id}">${p.tipo || ''}</td>
-                <td class="editable-select-prop" data-field="estado"   data-id="${p.id}">
-                    <span class="badge badge-${p.estado}">${p.estado || ''}</span>
-                </td>
-                <td class="editable-text" data-field="rango_min" data-id="${p.id}">${p.rango_min || ''}</td>
-                <td class="editable-text" data-field="rango_max" data-id="${p.id}">${p.rango_max || ''}</td>
-                <td><input type="checkbox" ${p.es_usd ? 'checked' : ''} onchange="actualizarPropiedad(${p.id}, 'es_usd', this.checked)"></td>
-                <td class="editable-text" data-field="ambientes" data-id="${p.id}">${p.ambientes || ''}</td>
-                <td>${p.propietario || '-'}</td>
-                <td>${p.interesados.join(', ') || '-'}</td>
-                <td>${p.fecha_estado || '-'}</td>
-                <td class="no-print">
-                    <button class="btn-action btn-match" onclick="verMatches(${p.id}, '${p.direccion.replace(/'/g, "\\'")}')" title="Compradores compatibles">⚡</button>
-                    <button class="btn-action btn-note"  onclick="abrirNotas(${p.id})" title="${hasNotes ? 'Ver/editar notas' : 'Agregar notas'}" style="${hasNotes ? 'background:#b45309' : ''}">📝</button>
-                    <button class="btn-action btn-cancel" onclick="eliminarPropiedad(${p.id})">✕</button>
-                </td>`;
-            tbody.appendChild(row);
-        });
-        agregarEventosEdicionTextoPropiedades();
-        agregarEventosEdicionSelectPropiedades();
-    }
-
-    function resetFiltrosPropiedades() {
-        ['filtroDireccion','filtroTipo','filtroEstado','filtroAmbiendesProp'].forEach(id => document.getElementById(id).value = '');
-        filtrarPropiedades();
-    }
-
-    function agregarFilaPropiedad() {
-        const propietarios = clientes.filter(c => c.tipo === 'propietario');
-        const optsProp = propietarios.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('');
-        const tbody = document.querySelector('#tablaPropiedades tbody');
-        const row = document.createElement('tr');
-        row.classList.add('new-row');
-        row.innerHTML = `
-            <td><input type="text" placeholder="Dirección"></td>
-            <td><select><option value="casa">Casa</option><option value="departamento">Departamento</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>
-            <td><select><option value="disponible">Disponible</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option></select></td>
-            <td><input type="number" placeholder="Min"></td>
-            <td><input type="number" placeholder="Max"></td>
-            <td><input type="checkbox"></td>
-            <td><input type="number" placeholder="Amb"></td>
-            <td><select><option value="">-- Sin propietario --</option>${optsProp}</select></td>
-            <td>-</td><td>-</td>
-            <td class="no-print">
-                <button class="btn-action btn-save"   onclick="guardarNuevaPropiedad(this)">✔</button>
-                <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">✕</button>
-            </td>`;
-        tbody.insertBefore(row, tbody.firstChild);
-    }
-
-    function guardarNuevaPropiedad(btn) {
-        const tds = btn.closest('tr').querySelectorAll('td');
-        const propiedad = {
-            direccion:     tds[0].querySelector('input').value,
-            tipo:          tds[1].querySelector('select').value,
-            estado:        tds[2].querySelector('select').value,
-            rango_min:     parseFloat(tds[3].querySelector('input').value) || null,
-            rango_max:     parseFloat(tds[4].querySelector('input').value) || null,
-            es_usd:        tds[5].querySelector('input').checked,
-            ambientes:     parseInt(tds[6].querySelector('input').value) || null,
-            propietario_id: parseInt(tds[7].querySelector('select').value) || null
-        };
-        if (!propiedad.direccion) { alert('Ingresá la dirección.'); return; }
-        fetch('/api/propiedades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(propiedad) })
-            .then(r => r.json()).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
-    }
-
-    function eliminarPropiedad(id) {
-        if (confirm('¿Seguro querés borrar esta propiedad?')) {
-            fetch(`/api/propiedades/${id}`, { method: 'DELETE' }).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
-        }
-    }
-
-    function actualizarPropiedad(id, field, value) {
-        fetch(`/api/propiedades/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
-            .then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
-    }
-
-    function agregarEventosEdicionTextoPropiedades() {
-        document.querySelectorAll('#tablaPropiedades .editable-text').forEach(cell => {
-            cell.addEventListener('dblclick', function() {
-                if (this.querySelector('input')) return;
-                const id = this.dataset.id, field = this.dataset.field;
-                const oldValue = this.textContent.trim();
-                this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
-                const input = this.querySelector('input');
-                input.focus();
-                input.addEventListener('blur', () => {
-                    const newValue = input.value.trim();
-                    if (newValue !== oldValue)
-                        actualizarPropiedad(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
-                    else this.textContent = oldValue;
-                });
-                input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
-            });
-        });
-    }
-
-    function agregarEventosEdicionSelectPropiedades() {
-        document.querySelectorAll('#tablaPropiedades .editable-select-prop').forEach(cell => {
-            cell.addEventListener('click', function() {
-                if (this.querySelector('select')) return;
-                const id = this.dataset.id, field = this.dataset.field;
-                const oldValue = field === 'estado'
-                    ? this.querySelector('.badge')?.textContent.trim()
-                    : this.textContent.trim();
-                const options = field === 'tipo'
-                    ? ['casa','departamento','local','terreno','otro'].map(v => `<option value="${v}">${v}</option>`).join('')
-                    : ['disponible','vendida','rentada'].map(v => `<option value="${v}">${v}</option>`).join('');
-                this.innerHTML = `<select>${options}</select>`;
-                const sel = this.querySelector('select');
-                sel.value = oldValue; sel.focus();
-                sel.addEventListener('change', () => actualizarPropiedad(id, field, sel.value));
-            });
-        });
-    }
-
-    // ── MATCHES ───────────────────────────────────────────────────────────────
-    function verMatches(propId, direccion) {
-        fetch(`/api/propiedades/${propId}/matches`).then(r => r.json()).then(matches => {
-            document.getElementById('modal-titulo').textContent = `Compradores compatibles — ${direccion}`;
-            document.getElementById('modal-contenido').innerHTML = matches.length === 0
-                ? '<p style="color:#64748b;margin:0">No hay interesados compatibles con esta propiedad.</p>'
-                : `<div class="table-wrap"><table>
-                    <thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Min</th><th>Max</th><th>USD</th><th>Amb</th><th>Operación</th></tr></thead>
-                    <tbody>${matches.map(m => `<tr>
-                        <td><a href="/cliente/${m.id}">${m.nombre} ${m.apellido}</a></td>
-                        <td>${m.telefono} <a href="${waLink(m.telefono)}" target="_blank" class="wa-link" title="WhatsApp">💬</a></td>
-                        <td>${m.email || '-'}</td>
-                        <td>${m.rango_min || '-'}</td><td>${m.rango_max || '-'}</td>
-                        <td>${m.es_usd ? 'Sí' : 'No'}</td>
-                        <td>${m.ambientes || '-'}</td>
-                        <td>${m.operacion || '-'}</td>
-                    </tr>`).join('')}</tbody>
-                   </table></div>`;
-            document.getElementById('modal-matches').classList.add('active');
-        }).catch(e => alert('Error: ' + e));
-    }
-
-    document.addEventListener('DOMContentLoaded', cargarClientes);
+    document.addEventListener('DOMContentLoaded', buscar);
 </script>
 </body>
 </html>
