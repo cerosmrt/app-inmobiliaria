@@ -1,29 +1,70 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_migrate import Migrate
 from models import db, Propiedad, Cliente, Admin, Consulta
+from config import config as app_config
 from functools import wraps
 import os
+import hmac
+import secrets
+import time
+import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inmobiliaria.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'moret-inmobiliaria-clave-secreta-2024'
 
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+env = os.environ.get('FLASK_ENV', 'default')
+app.config.from_object(app_config[env])
 
-for folder in [UPLOAD_FOLDER, 'templates', 'static']:
+for folder in [app.config['UPLOAD_FOLDER'], 'templates', 'static']:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# ── CSRF ──────────────────────────────────────────────────────────────────────
+
+def get_csrf_token():
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(32)
+    return session['csrf_token']
+
+app.jinja_env.globals['csrf_token'] = get_csrf_token
+
+# ── Rate limiting (login) ─────────────────────────────────────────────────────
+
+_login_attempts: dict = {}
+_RATE_WINDOW = 60
+_RATE_MAX    = 10
+
+def _check_login_rate(ip: str) -> bool:
+    now = time.time()
+    attempts = [t for t in _login_attempts.get(ip, []) if now - t < _RATE_WINDOW]
+    _login_attempts[ip] = attempts
+    if len(attempts) >= _RATE_MAX:
+        return False
+    _login_attempts[ip].append(now)
+    return True
+
+# ── File upload ───────────────────────────────────────────────────────────────
+
+_JPEG_MAGIC = b'\xff\xd8\xff'
+_PNG_MAGIC  = b'\x89PNG'
+
+def allowed_file(file) -> bool:
+    if not file or not file.filename:
+        return False
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in app.config['ALLOWED_EXTENSIONS']:
+        return False
+    header = file.read(4)
+    file.seek(0)
+    return header[:3] == _JPEG_MAGIC or header[:4] == _PNG_MAGIC
+
+def _unique_filename(prefix: str, original: str) -> str:
+    ext = secure_filename(original).rsplit('.', 1)[-1].lower()
+    return f"{prefix}_{uuid.uuid4().hex[:10]}.{ext}"
 
 # ── Auth decorators ───────────────────────────────────────────────────────────
 
@@ -40,18 +81,32 @@ def api_login_required(f):
     def decorated(*args, **kwargs):
         if 'admin_id' not in session:
             return jsonify({"error": "No autorizado"}), 401
+        if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            token = request.headers.get('X-CSRFToken', '')
+            stored = session.get('csrf_token', '')
+            if not token or not stored or not hmac.compare_digest(token, stored):
+                return jsonify({"error": "Token CSRF inválido"}), 403
         return f(*args, **kwargs)
     return decorated
+
+# ── Contacto helper ───────────────────────────────────────────────────────────
+
+def _contacto():
+    return {
+        'contacto_telefono': app.config.get('CONTACTO_TELEFONO', ''),
+        'contacto_wa':       app.config.get('CONTACTO_WA', ''),
+        'contacto_email':    app.config.get('CONTACTO_EMAIL', ''),
+    }
 
 # ── Public pages ──────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', **_contacto())
 
 @app.route('/propiedad/<int:id>')
 def propiedad_publica(id):
-    return render_template('propiedad.html', propiedad_id=id)
+    return render_template('propiedad.html', propiedad_id=id, **_contacto())
 
 # ── Admin pages ───────────────────────────────────────────────────────────────
 
@@ -64,12 +119,19 @@ def admin_index():
 def admin_login():
     if 'admin_id' in session:
         return redirect(url_for('admin_index'))
+    get_csrf_token()
     if request.method == 'POST':
+        form_token = request.form.get('csrf_token', '')
+        stored     = session.get('csrf_token', '')
+        if not form_token or not stored or not hmac.compare_digest(form_token, stored):
+            return render_template('admin/login.html', error='Error de validación. Intentá de nuevo.')
+        if not _check_login_rate(request.remote_addr):
+            return render_template('admin/login.html', error='Demasiados intentos. Esperá un minuto.')
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         admin = Admin.query.filter_by(username=username).first()
         if admin and admin.check_password(password):
-            session['admin_id'] = admin.id
+            session['admin_id']       = admin.id
             session['admin_username'] = admin.username
             return redirect(url_for('admin_index'))
         return render_template('admin/login.html', error='Usuario o contraseña incorrectos')
@@ -112,10 +174,10 @@ def cliente_perfil(id):
 
 @app.route('/api/public/propiedades')
 def api_public_propiedades():
-    tipo = request.args.get('tipo', '')
+    tipo      = request.args.get('tipo', '')
     operacion = request.args.get('operacion', '')
     ambientes = request.args.get('ambientes', '')
-    barrio = request.args.get('barrio', '')
+    barrio    = request.args.get('barrio', '')
     precio_max = request.args.get('precio_max', '')
 
     query = Propiedad.query.filter_by(publicada=True)
@@ -167,29 +229,29 @@ def api_public_consultas():
     db.session.commit()
     return jsonify({"message": "Consulta enviada correctamente"}), 201
 
-# ── Admin API: Propiedades ─────────────────────────────────────────────────────
+# ── Admin API: Propiedades ────────────────────────────────────────────────────
 
 @app.route('/api/propiedades', methods=['GET'])
 @api_login_required
 def get_propiedades():
-    tipo = request.args.get('tipo', '')
+    tipo       = request.args.get('tipo', '')
     propietario = request.args.get('propietario', '')
-    interesado = request.args.get('interesado', '')
+    interesado  = request.args.get('interesado', '')
 
     query = Propiedad.query
     if tipo:
         query = query.filter(Propiedad.tipo.ilike(f'%{tipo}%'))
     if propietario:
-        parts = propietario.split()
-        nombre = parts[0]
+        parts   = propietario.split()
+        nombre  = parts[0]
         apellido = ' '.join(parts[1:]) if len(parts) > 1 else ''
         query = query.join(Cliente, Propiedad.propietario).filter(
             Cliente.nombre.ilike(f'%{nombre}%'),
             Cliente.apellido.ilike(f'%{apellido}%') if apellido else True
         )
     if interesado:
-        parts = interesado.split()
-        nombre = parts[0]
+        parts   = interesado.split()
+        nombre  = parts[0]
         apellido = ' '.join(parts[1:]) if len(parts) > 1 else ''
         query = query.join(Propiedad.interesados).filter(
             Cliente.nombre.ilike(f'%{nombre}%'),
@@ -225,7 +287,7 @@ def add_propiedad():
 @app.route('/api/propiedades/<int:id>', methods=['GET'])
 @api_login_required
 def get_propiedad(id):
-    p = Propiedad.query.get(id)
+    p = db.session.get(Propiedad, id)
     if p:
         return jsonify(p.as_dict())
     return jsonify({"message": "Propiedad no encontrada"}), 404
@@ -233,26 +295,26 @@ def get_propiedad(id):
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 @api_login_required
 def update_propiedad(id):
-    p = Propiedad.query.get(id)
+    p = db.session.get(Propiedad, id)
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     data = request.get_json()
-    p.direccion = data.get('direccion', p.direccion)
-    p.barrio = data.get('barrio', p.barrio)
-    p.rango_min = data.get('rango_min', p.rango_min)
-    p.rango_max = data.get('rango_max', p.rango_max)
-    p.es_usd = data.get('es_usd', p.es_usd)
+    p.direccion        = data.get('direccion', p.direccion)
+    p.barrio           = data.get('barrio', p.barrio)
+    p.rango_min        = data.get('rango_min', p.rango_min)
+    p.rango_max        = data.get('rango_max', p.rango_max)
+    p.es_usd           = data.get('es_usd', p.es_usd)
     p.precio_a_consultar = data.get('precio_a_consultar', p.precio_a_consultar)
-    p.ambientes = data.get('ambientes', p.ambientes)
-    p.tipo = data.get('tipo', p.tipo)
-    p.operacion = data.get('operacion', p.operacion)
-    p.publicada = data.get('publicada', p.publicada)
-    p.descripcion = data.get('descripcion', p.descripcion)
+    p.ambientes        = data.get('ambientes', p.ambientes)
+    p.tipo             = data.get('tipo', p.tipo)
+    p.operacion        = data.get('operacion', p.operacion)
+    p.publicada        = data.get('publicada', p.publicada)
+    p.descripcion      = data.get('descripcion', p.descripcion)
     nuevo_estado = data.get('estado', p.estado)
     if nuevo_estado != p.estado:
         p.fecha_estado = datetime.utcnow()
-    p.estado = nuevo_estado
-    p.propietario_id = data.get('propietario_id', p.propietario_id)
+    p.estado           = nuevo_estado
+    p.propietario_id   = data.get('propietario_id', p.propietario_id)
     if 'interesados_ids' in data:
         p.interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
     db.session.commit()
@@ -261,7 +323,7 @@ def update_propiedad(id):
 @app.route('/api/propiedades/<int:id>', methods=['DELETE'])
 @api_login_required
 def delete_propiedad(id):
-    p = Propiedad.query.get(id)
+    p = db.session.get(Propiedad, id)
     if p:
         db.session.delete(p)
         db.session.commit()
@@ -271,27 +333,25 @@ def delete_propiedad(id):
 @app.route('/api/propiedades/<int:id>/upload', methods=['POST'])
 @api_login_required
 def upload_foto_propiedad(id):
-    p = Propiedad.query.get(id)
+    p = db.session.get(Propiedad, id)
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     if 'file' not in request.files:
         return jsonify({"message": "No se envió archivo"}), 400
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({"message": "Archivo vacío"}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"prop_{id}_{filename}")
-        file.save(filepath)
-        p.fotos = (p.fotos + ',' + filepath) if p.fotos else filepath
-        db.session.commit()
-        return jsonify(p.as_dict()), 200
-    return jsonify({"message": "Formato no permitido"}), 400
+    if not allowed_file(file):
+        return jsonify({"message": "Formato no permitido"}), 400
+    filename = _unique_filename(f"prop_{id}", file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    p.fotos = (p.fotos + ',' + filepath) if p.fotos else filepath
+    db.session.commit()
+    return jsonify(p.as_dict()), 200
 
 @app.route('/api/propiedades/<int:id>/fotos/<path:filename>', methods=['DELETE'])
 @api_login_required
 def delete_foto_propiedad(id, filename):
-    p = Propiedad.query.get(id)
+    p = db.session.get(Propiedad, id)
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     fotos = p.fotos.split(',') if p.fotos else []
@@ -308,7 +368,7 @@ def delete_foto_propiedad(id, filename):
 @app.route('/api/propiedades/<int:id>/matches', methods=['GET'])
 @api_login_required
 def get_matches(id):
-    p = Propiedad.query.get(id)
+    p = db.session.get(Propiedad, id)
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     query = Cliente.query.filter(Cliente.tipo == 'interesado')
@@ -352,7 +412,7 @@ def add_cliente():
 @app.route('/api/clientes/<int:id>', methods=['GET'])
 @api_login_required
 def get_cliente(id):
-    c = Cliente.query.get(id)
+    c = db.session.get(Cliente, id)
     if c:
         return jsonify(c.as_dict())
     return jsonify({"message": "Cliente no encontrado"}), 404
@@ -360,20 +420,20 @@ def get_cliente(id):
 @app.route('/api/clientes/<int:id>', methods=['PUT'])
 @api_login_required
 def update_cliente(id):
-    c = Cliente.query.get(id)
+    c = db.session.get(Cliente, id)
     if not c:
         return jsonify({"message": "Cliente no encontrado"}), 404
     data = request.get_json()
-    c.nombre = data.get('nombre', c.nombre)
-    c.apellido = data.get('apellido', c.apellido)
-    c.telefono = data.get('telefono', c.telefono)
-    c.email = data.get('email', c.email)
-    c.tipo = data.get('tipo', c.tipo)
-    c.rango_min = data.get('rango_min', c.rango_min)
-    c.rango_max = data.get('rango_max', c.rango_max)
-    c.es_usd = data.get('es_usd', c.es_usd)
-    c.ambientes = data.get('ambientes', c.ambientes)
-    c.operacion = data.get('operacion', c.operacion)
+    c.nombre     = data.get('nombre', c.nombre)
+    c.apellido   = data.get('apellido', c.apellido)
+    c.telefono   = data.get('telefono', c.telefono)
+    c.email      = data.get('email', c.email)
+    c.tipo       = data.get('tipo', c.tipo)
+    c.rango_min  = data.get('rango_min', c.rango_min)
+    c.rango_max  = data.get('rango_max', c.rango_max)
+    c.es_usd     = data.get('es_usd', c.es_usd)
+    c.ambientes  = data.get('ambientes', c.ambientes)
+    c.operacion  = data.get('operacion', c.operacion)
     c.descripcion = data.get('descripcion', c.descripcion)
     db.session.commit()
     return jsonify({"message": "Cliente actualizado"})
@@ -381,7 +441,7 @@ def update_cliente(id):
 @app.route('/api/clientes/<int:id>', methods=['DELETE'])
 @api_login_required
 def delete_cliente(id):
-    c = Cliente.query.get(id)
+    c = db.session.get(Cliente, id)
     if c:
         db.session.delete(c)
         db.session.commit()
@@ -391,22 +451,20 @@ def delete_cliente(id):
 @app.route('/api/clientes/<int:id>/upload', methods=['POST'])
 @api_login_required
 def upload_foto_cliente(id):
-    c = Cliente.query.get(id)
+    c = db.session.get(Cliente, id)
     if not c:
         return jsonify({"message": "Cliente no encontrado"}), 404
     if 'file' not in request.files:
         return jsonify({"message": "No se envió archivo"}), 400
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({"message": "Archivo vacío"}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{id}_{filename}")
-        file.save(filepath)
-        c.fotos = (c.fotos + ',' + filepath) if c.fotos else filepath
-        db.session.commit()
-        return jsonify(c.as_dict()), 200
-    return jsonify({"message": "Formato no permitido"}), 400
+    if not allowed_file(file):
+        return jsonify({"message": "Formato no permitido"}), 400
+    filename = _unique_filename(f"cli_{id}", file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    c.fotos = (c.fotos + ',' + filepath) if c.fotos else filepath
+    db.session.commit()
+    return jsonify(c.as_dict()), 200
 
 # ── Admin API: Consultas ──────────────────────────────────────────────────────
 
@@ -425,7 +483,7 @@ def consultas_no_leidas():
 @app.route('/api/consultas/<int:id>/leer', methods=['PUT'])
 @api_login_required
 def marcar_leida(id):
-    c = Consulta.query.get(id)
+    c = db.session.get(Consulta, id)
     if not c:
         return jsonify({"error": "No encontrada"}), 404
     c.leida = True
@@ -435,7 +493,7 @@ def marcar_leida(id):
 @app.route('/api/consultas/<int:id>', methods=['DELETE'])
 @api_login_required
 def delete_consulta(id):
-    c = Consulta.query.get(id)
+    c = db.session.get(Consulta, id)
     if not c:
         return jsonify({"error": "No encontrada"}), 404
     db.session.delete(c)
@@ -448,4 +506,4 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=app.config.get('DEBUG', False))

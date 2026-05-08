@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Panel Admin — Moret Inmobiliaria</title>
     <style>
         :root {
@@ -36,8 +37,8 @@
             position: absolute; top: 2px; right: 2px;
             background: #C41230; color: white; font-size: 10px; font-weight: 700;
             min-width: 16px; height: 16px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            padding: 0 4px; display: none;
+            display: none; align-items: center; justify-content: center;
+            padding: 0 4px;
         }
         .btn-logout {
             background: rgba(196,18,48,0.15); color: #f87171;
@@ -213,11 +214,11 @@
     <div id="tab-clientes">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaCliente()">+ Agregar cliente</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaClientes', 'Clientes')">🖨 Imprimir</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosClientes()">✕ Limpiar filtros</button>
+            <button class="btn btn-print" onclick="imprimirTabla('tablaClientes', 'Clientes')">Imprimir</button>
+            <button class="btn btn-gray"  onclick="resetFiltrosClientes()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
-            <input type="text" id="filtroTexto" placeholder="🔍 Nombre o Apellido" onkeyup="filtrarClientes()" style="min-width:200px">
+            <input type="text" id="filtroTexto" placeholder="Nombre o Apellido" onkeyup="filtrarClientes()" style="min-width:200px">
             <div class="sep"></div>
             <select id="filtroOperacion" onchange="filtrarClientes()">
                 <option value="">Todas las operaciones</option>
@@ -253,11 +254,11 @@
     <div id="tab-propiedades" style="display:none">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaPropiedad()">+ Agregar propiedad</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">🖨 Imprimir</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">✕ Limpiar filtros</button>
+            <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">Imprimir</button>
+            <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
-            <input type="text" id="filtroDireccion" placeholder="🔍 Dirección o barrio" onkeyup="filtrarPropiedades()" style="min-width:200px">
+            <input type="text" id="filtroDireccion" placeholder="Dirección o barrio" onkeyup="filtrarPropiedades()" style="min-width:200px">
             <div class="sep"></div>
             <select id="filtroTipo" onchange="filtrarPropiedades()">
                 <option value="">Todos los tipos</option>
@@ -278,7 +279,7 @@
                 <option value="vendida">Vendida</option>
                 <option value="rentada">Rentada</option>
             </select>
-            <input type="number" id="filtroAmbiendesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()" style="width:90px">
+            <input type="number" id="filtroAmbientesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()" style="width:90px">
             <div class="sep"></div>
             <label><input type="checkbox" id="filtroPublicadas" onchange="filtrarPropiedades()"> Solo publicadas</label>
         </div>
@@ -308,7 +309,7 @@
     <div class="modal-box">
         <div class="modal-header">
             <h3 id="modal-titulo">Compradores compatibles</h3>
-            <button class="modal-close" onclick="cerrarModal('modal-matches')">✕</button>
+            <button class="modal-close" onclick="cerrarModal('modal-matches')">&#x2715;</button>
         </div>
         <div id="modal-contenido"></div>
     </div>
@@ -318,8 +319,8 @@
 <div id="modal-notes" class="modal-overlay">
     <div class="modal-box" style="max-width:520px">
         <div class="modal-header">
-            <h3>📝 Notas de la propiedad</h3>
-            <button class="modal-close" onclick="cerrarModal('modal-notes')">✕</button>
+            <h3>Notas de la propiedad</h3>
+            <button class="modal-close" onclick="cerrarModal('modal-notes')">&#x2715;</button>
         </div>
         <textarea id="notas-textarea" class="notes-textarea" placeholder="Escribí notas sobre esta propiedad..."></textarea>
         <div class="modal-footer">
@@ -330,20 +331,31 @@
 </div>
 
 <script>
+    // ── Utilidades ────────────────────────────────────────────────────────────
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Interceptor global: 401 → login, CSRF en métodos de escritura
+    const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const _origFetch = window.fetch;
+    window.fetch = function(url, options) {
+        options = options || {};
+        if (_csrfToken && options.method &&
+            ['POST','PUT','DELETE','PATCH'].indexOf(options.method.toUpperCase()) !== -1) {
+            options.headers = Object.assign({}, options.headers, { 'X-CSRFToken': _csrfToken });
+        }
+        return _origFetch(url, options).then(function(r) {
+            if (r.status === 401) window.location.href = '/admin/login';
+            return r;
+        });
+    };
+
     let clientes = [];
     let propiedades = [];
     let sortClientes    = { field: null, dir: 1 };
     let sortPropiedades = { field: null, dir: 1 };
     let notasPropiedadId = null;
-
-    // Interceptor global para 401 → redirigir a login
-    const _fetch = window.fetch;
-    window.fetch = function(...args) {
-        return _fetch(...args).then(r => {
-            if (r.status === 401) { window.location.href = '/admin/login'; }
-            return r;
-        });
-    };
 
     // ── TABS ──────────────────────────────────────────────────────────────────
     function mostrarTab(tab, btn) {
@@ -361,7 +373,7 @@
         const s = tabla === 'clientes' ? sortClientes : sortPropiedades;
         if (s.field === field) s.dir *= -1;
         else { s.field = field; s.dir = 1; }
-        document.querySelectorAll(`th[data-sort="${tabla}"]`).forEach(t => {
+        document.querySelectorAll('th[data-sort="' + tabla + '"]').forEach(t => {
             const icon = t.querySelector('.sort-icon');
             const active = t.dataset.field === field;
             if (icon) icon.textContent = active ? (s.dir === 1 ? '▴' : '▾') : '';
@@ -373,9 +385,9 @@
 
     function applySort(arr, s) {
         if (!s.field) return arr;
-        return [...arr].sort((a, b) => {
-            const va = a[s.field] ?? '';
-            const vb = b[s.field] ?? '';
+        return arr.slice().sort(function(a, b) {
+            const va = a[s.field] != null ? a[s.field] : '';
+            const vb = b[s.field] != null ? b[s.field] : '';
             if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * s.dir;
             return String(va).localeCompare(String(vb), 'es', { numeric: true }) * s.dir;
         });
@@ -386,57 +398,59 @@
         const tabla = document.getElementById(tablaId).outerHTML;
         const fecha = new Date().toLocaleDateString('es-AR');
         const v = window.open('', '_blank');
-        v.document.write(`<html><head><title>${titulo} — ${fecha}</title>
-        <style>
-            body { font-family: Arial, sans-serif; font-size: 11px; }
-            h2 { font-size: 14px; margin-bottom: 2px; }
-            p  { color: #64748b; margin: 0 0 10px; font-size: 11px; }
-            table { width: 100%; border-collapse: collapse; }
-            th { background: #1a1a1a; color: white; padding: 5px 7px; text-align: left; font-size: 10px; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            td { padding: 4px 7px; border-bottom: 1px solid #e2e8f0; }
-            tr:nth-child(even) td { background: #f8fafc; }
-            .no-print { display: none; }
-            .badge { border: 1px solid currentColor; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
-            a { color: black; text-decoration: none; }
-            .wa-link { display: none; }
-        </style></head>
-        <body><h2>${titulo}</h2><p>${fecha}</p>${tabla}</body></html>`);
+        v.document.write('<html><head><title>' + titulo + ' — ' + fecha + '</title>' +
+        '<style>' +
+        'body { font-family: Arial, sans-serif; font-size: 11px; }' +
+        'h2 { font-size: 14px; margin-bottom: 2px; }' +
+        'p  { color: #64748b; margin: 0 0 10px; font-size: 11px; }' +
+        'table { width: 100%; border-collapse: collapse; }' +
+        'th { background: #1a1a1a; color: white; padding: 5px 7px; text-align: left; font-size: 10px; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+        'td { padding: 4px 7px; border-bottom: 1px solid #e2e8f0; }' +
+        'tr:nth-child(even) td { background: #f8fafc; }' +
+        '.no-print { display: none; }' +
+        '.badge { border: 1px solid currentColor; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; text-transform: uppercase; }' +
+        'a { color: black; text-decoration: none; }' +
+        '.wa-link { display: none; }' +
+        '</style></head>' +
+        '<body><h2>' + titulo + '</h2><p>' + fecha + '</p>' + tabla + '</body></html>');
         v.document.close(); v.print();
     }
 
     function waLink(phone) {
         const d = String(phone).replace(/\D/g, '');
         const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
-        return `https://wa.me/${intl}`;
+        return 'https://wa.me/' + intl;
     }
 
     // ── MODALS ────────────────────────────────────────────────────────────────
     function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-    document.querySelectorAll('.modal-overlay').forEach(m => {
-        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+    document.querySelectorAll('.modal-overlay').forEach(function(m) {
+        m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('active'); });
     });
 
     function abrirNotas(propId) {
         notasPropiedadId = propId;
-        const p = propiedades.find(x => x.id === propId);
-        document.getElementById('notas-textarea').value = p?.descripcion || '';
+        const p = propiedades.find(function(x) { return x.id === propId; });
+        document.getElementById('notas-textarea').value = p ? (p.descripcion || '') : '';
         document.getElementById('modal-notes').classList.add('active');
-        setTimeout(() => document.getElementById('notas-textarea').focus(), 100);
+        setTimeout(function() { document.getElementById('notas-textarea').focus(); }, 100);
     }
 
     function guardarNotas() {
         const texto = document.getElementById('notas-textarea').value;
-        fetch(`/api/propiedades/${notasPropiedadId}`, {
+        fetch('/api/propiedades/' + notasPropiedadId, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ descripcion: texto })
-        }).then(() => { cerrarModal('modal-notes'); cargarPropiedades(); })
-          .catch(e => alert('Error: ' + e));
+        }).then(function() { cerrarModal('modal-notes'); cargarPropiedades(); })
+          .catch(function(e) { console.error('Error al guardar notas', e); });
     }
 
     // ── CLIENTES ──────────────────────────────────────────────────────────────
     function cargarClientes() {
-        fetch('/api/clientes').then(r => r.json()).then(data => {
-            clientes = data.sort((a, b) => (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido, 'es'));
+        fetch('/api/clientes').then(function(r) { return r.json(); }).then(function(data) {
+            clientes = data.sort(function(a, b) {
+                return (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido, 'es');
+            });
             filtrarClientes();
         });
     }
@@ -448,7 +462,7 @@
         const showProp  = document.getElementById('togglePropietarios').checked;
         const showInt   = document.getElementById('toggleInteresados').checked;
 
-        let filtrados = clientes.filter(c => {
+        let filtrados = clientes.filter(function(c) {
             const matchTexto = c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
             const matchOp    = !operacion || c.operacion === operacion;
             const matchAmb   = !ambientes || c.ambientes == ambientes;
@@ -462,23 +476,21 @@
 
         const tbody = document.querySelector('#tablaClientes tbody');
         tbody.innerHTML = '';
-        filtrados.forEach(c => {
+        filtrados.forEach(function(c) {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><a href="/cliente/${c.id}">${c.nombre} ${c.apellido}</a></td>
-                <td class="editable-text" data-field="telefono" data-id="${c.id}">
-                    ${c.telefono}&nbsp;<a href="${waLink(c.telefono)}" target="_blank" class="wa-link" title="WhatsApp" onclick="event.stopPropagation()">💬</a>
-                </td>
-                <td class="editable-text" data-field="email"     data-id="${c.id}">${c.email || ''}</td>
-                <td class="editable-select" data-field="tipo"    data-id="${c.id}"><span class="badge badge-${c.tipo}">${c.tipo}</span></td>
-                <td class="editable-text" data-field="rango_min" data-id="${c.id}">${c.rango_min || ''}</td>
-                <td class="editable-text" data-field="rango_max" data-id="${c.id}">${c.rango_max || ''}</td>
-                <td><input type="checkbox" ${c.es_usd ? 'checked' : ''} onchange="actualizarCliente(${c.id}, 'es_usd', this.checked)"></td>
-                <td class="editable-text" data-field="ambientes" data-id="${c.id}">${c.ambientes || ''}</td>
-                <td class="editable-select" data-field="operacion" data-id="${c.id}">${c.operacion || ''}</td>
-                <td class="no-print">
-                    <button class="btn-action btn-cancel" onclick="eliminarCliente(${c.id})">✕</button>
-                </td>`;
+            row.innerHTML =
+                '<td><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></td>' +
+                '<td class="editable-text" data-field="telefono" data-id="' + c.id + '">' +
+                    esc(c.telefono) + '&nbsp;<a href="' + waLink(c.telefono) + '" target="_blank" class="wa-link" title="WhatsApp" onclick="event.stopPropagation()">&#x1F4AC;</a>' +
+                '</td>' +
+                '<td class="editable-text" data-field="email" data-id="' + c.id + '">' + esc(c.email || '') + '</td>' +
+                '<td class="editable-select" data-field="tipo" data-id="' + c.id + '"><span class="badge badge-' + esc(c.tipo) + '">' + esc(c.tipo) + '</span></td>' +
+                '<td class="editable-text" data-field="rango_min" data-id="' + c.id + '">' + (c.rango_min || '') + '</td>' +
+                '<td class="editable-text" data-field="rango_max" data-id="' + c.id + '">' + (c.rango_max || '') + '</td>' +
+                '<td><input type="checkbox" ' + (c.es_usd ? 'checked' : '') + ' onchange="actualizarCliente(' + c.id + ', \'es_usd\', this.checked)"></td>' +
+                '<td class="editable-text" data-field="ambientes" data-id="' + c.id + '">' + (c.ambientes || '') + '</td>' +
+                '<td class="editable-select" data-field="operacion" data-id="' + c.id + '">' + esc(c.operacion || '') + '</td>' +
+                '<td class="no-print"><button class="btn-action btn-cancel" onclick="eliminarCliente(' + c.id + ')">&#x2715;</button></td>';
             tbody.appendChild(row);
         });
         agregarEventosEdicionTextoClientes();
@@ -486,8 +498,8 @@
     }
 
     function resetFiltrosClientes() {
-        ['togglePropietarios','toggleInteresados'].forEach(id => document.getElementById(id).checked = false);
-        ['filtroTexto','filtroOperacion','filtroAmbientes'].forEach(id => document.getElementById(id).value = '');
+        ['togglePropietarios','toggleInteresados'].forEach(function(id) { document.getElementById(id).checked = false; });
+        ['filtroTexto','filtroOperacion','filtroAmbientes'].forEach(function(id) { document.getElementById(id).value = ''; });
         filtrarClientes();
     }
 
@@ -495,20 +507,20 @@
         const tbody = document.querySelector('#tablaClientes tbody');
         const row = document.createElement('tr');
         row.classList.add('new-row');
-        row.innerHTML = `
-            <td data-field="nombre">   <input type="text"   placeholder="Nombre Apellido"></td>
-            <td data-field="telefono"> <input type="text"   placeholder="Teléfono"></td>
-            <td data-field="email">    <input type="text"   placeholder="Email"></td>
-            <td data-field="tipo">     <select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select></td>
-            <td data-field="rango_min"><input type="number" placeholder="Min"></td>
-            <td data-field="rango_max"><input type="number" placeholder="Max"></td>
-            <td><input type="checkbox" data-field="es_usd"></td>
-            <td data-field="ambientes"><input type="number" placeholder="Amb"></td>
-            <td data-field="operacion"><select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select></td>
-            <td class="no-print">
-                <button class="btn-action btn-save"   onclick="guardarNuevoCliente(this)">✔</button>
-                <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">✕</button>
-            </td>`;
+        row.innerHTML =
+            '<td data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>' +
+            '<td data-field="telefono"><input type="text" placeholder="Teléfono"></td>' +
+            '<td data-field="email"><input type="text" placeholder="Email"></td>' +
+            '<td data-field="tipo"><select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select></td>' +
+            '<td data-field="rango_min"><input type="number" placeholder="Min"></td>' +
+            '<td data-field="rango_max"><input type="number" placeholder="Max"></td>' +
+            '<td><input type="checkbox" data-field="es_usd"></td>' +
+            '<td data-field="ambientes"><input type="number" placeholder="Amb"></td>' +
+            '<td data-field="operacion"><select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select></td>' +
+            '<td class="no-print">' +
+                '<button class="btn-action btn-save" onclick="guardarNuevoCliente(this)">&#x2714;</button>' +
+                '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
+            '</td>';
         tbody.insertBefore(row, tbody.firstChild);
     }
 
@@ -516,135 +528,152 @@
         const row = btn.closest('tr');
         const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
         const cliente = {
-            nombre:     nombreCompleto[0] || '',
-            apellido:   nombreCompleto.slice(1).join(' ') || '',
-            telefono:   row.querySelector('[data-field="telefono"] input').value,
-            email:      row.querySelector('[data-field="email"] input').value || null,
-            tipo:       row.querySelector('[data-field="tipo"] select').value,
-            rango_min:  parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
-            rango_max:  parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
-            es_usd:     row.querySelector('[data-field="es_usd"]').checked,
-            ambientes:  parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
-            operacion:  row.querySelector('[data-field="operacion"] select').value,
+            nombre:      nombreCompleto[0] || '',
+            apellido:    nombreCompleto.slice(1).join(' ') || '',
+            telefono:    row.querySelector('[data-field="telefono"] input').value,
+            email:       row.querySelector('[data-field="email"] input').value || null,
+            tipo:        row.querySelector('[data-field="tipo"] select').value,
+            rango_min:   parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
+            rango_max:   parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
+            es_usd:      row.querySelector('[data-field="es_usd"]').checked,
+            ambientes:   parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
+            operacion:   row.querySelector('[data-field="operacion"] select').value,
             descripcion: ''
         };
-        if (!cliente.nombre || !cliente.apellido || !cliente.telefono) { alert('Completá Nombre, Apellido y Teléfono.'); return; }
-        fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cliente) })
-            .then(r => r.json()).then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+        if (!cliente.nombre || !cliente.apellido || !cliente.telefono) {
+            alert('Completá Nombre, Apellido y Teléfono.');
+            return;
+        }
+        fetch('/api/clientes', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cliente)
+        }).then(function(r) { return r.json(); })
+          .then(function() { cargarClientes(); })
+          .catch(function(e) { console.error('Error al guardar cliente', e); });
     }
 
     function eliminarCliente(id) {
         if (confirm('¿Seguro querés borrar este cliente?')) {
-            fetch(`/api/clientes/${id}`, { method: 'DELETE' }).then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+            fetch('/api/clientes/' + id, { method: 'DELETE' })
+                .then(function() { cargarClientes(); })
+                .catch(function(e) { console.error('Error al eliminar cliente', e); });
         }
     }
 
     function actualizarCliente(id, field, value) {
-        fetch(`/api/clientes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
-            .then(() => cargarClientes()).catch(e => alert('Error: ' + e));
+        const body = {};
+        body[field] = value;
+        fetch('/api/clientes/' + id, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function() { cargarClientes(); })
+          .catch(function(e) { console.error('Error al actualizar cliente', e); });
     }
 
     function agregarEventosEdicionTextoClientes() {
-        document.querySelectorAll('#tablaClientes .editable-text').forEach(cell => {
+        document.querySelectorAll('#tablaClientes .editable-text').forEach(function(cell) {
             cell.addEventListener('dblclick', function(e) {
                 if (this.querySelector('input') || e.target.tagName === 'A') return;
                 const id = this.dataset.id, field = this.dataset.field;
                 const oldValue = this.textContent.trim();
-                this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
+                this.innerHTML = '<input type="' + (field.includes('rango') || field === 'ambientes' ? 'number' : 'text') + '" value="' + esc(oldValue) + '">';
                 const input = this.querySelector('input');
                 input.focus();
-                input.addEventListener('blur', () => {
+                input.addEventListener('blur', function() {
                     const newValue = input.value.trim();
                     if (newValue !== oldValue) {
                         if (field === 'nombre') {
-                            const [nombre, ...rest] = newValue.split(' ');
-                            actualizarCliente(id, 'nombre', nombre);
-                            if (rest.length) actualizarCliente(id, 'apellido', rest.join(' '));
+                            const parts = newValue.split(' ');
+                            actualizarCliente(id, 'nombre', parts[0]);
+                            if (parts.length > 1) actualizarCliente(id, 'apellido', parts.slice(1).join(' '));
                         } else {
-                            actualizarCliente(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
+                            actualizarCliente(id, field, (field.includes('rango') || field === 'ambientes') ? parseFloat(newValue) || null : newValue);
                         }
                     } else { cargarClientes(); }
                 });
-                input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
+                input.addEventListener('keypress', function(e) { if (e.key === 'Enter') input.blur(); });
             });
         });
     }
 
     function agregarEventosEdicionSelectClientes() {
-        document.querySelectorAll('#tablaClientes .editable-select').forEach(cell => {
+        document.querySelectorAll('#tablaClientes .editable-select').forEach(function(cell) {
             cell.addEventListener('click', function() {
                 if (this.querySelector('select')) return;
                 const id = this.dataset.id, field = this.dataset.field;
                 const oldValue = field === 'tipo'
-                    ? this.querySelector('.badge')?.textContent.trim()
+                    ? (this.querySelector('.badge') ? this.querySelector('.badge').textContent.trim() : '')
                     : this.textContent.trim();
                 const options = field === 'tipo'
                     ? '<option value="interesado">Interesado</option><option value="propietario">Propietario</option>'
                     : '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
-                this.innerHTML = `<select>${options}</select>`;
+                this.innerHTML = '<select>' + options + '</select>';
                 const sel = this.querySelector('select');
                 sel.value = oldValue; sel.focus();
-                sel.addEventListener('change', () => actualizarCliente(id, field, sel.value));
+                sel.addEventListener('change', function() { actualizarCliente(id, field, sel.value); });
             });
         });
     }
 
     // ── PROPIEDADES ───────────────────────────────────────────────────────────
     function cargarPropiedades() {
-        fetch('/api/propiedades').then(r => r.json()).then(data => {
-            propiedades = data.sort((a, b) => a.direccion.localeCompare(b.direccion, 'es'));
+        fetch('/api/propiedades').then(function(r) { return r.json(); }).then(function(data) {
+            propiedades = data.sort(function(a, b) {
+                return a.direccion.localeCompare(b.direccion, 'es');
+            });
             filtrarPropiedades();
         });
     }
 
     function filtrarPropiedades() {
-        const dir      = document.getElementById('filtroDireccion').value.toLowerCase();
-        const tipo     = document.getElementById('filtroTipo').value;
-        const op       = document.getElementById('filtroOperacion2').value;
-        const estado   = document.getElementById('filtroEstado').value;
-        const amb      = document.getElementById('filtroAmbiendesProp').value;
-        const soloPub  = document.getElementById('filtroPublicadas').checked;
+        const dir     = document.getElementById('filtroDireccion').value.toLowerCase();
+        const tipo    = document.getElementById('filtroTipo').value;
+        const op      = document.getElementById('filtroOperacion2').value;
+        const estado  = document.getElementById('filtroEstado').value;
+        const amb     = document.getElementById('filtroAmbientesProp').value;
+        const soloPub = document.getElementById('filtroPublicadas').checked;
 
-        let filtradas = propiedades.filter(p =>
-            (!dir    || p.direccion.toLowerCase().includes(dir) || (p.barrio || '').toLowerCase().includes(dir))
-         && (!tipo   || p.tipo   === tipo)
-         && (!op     || p.operacion === op)
-         && (!estado || p.estado === estado)
-         && (!amb    || p.ambientes == amb)
-         && (!soloPub || p.publicada)
-        );
+        let filtradas = propiedades.filter(function(p) {
+            return (!dir    || p.direccion.toLowerCase().includes(dir) || (p.barrio || '').toLowerCase().includes(dir))
+                && (!tipo   || p.tipo === tipo)
+                && (!op     || p.operacion === op)
+                && (!estado || p.estado === estado)
+                && (!amb    || p.ambientes == amb)
+                && (!soloPub || p.publicada);
+        });
         filtradas = applySort(filtradas, sortPropiedades);
 
         const tbody = document.querySelector('#tablaPropiedades tbody');
         tbody.innerHTML = '';
-        filtradas.forEach(p => {
+        filtradas.forEach(function(p) {
             const row = document.createElement('tr');
             const hasNotes = p.descripcion && p.descripcion.trim().length > 0;
-            const precioStr = p.precio_a_consultar ? 'A consultar' : (p.rango_min ? `${p.es_usd ? 'USD ' : ''}${p.rango_min.toLocaleString('es-AR')}` : '');
-            row.innerHTML = `
-                <td class="editable-text"        data-field="direccion"  data-id="${p.id}">${p.direccion}</td>
-                <td class="editable-text"        data-field="barrio"     data-id="${p.id}">${p.barrio || ''}</td>
-                <td class="editable-select-prop" data-field="tipo"       data-id="${p.id}">${p.tipo || ''}</td>
-                <td class="editable-select-prop" data-field="operacion"  data-id="${p.id}">${p.operacion || ''}</td>
-                <td class="editable-select-prop" data-field="estado"     data-id="${p.id}">
-                    <span class="badge badge-${p.estado}">${p.estado || ''}</span>
-                </td>
-                <td class="editable-text" data-field="rango_min" data-id="${p.id}" title="${p.rango_max ? 'Max: ' + p.rango_max : ''}">${precioStr}</td>
-                <td class="editable-text" data-field="ambientes"  data-id="${p.id}">${p.ambientes || ''}</td>
-                <td>${p.propietario_id ? `<a href="/cliente/${p.propietario_id}">${p.propietario}</a>` : '-'}</td>
-                <td>${p.fecha_estado || '-'}</td>
-                <td>
-                    <span class="badge ${p.publicada ? 'badge-publicada' : 'badge-no-publicada'}"
-                          onclick="togglePublicada(${p.id}, ${p.publicada})"
-                          title="${p.publicada ? 'Click para despublicar' : 'Click para publicar'}">
-                        ${p.publicada ? '✓ Publicada' : '— Borrador'}
-                    </span>
-                </td>
-                <td class="no-print">
-                    <button class="btn-action btn-match" onclick="verMatches(${p.id}, '${p.direccion.replace(/'/g, "\\'")}')" title="Compradores compatibles">⚡</button>
-                    <button class="btn-action btn-note"  onclick="abrirNotas(${p.id})" title="${hasNotes ? 'Ver/editar notas' : 'Agregar notas'}" style="${hasNotes ? 'background:#b45309' : ''}">📝</button>
-                    <button class="btn-action btn-cancel" onclick="eliminarPropiedad(${p.id})">✕</button>
-                </td>`;
+            const precioStr = p.precio_a_consultar ? 'A consultar'
+                : (p.rango_min ? (p.es_usd ? 'USD ' : '') + p.rango_min.toLocaleString('es-AR') : '');
+            row.innerHTML =
+                '<td class="editable-text" data-field="direccion" data-id="' + p.id + '">' + esc(p.direccion) + '</td>' +
+                '<td class="editable-text" data-field="barrio" data-id="' + p.id + '">' + esc(p.barrio || '') + '</td>' +
+                '<td class="editable-select-prop" data-field="tipo" data-id="' + p.id + '">' + esc(p.tipo || '') + '</td>' +
+                '<td class="editable-select-prop" data-field="operacion" data-id="' + p.id + '">' + esc(p.operacion || '') + '</td>' +
+                '<td class="editable-select-prop" data-field="estado" data-id="' + p.id + '">' +
+                    '<span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado || '') + '</span>' +
+                '</td>' +
+                '<td class="editable-text" data-field="rango_min" data-id="' + p.id + '" title="' + (p.rango_max ? 'Max: ' + p.rango_max : '') + '">' + esc(precioStr) + '</td>' +
+                '<td class="editable-text" data-field="ambientes" data-id="' + p.id + '">' + (p.ambientes || '') + '</td>' +
+                '<td>' + (p.propietario_id ? '<a href="/cliente/' + p.propietario_id + '">' + esc(p.propietario) + '</a>' : '-') + '</td>' +
+                '<td>' + esc(p.fecha_estado || '-') + '</td>' +
+                '<td>' +
+                    '<span class="badge ' + (p.publicada ? 'badge-publicada' : 'badge-no-publicada') + '"' +
+                    ' onclick="togglePublicada(' + p.id + ', ' + p.publicada + ')"' +
+                    ' title="' + (p.publicada ? 'Click para despublicar' : 'Click para publicar') + '">' +
+                    (p.publicada ? '&#x2713; Publicada' : '&mdash; Borrador') +
+                    '</span>' +
+                '</td>' +
+                '<td class="no-print">' +
+                    '<button class="btn-action btn-match" onclick="verMatches(' + p.id + ', \'' + esc(p.direccion).replace(/'/g,"\\'") + '\')" title="Compradores compatibles">&#x26A1;</button>' +
+                    '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '" ' + (hasNotes ? 'style="background:#b45309"' : '') + '>&#x1F4DD;</button>' +
+                    '<button class="btn-action btn-cancel" onclick="eliminarPropiedad(' + p.id + ')">&#x2715;</button>' +
+                '</td>';
             tbody.appendChild(row);
         });
         agregarEventosEdicionTextoPropiedades();
@@ -652,147 +681,168 @@
     }
 
     function togglePublicada(id, actual) {
-        fetch(`/api/propiedades/${id}`, {
+        fetch('/api/propiedades/' + id, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ publicada: !actual })
-        }).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+        }).then(function() { cargarPropiedades(); })
+          .catch(function(e) { console.error('Error al togglear publicada', e); });
     }
 
     function resetFiltrosPropiedades() {
-        ['filtroDireccion','filtroTipo','filtroOperacion2','filtroEstado','filtroAmbiendesProp'].forEach(id => document.getElementById(id).value = '');
+        ['filtroDireccion','filtroTipo','filtroOperacion2','filtroEstado','filtroAmbientesProp'].forEach(function(id) {
+            document.getElementById(id).value = '';
+        });
         document.getElementById('filtroPublicadas').checked = false;
         filtrarPropiedades();
     }
 
     function agregarFilaPropiedad() {
-        const propietarios = clientes.filter(c => c.tipo === 'propietario');
-        const optsProp = propietarios.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('');
+        const propietarios = clientes.filter(function(c) { return c.tipo === 'propietario'; });
+        const optsProp = propietarios.map(function(c) {
+            return '<option value="' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</option>';
+        }).join('');
         const tbody = document.querySelector('#tablaPropiedades tbody');
         const row = document.createElement('tr');
         row.classList.add('new-row');
-        row.innerHTML = `
-            <td><input type="text" placeholder="Dirección"></td>
-            <td><input type="text" placeholder="Barrio"></td>
-            <td><select><option value="casa">Casa</option><option value="departamento">Departamento</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>
-            <td><select><option value="venta">Venta</option><option value="alquiler">Alquiler</option></select></td>
-            <td><select><option value="disponible">Disponible</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option></select></td>
-            <td><input type="number" placeholder="Precio USD"></td>
-            <td><input type="number" placeholder="Amb"></td>
-            <td><select><option value="">-- Sin propietario --</option>${optsProp}</select></td>
-            <td>-</td><td>-</td>
-            <td class="no-print">
-                <button class="btn-action btn-save"   onclick="guardarNuevaPropiedad(this)">✔</button>
-                <button class="btn-action btn-cancel" onclick="this.closest('tr').remove()">✕</button>
-            </td>`;
+        row.innerHTML =
+            '<td><input type="text" placeholder="Dirección"></td>' +
+            '<td><input type="text" placeholder="Barrio"></td>' +
+            '<td><select><option value="casa">Casa</option><option value="departamento">Departamento</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>' +
+            '<td><select><option value="venta">Venta</option><option value="alquiler">Alquiler</option></select></td>' +
+            '<td><select><option value="disponible">Disponible</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option></select></td>' +
+            '<td><input type="number" placeholder="Precio USD"></td>' +
+            '<td><input type="number" placeholder="Amb"></td>' +
+            '<td><select><option value="">-- Sin propietario --</option>' + optsProp + '</select></td>' +
+            '<td>-</td><td>-</td>' +
+            '<td class="no-print">' +
+                '<button class="btn-action btn-save" onclick="guardarNuevaPropiedad(this)">&#x2714;</button>' +
+                '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
+            '</td>';
         tbody.insertBefore(row, tbody.firstChild);
     }
 
     function guardarNuevaPropiedad(btn) {
         const tds = btn.closest('tr').querySelectorAll('td');
         const propiedad = {
-            direccion:     tds[0].querySelector('input').value,
-            barrio:        tds[1].querySelector('input').value || null,
-            tipo:          tds[2].querySelector('select').value,
-            operacion:     tds[3].querySelector('select').value,
-            estado:        tds[4].querySelector('select').value,
-            rango_min:     parseFloat(tds[5].querySelector('input').value) || null,
-            es_usd:        true,
-            ambientes:     parseInt(tds[6].querySelector('input').value) || null,
+            direccion:      tds[0].querySelector('input').value,
+            barrio:         tds[1].querySelector('input').value || null,
+            tipo:           tds[2].querySelector('select').value,
+            operacion:      tds[3].querySelector('select').value,
+            estado:         tds[4].querySelector('select').value,
+            rango_min:      parseFloat(tds[5].querySelector('input').value) || null,
+            es_usd:         true,
+            ambientes:      parseInt(tds[6].querySelector('input').value) || null,
             propietario_id: parseInt(tds[7].querySelector('select').value) || null
         };
         if (!propiedad.direccion) { alert('Ingresá la dirección.'); return; }
-        fetch('/api/propiedades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(propiedad) })
-            .then(r => r.json()).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+        fetch('/api/propiedades', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(propiedad)
+        }).then(function(r) { return r.json(); })
+          .then(function() { cargarPropiedades(); })
+          .catch(function(e) { console.error('Error al guardar propiedad', e); });
     }
 
     function eliminarPropiedad(id) {
         if (confirm('¿Seguro querés borrar esta propiedad?')) {
-            fetch(`/api/propiedades/${id}`, { method: 'DELETE' }).then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+            fetch('/api/propiedades/' + id, { method: 'DELETE' })
+                .then(function() { cargarPropiedades(); })
+                .catch(function(e) { console.error('Error al eliminar propiedad', e); });
         }
     }
 
     function actualizarPropiedad(id, field, value) {
-        fetch(`/api/propiedades/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })
-            .then(() => cargarPropiedades()).catch(e => alert('Error: ' + e));
+        const body = {};
+        body[field] = value;
+        fetch('/api/propiedades/' + id, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function() { cargarPropiedades(); })
+          .catch(function(e) { console.error('Error al actualizar propiedad', e); });
     }
 
     function agregarEventosEdicionTextoPropiedades() {
-        document.querySelectorAll('#tablaPropiedades .editable-text').forEach(cell => {
+        document.querySelectorAll('#tablaPropiedades .editable-text').forEach(function(cell) {
             cell.addEventListener('dblclick', function() {
                 if (this.querySelector('input')) return;
                 const id = this.dataset.id, field = this.dataset.field;
                 const oldValue = this.textContent.trim();
-                this.innerHTML = `<input type="${field.includes('rango') || field === 'ambientes' ? 'number' : 'text'}" value="${oldValue}">`;
+                this.innerHTML = '<input type="' + (field.includes('rango') || field === 'ambientes' ? 'number' : 'text') + '" value="' + esc(oldValue) + '">';
                 const input = this.querySelector('input');
                 input.focus();
-                input.addEventListener('blur', () => {
+                input.addEventListener('blur', function() {
                     const newValue = input.value.trim();
                     if (newValue !== oldValue)
-                        actualizarPropiedad(id, field, field.includes('rango') || field === 'ambientes' ? parseFloat(newValue) || null : newValue);
-                    else this.textContent = oldValue;
+                        actualizarPropiedad(id, field, (field.includes('rango') || field === 'ambientes') ? parseFloat(newValue) || null : newValue);
+                    else cell.textContent = oldValue;
                 });
-                input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
+                input.addEventListener('keypress', function(e) { if (e.key === 'Enter') input.blur(); });
             });
         });
     }
 
     function agregarEventosEdicionSelectPropiedades() {
-        document.querySelectorAll('#tablaPropiedades .editable-select-prop').forEach(cell => {
+        document.querySelectorAll('#tablaPropiedades .editable-select-prop').forEach(function(cell) {
             cell.addEventListener('click', function() {
                 if (this.querySelector('select')) return;
                 const id = this.dataset.id, field = this.dataset.field;
                 const oldValue = field === 'estado'
-                    ? this.querySelector('.badge')?.textContent.trim()
+                    ? (this.querySelector('.badge') ? this.querySelector('.badge').textContent.trim() : '')
                     : this.textContent.trim();
-                const options = {
+                const opts = {
                     tipo:      ['casa','departamento','local','terreno','otro'],
                     operacion: ['venta','alquiler'],
                     estado:    ['disponible','vendida','rentada']
                 }[field] || [];
-                this.innerHTML = `<select>${options.map(v => `<option value="${v}">${v}</option>`).join('')}</select>`;
+                this.innerHTML = '<select>' + opts.map(function(v) { return '<option value="' + v + '">' + v + '</option>'; }).join('') + '</select>';
                 const sel = this.querySelector('select');
                 sel.value = oldValue; sel.focus();
-                sel.addEventListener('change', () => actualizarPropiedad(id, field, sel.value));
+                sel.addEventListener('change', function() { actualizarPropiedad(id, field, sel.value); });
             });
         });
     }
 
     // ── MATCHES ───────────────────────────────────────────────────────────────
     function verMatches(propId, direccion) {
-        fetch(`/api/propiedades/${propId}/matches`).then(r => r.json()).then(matches => {
-            document.getElementById('modal-titulo').textContent = `Compradores compatibles — ${direccion}`;
-            document.getElementById('modal-contenido').innerHTML = matches.length === 0
-                ? '<p style="color:#64748b;margin:0">No hay interesados compatibles con esta propiedad.</p>'
-                : `<div class="table-wrap"><table>
-                    <thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Min</th><th>Max</th><th>USD</th><th>Amb</th><th>Operación</th></tr></thead>
-                    <tbody>${matches.map(m => `<tr>
-                        <td><a href="/cliente/${m.id}">${m.nombre} ${m.apellido}</a></td>
-                        <td>${m.telefono} <a href="${waLink(m.telefono)}" target="_blank" class="wa-link">💬</a></td>
-                        <td>${m.email || '-'}</td>
-                        <td>${m.rango_min || '-'}</td><td>${m.rango_max || '-'}</td>
-                        <td>${m.es_usd ? 'Sí' : 'No'}</td>
-                        <td>${m.ambientes || '-'}</td>
-                        <td>${m.operacion || '-'}</td>
-                    </tr>`).join('')}</tbody>
-                   </table></div>`;
+        fetch('/api/propiedades/' + propId + '/matches').then(function(r) { return r.json(); }).then(function(matches) {
+            document.getElementById('modal-titulo').textContent = 'Compradores compatibles — ' + direccion;
+            if (matches.length === 0) {
+                document.getElementById('modal-contenido').innerHTML = '<p style="color:#64748b;margin:0">No hay interesados compatibles con esta propiedad.</p>';
+            } else {
+                document.getElementById('modal-contenido').innerHTML =
+                    '<div class="table-wrap"><table>' +
+                    '<thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Min</th><th>Max</th><th>USD</th><th>Amb</th><th>Operación</th></tr></thead>' +
+                    '<tbody>' + matches.map(function(m) {
+                        return '<tr>' +
+                            '<td><a href="/cliente/' + m.id + '">' + esc(m.nombre) + ' ' + esc(m.apellido) + '</a></td>' +
+                            '<td>' + esc(m.telefono) + ' <a href="' + waLink(m.telefono) + '" target="_blank" class="wa-link">&#x1F4AC;</a></td>' +
+                            '<td>' + esc(m.email || '-') + '</td>' +
+                            '<td>' + (m.rango_min || '-') + '</td>' +
+                            '<td>' + (m.rango_max || '-') + '</td>' +
+                            '<td>' + (m.es_usd ? 'Sí' : 'No') + '</td>' +
+                            '<td>' + (m.ambientes || '-') + '</td>' +
+                            '<td>' + esc(m.operacion || '-') + '</td>' +
+                        '</tr>';
+                    }).join('') + '</tbody></table></div>';
+            }
             document.getElementById('modal-matches').classList.add('active');
-        }).catch(e => alert('Error: ' + e));
+        }).catch(function(e) { console.error('Error al cargar matches', e); });
     }
 
     // ── INIT ──────────────────────────────────────────────────────────────────
     function cargarBadgeConsultas() {
         fetch('/api/consultas/no_leidas')
-            .then(r => r.json())
-            .then(data => {
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
                 const badge = document.getElementById('badge-consultas');
                 if (data.count > 0) {
                     badge.textContent = data.count;
                     badge.style.display = 'flex';
                 }
-            }).catch(() => {});
+            }).catch(function() {});
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
         cargarClientes();
         cargarBadgeConsultas();
     });

@@ -327,20 +327,20 @@
         <h2>¿Tenés alguna <span>consulta</span>?</h2>
         <p>Contactanos por el medio que prefieras. Respondemos a la brevedad.</p>
         <div class="contact-cards">
-            <a href="https://wa.me/5491112345678" target="_blank" class="contact-card wa">
-                <div class="c-icon">💬</div>
+            <a href="https://wa.me/{{ contacto_wa }}" target="_blank" class="contact-card wa">
+                <div class="c-icon">&#x1F4AC;</div>
                 <div class="c-label">WhatsApp</div>
-                <div class="c-value">+54 9 11 1234-5678</div>
+                <div class="c-value">{{ contacto_telefono }}</div>
             </a>
-            <a href="tel:+541112345678" class="contact-card">
-                <div class="c-icon">📞</div>
+            <a href="tel:{{ contacto_telefono }}" class="contact-card">
+                <div class="c-icon">&#x1F4DE;</div>
                 <div class="c-label">Teléfono</div>
-                <div class="c-value">(011) 1234-5678</div>
+                <div class="c-value">{{ contacto_telefono }}</div>
             </a>
-            <a href="mailto:info@moretinmobiliaria.com" class="contact-card">
-                <div class="c-icon">✉️</div>
+            <a href="mailto:{{ contacto_email }}" class="contact-card">
+                <div class="c-icon">&#x2709;&#xFE0F;</div>
                 <div class="c-label">Email</div>
-                <div class="c-value">info@moretinmobiliaria.com</div>
+                <div class="c-value">{{ contacto_email }}</div>
             </a>
         </div>
     </div>
@@ -351,6 +351,7 @@
     <div class="footer-brand">Moret</div>
     <div>Roberto Moret Inmobiliaria — Buenos Aires, Argentina</div>
     <div style="margin-top:6px">© <span id="footer-year"></span> Todos los derechos reservados</div>
+    <div style="margin-top:14px"><a href="/admin" style="color:rgba(255,255,255,0.2);font-size:11px">Acceso administrativo</a></div>
 </footer>
 
 <script>

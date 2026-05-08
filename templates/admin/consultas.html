@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Consultas — Moret Inmobiliaria</title>
     <style>
         :root { --red: #C41230; --border: #e2e8f0; --text: #1e293b; --muted: #64748b; }
@@ -53,7 +54,7 @@
         tbody tr:hover td { background: #ffe4e8 !important; }
         tbody tr.no-leida td { background: #fff8f8; font-weight: 500; }
         tbody tr.no-leida td:first-child::before {
-            content: '●'; color: var(--red); margin-right: 6px; font-size: 10px;
+            content: '\25CF'; color: var(--red); margin-right: 6px; font-size: 10px;
         }
 
         .msg-preview { max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
@@ -73,7 +74,6 @@
 
         .empty { text-align: center; padding: 40px; color: var(--muted); }
 
-        /* Modal mensaje completo */
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.55); z-index:100; justify-content:center; align-items:center; }
         .modal-overlay.active { display: flex; }
         .modal-box { background: white; padding: 28px; max-width: 560px; width: 92%; border-radius: 10px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
@@ -111,7 +111,7 @@
             <option value="no">No leídas</option>
             <option value="si">Leídas</option>
         </select>
-        <input type="text" id="filtroBuscar" placeholder="🔍 Buscar nombre o propiedad..." onkeyup="filtrar()" style="min-width:240px">
+        <input type="text" id="filtroBuscar" placeholder="Buscar nombre o propiedad..." onkeyup="filtrar()" style="min-width:240px">
     </div>
 
     <div class="table-wrap">
@@ -136,7 +136,7 @@
     <div class="modal-box">
         <div class="modal-header">
             <h3 id="modal-nombre">Consulta</h3>
-            <button class="modal-close" onclick="document.getElementById('modal-msg').classList.remove('active')">✕</button>
+            <button class="modal-close" onclick="document.getElementById('modal-msg').classList.remove('active')">&#x2715;</button>
         </div>
         <div class="modal-meta">
             <span id="modal-contacto"></span>
@@ -148,18 +148,36 @@
 </div>
 
 <script>
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const _origFetch = window.fetch;
+    window.fetch = function(url, options) {
+        options = options || {};
+        if (_csrfToken && options.method &&
+            ['POST','PUT','DELETE','PATCH'].indexOf(options.method.toUpperCase()) !== -1) {
+            options.headers = Object.assign({}, options.headers, { 'X-CSRFToken': _csrfToken });
+        }
+        return _origFetch(url, options).then(function(r) {
+            if (r.status === 401) window.location.href = '/admin/login';
+            return r;
+        });
+    };
+
     let consultas = [];
 
     function waLink(phone) {
         const d = String(phone).replace(/\D/g, '');
         const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
-        return `https://wa.me/${intl}`;
+        return 'https://wa.me/' + intl;
     }
 
     function filtrar() {
-        const estado  = document.getElementById('filtroLeida').value;
-        const buscar  = document.getElementById('filtroBuscar').value.toLowerCase();
-        let filtradas = consultas.filter(c => {
+        const estado = document.getElementById('filtroLeida').value;
+        const buscar = document.getElementById('filtroBuscar').value.toLowerCase();
+        let filtradas = consultas.filter(function(c) {
             const matchEstado = !estado || (estado === 'no' ? !c.leida : c.leida);
             const matchBuscar = !buscar
                 || c.nombre.toLowerCase().includes(buscar)
@@ -176,67 +194,76 @@
             tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay consultas para mostrar.</td></tr>';
             return;
         }
-        tbody.innerHTML = lista.map(c => `
-            <tr class="${c.leida ? '' : 'no-leida'}" data-id="${c.id}">
-                <td>${c.nombre}</td>
-                <td>
-                    ${c.telefono ? `${c.telefono} <a href="${waLink(c.telefono)}" target="_blank" class="wa-link">💬</a>` : ''}
-                    ${c.email ? `<br><a href="mailto:${c.email}" style="font-size:12px;color:#2563eb">${c.email}</a>` : ''}
-                </td>
-                <td>
-                    ${c.propiedad_id
-                        ? `<a href="/propiedad/${c.propiedad_id}" target="_blank" class="prop-link">${c.propiedad_direccion || 'Ver propiedad'}</a>`
-                        : '<span style="color:#94a3b8;font-size:12px">General</span>'}
-                </td>
-                <td>
-                    <div class="msg-preview">${c.mensaje}</div>
-                </td>
-                <td style="font-size:12px;white-space:nowrap">${c.fecha}</td>
-                <td>
-                    <button class="btn-action btn-expand" onclick="verMensaje(${c.id})">Ver</button>
-                    ${!c.leida ? `<button class="btn-action btn-leer" onclick="marcarLeida(${c.id})">✓ Leída</button>` : ''}
-                    <button class="btn-action btn-delete" onclick="eliminar(${c.id})">✕</button>
-                </td>
-            </tr>`).join('');
+        tbody.innerHTML = lista.map(function(c) {
+            return '<tr class="' + (c.leida ? '' : 'no-leida') + '" data-id="' + c.id + '">' +
+                '<td>' + esc(c.nombre) + '</td>' +
+                '<td>' +
+                    (c.telefono ? esc(c.telefono) + ' <a href="' + waLink(c.telefono) + '" target="_blank" class="wa-link">&#x1F4AC;</a>' : '') +
+                    (c.email ? '<br><a href="mailto:' + esc(c.email) + '" style="font-size:12px;color:#2563eb">' + esc(c.email) + '</a>' : '') +
+                '</td>' +
+                '<td>' +
+                    (c.propiedad_id
+                        ? '<a href="/propiedad/' + c.propiedad_id + '" target="_blank" class="prop-link">' + esc(c.propiedad_direccion || 'Ver propiedad') + '</a>'
+                        : '<span style="color:#94a3b8;font-size:12px">General</span>') +
+                '</td>' +
+                '<td><div class="msg-preview">' + esc(c.mensaje) + '</div></td>' +
+                '<td style="font-size:12px;white-space:nowrap">' + esc(c.fecha) + '</td>' +
+                '<td>' +
+                    '<button class="btn-action btn-expand" onclick="verMensaje(' + c.id + ')">Ver</button>' +
+                    (!c.leida ? '<button class="btn-action btn-leer" onclick="marcarLeida(' + c.id + ')">&#x2713; Le&iacute;da</button>' : '') +
+                    '<button class="btn-action btn-delete" onclick="eliminar(' + c.id + ')">&#x2715;</button>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
     }
 
     function verMensaje(id) {
-        const c = consultas.find(x => x.id === id);
+        const c = consultas.find(function(x) { return x.id === id; });
         if (!c) return;
         document.getElementById('modal-nombre').textContent = c.nombre;
-        document.getElementById('modal-contacto').innerHTML =
-            (c.telefono ? `📞 ${c.telefono}` : '') +
-            (c.email ? `  ✉️ ${c.email}` : '');
+        // textContent es seguro — no parsea HTML
+        document.getElementById('modal-contacto').textContent =
+            (c.telefono ? '&#x260E; ' + c.telefono : '') +
+            (c.email ? '  &#x2709; ' + c.email : '');
+        // Usar textContent para contenido de usuario
+        const contactoEl = document.getElementById('modal-contacto');
+        contactoEl.textContent = '';
+        if (c.telefono) {
+            contactoEl.appendChild(document.createTextNode('☎ ' + c.telefono + '  '));
+        }
+        if (c.email) {
+            contactoEl.appendChild(document.createTextNode('✉ ' + c.email));
+        }
         document.getElementById('modal-prop').textContent =
-            c.propiedad_direccion ? `🏠 ${c.propiedad_direccion}` : '';
-        document.getElementById('modal-fecha').textContent = `🕐 ${c.fecha}`;
+            c.propiedad_direccion ? '🏠 ' + c.propiedad_direccion : '';
+        document.getElementById('modal-fecha').textContent = c.fecha ? '🕐 ' + c.fecha : '';
         document.getElementById('modal-texto').textContent = c.mensaje;
         document.getElementById('modal-msg').classList.add('active');
         if (!c.leida) marcarLeida(id);
     }
 
     function marcarLeida(id) {
-        fetch(`/api/consultas/${id}/leer`, { method: 'PUT' })
-            .then(() => {
-                const c = consultas.find(x => x.id === id);
+        fetch('/api/consultas/' + id + '/leer', { method: 'PUT' })
+            .then(function() {
+                const c = consultas.find(function(x) { return x.id === id; });
                 if (c) c.leida = true;
                 filtrar();
                 actualizarBadge();
-            }).catch(e => console.error(e));
+            }).catch(function(e) { console.error(e); });
     }
 
     function eliminar(id) {
         if (!confirm('¿Eliminar esta consulta?')) return;
-        fetch(`/api/consultas/${id}`, { method: 'DELETE' })
-            .then(() => {
-                consultas = consultas.filter(c => c.id !== id);
+        fetch('/api/consultas/' + id, { method: 'DELETE' })
+            .then(function() {
+                consultas = consultas.filter(function(c) { return c.id !== id; });
                 filtrar();
                 actualizarBadge();
-            }).catch(e => alert('Error: ' + e));
+            }).catch(function(e) { console.error('Error al eliminar consulta', e); });
     }
 
     function actualizarBadge() {
-        const noLeidas = consultas.filter(c => !c.leida).length;
+        const noLeidas = consultas.filter(function(c) { return !c.leida; }).length;
         const badge = document.getElementById('badge-total');
         if (noLeidas > 0) { badge.textContent = noLeidas + ' sin leer'; badge.style.display = 'inline'; }
         else badge.style.display = 'none';
@@ -246,19 +273,16 @@
         if (e.target === this) this.classList.remove('active');
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/consultas')
-            .then(r => {
-                if (r.status === 401) { window.location.href = '/admin/login'; return; }
-                return r.json();
-            })
-            .then(data => {
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
                 if (!data) return;
                 consultas = data;
                 filtrar();
                 actualizarBadge();
             })
-            .catch(e => console.error(e));
+            .catch(function(e) { console.error(e); });
     });
 </script>
 </body>

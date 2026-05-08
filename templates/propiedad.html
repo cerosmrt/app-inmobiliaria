@@ -260,9 +260,9 @@
         return `https://wa.me/${intl}`;
     }
 
-    const TELEFONO = '+54 9 11 1234-5678';
-    const WA_NUM   = '5491112345678';
-    const EMAIL    = 'info@moretinmobiliaria.com';
+    const TELEFONO = '{{ contacto_telefono }}';
+    const WA_NUM   = '{{ contacto_wa }}';
+    const EMAIL    = '{{ contacto_email }}';
 
     function formatPrecio(p) {
         if (p.precio_a_consultar) return `<span class="consultar">A consultar</span>`;

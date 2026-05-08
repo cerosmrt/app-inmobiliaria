@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Perfil de Cliente</title>
     <style>
         :root {
@@ -16,7 +17,6 @@
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
 
-        /* ── Header ── */
         .app-header {
             background: var(--navy); color: white;
             padding: 12px 24px; display: flex; align-items: center; gap: 14px;
@@ -33,10 +33,8 @@
 
         .container { max-width: 1300px; margin: 0 auto; padding: 24px; }
 
-        /* ── Layout ── */
         .layout { display: flex; gap: 24px; align-items: flex-start; }
 
-        /* ── Info card ── */
         .info-card {
             width: 240px; flex-shrink: 0; background: white;
             border-radius: 10px; padding: 20px;
@@ -71,7 +69,6 @@
         }
         .wa-btn:hover { opacity: 0.8; text-decoration: none; }
 
-        /* ── Detail panel ── */
         .detail { flex: 1; min-width: 0; }
 
         .section-card {
@@ -84,13 +81,11 @@
             display: flex; align-items: center; gap: 7px;
         }
 
-        /* ── Preferencias grid ── */
         .pref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
         .pref-item { background: var(--bg); border-radius: 6px; padding: 10px 12px; }
         .pref-item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
         .pref-item .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
 
-        /* ── Tables ── */
         .table-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         thead th {
@@ -102,7 +97,6 @@
         tbody tr:nth-child(even) td { background: #f8fafc; }
         tbody tr:hover td { background: #dbeafe; }
 
-        /* ── Notes ── */
         .notes-textarea {
             width: 100%; font-size: 14px; padding: 10px 12px;
             border: 1px solid var(--border); border-radius: 6px;
@@ -117,19 +111,15 @@
         .btn-green { background: #16a34a; color: white; }
         .save-confirm { font-size: 12px; color: #16a34a; margin-left: 10px; display: none; }
 
-        /* ── Photos ── */
         .propiedad-fotos { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
         .propiedad-fotos:last-child { border-bottom: none; margin-bottom: 0; }
         .propiedad-fotos h3 { font-size: 14px; margin: 0 0 8px; color: var(--navy); }
-        .upload-zone {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-        }
+        .upload-zone { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .fotos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
         .foto-preview { cursor: pointer; border-radius: 6px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.15s; }
         .foto-preview:hover { border-color: var(--blue); }
         .foto-preview img { width: 90px; height: 80px; object-fit: cover; display: block; }
 
-        /* ── Modal visor ── */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); justify-content: center; align-items: center; z-index: 100; }
         .modal.active { display: flex; }
         .modal-content { position: relative; }
@@ -151,9 +141,9 @@
 <body>
 
 <header class="app-header">
-    <span class="icon">🏠</span>
+    <span class="icon">&#x1F3E0;</span>
     <h1 id="header-nombre">Perfil de Cliente</h1>
-    <a href="/admin" class="back-link">← Volver al panel</a>
+    <a href="/admin" class="back-link">&#x2190; Volver al panel</a>
 </header>
 
 <div class="container">
@@ -168,9 +158,9 @@
 <!-- Modal visor de fotos -->
 <div id="foto-modal" class="modal">
     <div class="modal-content">
-        <button class="nav-btn prev-btn" onclick="cambiarFoto(-1)">❮</button>
+        <button class="nav-btn prev-btn" onclick="cambiarFoto(-1)">&#x276E;</button>
         <img id="modal-image" src="" alt="Foto ampliada">
-        <button class="nav-btn next-btn" onclick="cambiarFoto(1)">❯</button>
+        <button class="nav-btn next-btn" onclick="cambiarFoto(1)">&#x276F;</button>
     </div>
 </div>
 
@@ -179,206 +169,202 @@
     let fotosActuales = [];
     let indiceFotoActual = 0;
 
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const _origFetch = window.fetch;
+    window.fetch = function(url, options) {
+        options = options || {};
+        if (_csrfToken && options.method &&
+            ['POST','PUT','DELETE','PATCH'].indexOf(options.method.toUpperCase()) !== -1) {
+            options.headers = Object.assign({}, options.headers, { 'X-CSRFToken': _csrfToken });
+        }
+        return _origFetch(url, options).then(function(r) {
+            if (r.status === 401) window.location.href = '/admin/login';
+            return r;
+        });
+    };
+
     function waLink(phone) {
         const d = String(phone).replace(/\D/g, '');
         const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
-        return `https://wa.me/${intl}`;
+        return 'https://wa.me/' + intl;
     }
 
     function cargarPerfil() {
-        fetch(`/api/clientes/${clienteId}`)
-            .then(r => { if (!r.ok) throw new Error('Cliente no encontrado'); return r.json(); })
-            .then(data => {
-                document.getElementById('header-nombre').textContent = `${data.nombre} ${data.apellido}`;
-                const initials = (data.nombre[0] || '') + (data.apellido[0] || '');
-                document.getElementById('cliente-info').innerHTML = `
-                    <div class="avatar">${initials.toUpperCase()}</div>
-                    <h2>${data.nombre} ${data.apellido}</h2>
-                    <div class="info-row">
-                        <div class="label">Tipo</div>
-                        <div class="value"><span class="badge badge-${data.tipo}">${data.tipo}</span></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="label">Teléfono</div>
-                        <div class="value">${data.telefono}</div>
-                    </div>
-                    ${data.email ? `<div class="info-row"><div class="label">Email</div><div class="value">${data.email}</div></div>` : ''}
-                    <a href="${waLink(data.telefono)}" target="_blank" class="wa-btn">💬 WhatsApp</a>
-                `;
+        fetch('/api/clientes/' + clienteId)
+            .then(function(r) {
+                if (!r.ok) throw new Error('Cliente no encontrado');
+                return r.json();
+            })
+            .then(function(data) {
+                document.getElementById('header-nombre').textContent = data.nombre + ' ' + data.apellido;
+                const initials = ((data.nombre[0] || '') + (data.apellido[0] || '')).toUpperCase();
+
+                const infoCard = document.getElementById('cliente-info');
+                infoCard.innerHTML =
+                    '<div class="avatar">' + esc(initials) + '</div>' +
+                    '<h2>' + esc(data.nombre) + ' ' + esc(data.apellido) + '</h2>' +
+                    '<div class="info-row">' +
+                        '<div class="label">Tipo</div>' +
+                        '<div class="value"><span class="badge badge-' + esc(data.tipo) + '">' + esc(data.tipo) + '</span></div>' +
+                    '</div>' +
+                    '<div class="info-row">' +
+                        '<div class="label">Teléfono</div>' +
+                        '<div class="value">' + esc(data.telefono) + '</div>' +
+                    '</div>' +
+                    (data.email ? '<div class="info-row"><div class="label">Email</div><div class="value">' + esc(data.email) + '</div></div>' : '') +
+                    '<a href="' + waLink(data.telefono) + '" target="_blank" class="wa-btn">&#x1F4AC; WhatsApp</a>';
+
                 const detalleDiv = document.getElementById('detalle-cliente');
                 if (data.tipo === 'propietario') cargarPropiedadesPropietario(data, detalleDiv);
                 else cargarPropiedadesInteresado(data, detalleDiv);
             })
-            .catch(err => {
-                document.getElementById('cliente-info').innerHTML = `<p style="color:#dc2626">${err.message}</p>`;
+            .catch(function(err) {
+                document.getElementById('cliente-info').innerHTML = '<p style="color:#dc2626">' + esc(err.message) + '</p>';
             });
     }
 
+    function renderTablaPropiedades(propiedades) {
+        if (propiedades.length === 0) return '<p style="color:#64748b;margin:0">No hay propiedades asociadas.</p>';
+        return '<div class="table-wrap"><table>' +
+            '<thead><tr><th>Dirección</th><th>Tipo</th><th>Estado</th><th>Min</th><th>Max</th><th>USD</th><th>Amb</th></tr></thead>' +
+            '<tbody>' + propiedades.map(function(p) {
+                return '<tr>' +
+                    '<td>' + esc(p.direccion) + '</td>' +
+                    '<td>' + esc(p.tipo) + '</td>' +
+                    '<td><span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado) + '</span></td>' +
+                    '<td>' + (p.rango_min || '-') + '</td>' +
+                    '<td>' + (p.rango_max || '-') + '</td>' +
+                    '<td>' + (p.es_usd ? 'Sí' : 'No') + '</td>' +
+                    '<td>' + (p.ambientes || '-') + '</td>' +
+                '</tr>';
+            }).join('') +
+            '</tbody></table></div>';
+    }
+
     function cargarPropiedadesPropietario(data, detalleDiv) {
-        fetch(`/api/propiedades?propietario=${encodeURIComponent(data.nombre + ' ' + data.apellido)}`)
-            .then(r => r.json())
-            .then(propiedades => {
-                detalleDiv.innerHTML = `
-                    <div class="section-card">
-                        <h2>🏘 Propiedades</h2>
-                        ${propiedades.length > 0 ? `
-                        <div class="table-wrap">
-                        <table>
-                            <thead><tr>
-                                <th>Dirección</th><th>Tipo</th><th>Estado</th>
-                                <th>Min</th><th>Max</th><th>USD</th><th>Amb</th>
-                            </tr></thead>
-                            <tbody>
-                                ${propiedades.map(p => `<tr>
-                                    <td>${p.direccion}</td>
-                                    <td>${p.tipo}</td>
-                                    <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
-                                    <td>${p.rango_min || '-'}</td>
-                                    <td>${p.rango_max || '-'}</td>
-                                    <td>${p.es_usd ? 'Sí' : 'No'}</td>
-                                    <td>${p.ambientes || '-'}</td>
-                                </tr>`).join('')}
-                            </tbody>
-                        </table></div>` : '<p style="color:#64748b;margin:0">No hay propiedades asociadas.</p>'}
-                    </div>
-
-                    <div class="section-card">
-                        <h2>📝 Notas del cliente</h2>
-                        <textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">${data.descripcion || ''}</textarea>
-                        <div style="margin-top:10px;display:flex;align-items:center">
-                            <button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>
-                            <span id="save-confirm" class="save-confirm">¡Guardado!</span>
-                        </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h2>📷 Fotos</h2>
-                        <div id="fotos-propiedades">
-                            ${propiedades.map(prop => `
-                                <div class="propiedad-fotos">
-                                    <h3>${prop.direccion}</h3>
-                                    <div class="upload-zone">
-                                        <input type="file" accept=".jpg,.jpeg,.png" onchange="subirFoto(${prop.id}, this)" style="font-size:12px">
-                                    </div>
-                                    <div class="fotos-grid" data-prop-id="${prop.id}">
-                                        ${prop.fotos.map(f => `
-                                            <div class="foto-preview" onclick="abrirVisor(${prop.id}, '${f}')">
-                                                <img src="/${f}" alt="Foto" onerror="this.parentElement.style.display='none'">
-                                            </div>`).join('')}
-                                    </div>
-                                </div>`).join('')}
-                        </div>
-                    </div>
-                `;
+        fetch('/api/propiedades?propietario=' + encodeURIComponent(data.nombre + ' ' + data.apellido))
+            .then(function(r) { return r.json(); })
+            .then(function(propiedades) {
+                detalleDiv.innerHTML =
+                    '<div class="section-card">' +
+                        '<h2>&#x1F3D8; Propiedades</h2>' +
+                        renderTablaPropiedades(propiedades) +
+                    '</div>' +
+                    '<div class="section-card">' +
+                        '<h2>&#x1F4DD; Notas del cliente</h2>' +
+                        '<textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
+                        '<div style="margin-top:10px;display:flex;align-items:center">' +
+                            '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
+                            '<span id="save-confirm" class="save-confirm">&#x2713; Guardado</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="section-card">' +
+                        '<h2>&#x1F4F7; Fotos</h2>' +
+                        '<div id="fotos-propiedades">' +
+                            propiedades.map(function(prop) {
+                                return '<div class="propiedad-fotos">' +
+                                    '<h3>' + esc(prop.direccion) + '</h3>' +
+                                    '<div class="upload-zone">' +
+                                        '<input type="file" accept=".jpg,.jpeg,.png" onchange="subirFoto(' + prop.id + ', this)" style="font-size:12px">' +
+                                    '</div>' +
+                                    '<div class="fotos-grid" data-prop-id="' + prop.id + '">' +
+                                        prop.fotos.map(function(f) {
+                                            return '<div class="foto-preview" onclick="abrirVisor(' + prop.id + ', \'' + esc(f).replace(/'/g, "\\'") + '\')">' +
+                                                '<img src="/' + esc(f) + '" alt="Foto" onerror="this.parentElement.style.display=\'none\'">' +
+                                            '</div>';
+                                        }).join('') +
+                                    '</div>' +
+                                '</div>';
+                            }).join('') +
+                        '</div>' +
+                    '</div>';
             })
-            .catch(err => { detalleDiv.innerHTML = `<p style="color:#dc2626">Error: ${err.message}</p>`; });
+            .catch(function(err) {
+                detalleDiv.innerHTML = '<p style="color:#dc2626">Error: ' + esc(err.message) + '</p>';
+            });
     }
 
     function cargarPropiedadesInteresado(data, detalleDiv) {
-        fetch(`/api/propiedades?interesado=${encodeURIComponent(data.nombre + ' ' + data.apellido)}`)
-            .then(r => r.json())
-            .then(propiedades => {
-                detalleDiv.innerHTML = `
-                    <div class="section-card">
-                        <h2>⚙ Preferencias de búsqueda</h2>
-                        <div class="pref-grid">
-                            <div class="pref-item">
-                                <div class="label">Mínimo</div>
-                                <div class="value">${data.rango_min ? data.rango_min.toLocaleString('es-AR') : '-'}</div>
-                            </div>
-                            <div class="pref-item">
-                                <div class="label">Máximo</div>
-                                <div class="value">${data.rango_max ? data.rango_max.toLocaleString('es-AR') : '-'}</div>
-                            </div>
-                            <div class="pref-item">
-                                <div class="label">Moneda</div>
-                                <div class="value">${data.es_usd ? 'USD' : 'ARS'}</div>
-                            </div>
-                            <div class="pref-item">
-                                <div class="label">Ambientes</div>
-                                <div class="value">${data.ambientes || '-'}</div>
-                            </div>
-                            <div class="pref-item">
-                                <div class="label">Operación</div>
-                                <div class="value">${data.operacion || '-'}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h2>🏠 Propiedades de interés</h2>
-                        ${propiedades.length > 0 ? `
-                        <div class="table-wrap"><table>
-                            <thead><tr>
-                                <th>Dirección</th><th>Tipo</th><th>Estado</th>
-                                <th>Min</th><th>Max</th><th>USD</th><th>Amb</th>
-                            </tr></thead>
-                            <tbody>
-                                ${propiedades.map(p => `<tr>
-                                    <td>${p.direccion}</td>
-                                    <td>${p.tipo}</td>
-                                    <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
-                                    <td>${p.rango_min || '-'}</td>
-                                    <td>${p.rango_max || '-'}</td>
-                                    <td>${p.es_usd ? 'Sí' : 'No'}</td>
-                                    <td>${p.ambientes || '-'}</td>
-                                </tr>`).join('')}
-                            </tbody>
-                        </table></div>` : '<p style="color:#64748b;margin:0">Sin propiedades de interés registradas.</p>'}
-                    </div>
-
-                    <div class="section-card">
-                        <h2>📝 Notas del cliente</h2>
-                        <textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">${data.descripcion || ''}</textarea>
-                        <div style="margin-top:10px;display:flex;align-items:center">
-                            <button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>
-                            <span id="save-confirm" class="save-confirm">¡Guardado!</span>
-                        </div>
-                    </div>
-                `;
+        fetch('/api/propiedades?interesado=' + encodeURIComponent(data.nombre + ' ' + data.apellido))
+            .then(function(r) { return r.json(); })
+            .then(function(propiedades) {
+                detalleDiv.innerHTML =
+                    '<div class="section-card">' +
+                        '<h2>&#x2699; Preferencias de búsqueda</h2>' +
+                        '<div class="pref-grid">' +
+                            '<div class="pref-item"><div class="label">Mínimo</div><div class="value">' + (data.rango_min ? data.rango_min.toLocaleString('es-AR') : '-') + '</div></div>' +
+                            '<div class="pref-item"><div class="label">Máximo</div><div class="value">' + (data.rango_max ? data.rango_max.toLocaleString('es-AR') : '-') + '</div></div>' +
+                            '<div class="pref-item"><div class="label">Moneda</div><div class="value">' + (data.es_usd ? 'USD' : 'ARS') + '</div></div>' +
+                            '<div class="pref-item"><div class="label">Ambientes</div><div class="value">' + (data.ambientes || '-') + '</div></div>' +
+                            '<div class="pref-item"><div class="label">Operación</div><div class="value">' + esc(data.operacion || '-') + '</div></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="section-card">' +
+                        '<h2>&#x1F3E0; Propiedades de interés</h2>' +
+                        renderTablaPropiedades(propiedades) +
+                    '</div>' +
+                    '<div class="section-card">' +
+                        '<h2>&#x1F4DD; Notas del cliente</h2>' +
+                        '<textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
+                        '<div style="margin-top:10px;display:flex;align-items:center">' +
+                            '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
+                            '<span id="save-confirm" class="save-confirm">&#x2713; Guardado</span>' +
+                        '</div>' +
+                    '</div>';
             })
-            .catch(err => { detalleDiv.innerHTML = `<p style="color:#dc2626">Error: ${err.message}</p>`; });
+            .catch(function(err) {
+                detalleDiv.innerHTML = '<p style="color:#dc2626">Error: ' + esc(err.message) + '</p>';
+            });
     }
 
     function guardarDescripcion() {
         const descripcion = document.getElementById('descripcion').value;
-        fetch(`/api/clientes/${clienteId}`, {
+        fetch('/api/clientes/' + clienteId, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descripcion })
-        }).then(() => {
+            body: JSON.stringify({ descripcion: descripcion })
+        }).then(function() {
             const el = document.getElementById('save-confirm');
             el.style.display = 'inline';
-            setTimeout(() => { el.style.display = 'none'; }, 2000);
-        }).catch(e => alert('Error: ' + e));
+            setTimeout(function() { el.style.display = 'none'; }, 2000);
+        }).catch(function(e) { console.error('Error al guardar descripción', e); });
     }
 
     function subirFoto(propiedadId, input) {
         if (!input.files[0]) return;
         const formData = new FormData();
         formData.append('file', input.files[0]);
-        fetch(`/api/propiedades/${propiedadId}/upload`, { method: 'POST', body: formData })
-            .then(r => { if (!r.ok) throw new Error('Error al subir'); return r.json(); })
-            .then(data => actualizarFotos(propiedadId, data.fotos))
-            .catch(e => alert('Error: ' + e));
+        fetch('/api/propiedades/' + propiedadId + '/upload', { method: 'POST', body: formData })
+            .then(function(r) { if (!r.ok) throw new Error('Error al subir'); return r.json(); })
+            .then(function(data) { actualizarFotos(propiedadId, data.fotos); })
+            .catch(function(e) { alert('Error al subir imagen: ' + e.message); });
     }
 
     function actualizarFotos(propiedadId, fotos) {
-        const container = document.querySelector(`.fotos-grid[data-prop-id="${propiedadId}"]`);
-        container.innerHTML = fotos.map(f => `
-            <div class="foto-preview" onclick="abrirVisor(${propiedadId}, '${f}')">
-                <img src="/${f}" alt="Foto" onerror="this.parentElement.style.display='none'">
-            </div>`).join('');
+        const container = document.querySelector('.fotos-grid[data-prop-id="' + propiedadId + '"]');
+        if (!container) return;
+        container.innerHTML = fotos.map(function(f) {
+            return '<div class="foto-preview" onclick="abrirVisor(' + propiedadId + ', \'' + esc(f).replace(/'/g, "\\'") + '\')">' +
+                '<img src="/' + esc(f) + '" alt="Foto" onerror="this.parentElement.style.display=\'none\'">' +
+            '</div>';
+        }).join('');
     }
 
     function abrirVisor(propiedadId, fotoSrc) {
         const modal = document.getElementById('foto-modal');
-        const container = document.querySelector(`.fotos-grid[data-prop-id="${propiedadId}"]`);
-        fotosActuales = Array.from(container.querySelectorAll('.foto-preview img')).map(img => img.src);
-        indiceFotoActual = fotosActuales.findIndex(src => src.includes(fotoSrc.split('/').pop()));
+        const container = document.querySelector('.fotos-grid[data-prop-id="' + propiedadId + '"]');
+        fotosActuales = Array.from(container.querySelectorAll('.foto-preview img')).map(function(img) { return img.src; });
+        const basename = fotoSrc.split('/').pop();
+        indiceFotoActual = fotosActuales.findIndex(function(src) { return src.includes(basename); });
         if (indiceFotoActual < 0) indiceFotoActual = 0;
         document.getElementById('modal-image').src = fotosActuales[indiceFotoActual];
         modal.classList.add('active');
-        modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); }, { once: true });
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) modal.classList.remove('active');
+        }, { once: true });
     }
 
     function cambiarFoto(dir) {
