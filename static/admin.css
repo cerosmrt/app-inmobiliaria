@@ -71,6 +71,7 @@ body {
 .btn-cancel  { background: #dc2626; color: white; }
 .btn-match   { background: #2563eb; color: white; }
 .btn-note    { background: #d97706; color: white; }
+.btn-foto    { background: #0891b2; color: white; }
 .btn-leer    { background: #dcfce7; color: #15803d; }
 .btn-leer:hover   { background: #bbf7d0; }
 .btn-delete  { background: #fee2e2; color: #b91c1c; }
@@ -161,6 +162,19 @@ a:hover { text-decoration: underline; }
 .modal-msg {
     font-size: 14px; line-height: 1.6; white-space: pre-wrap;
     background: #f8fafc; padding: 14px; border-radius: 6px; border: 1px solid var(--border);
+}
+
+/* ── Photo modal ─────────────────────────────────────────────────────────── */
+.upload-zone { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.fotos-grid  { display: flex; flex-wrap: wrap; gap: 8px; }
+.foto-item   { position: relative; border-radius: 6px; overflow: hidden; }
+.foto-item img { width: 110px; height: 90px; object-fit: cover; display: block; cursor: pointer; transition: opacity 0.15s; }
+.foto-item img:hover { opacity: 0.82; }
+.btn-del-foto {
+    position: absolute; top: 3px; right: 3px;
+    background: rgba(220,38,38,0.88); color: white; border: none;
+    border-radius: 3px; font-size: 11px; font-weight: 700;
+    padding: 1px 5px; cursor: pointer; line-height: 1.4;
 }
 
 /* ── Toast ───────────────────────────────────────────────────────────────── */

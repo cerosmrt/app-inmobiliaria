@@ -159,6 +159,24 @@
     </div>
 </div>
 
+<!-- Modal: fotos de propiedad -->
+<div id="modal-fotos" class="modal-overlay">
+    <div class="modal-box" style="max-width:700px">
+        <div class="modal-header">
+            <h3 id="fotos-modal-titulo">Fotos</h3>
+            <button class="modal-close" onclick="cerrarModal('modal-fotos')">&#x2715;</button>
+        </div>
+        <div class="upload-zone">
+            <input type="file" id="input-fotos" accept=".jpg,.jpeg,.png" multiple
+                   onchange="subirFotos(this)" style="font-size:13px">
+            <span style="font-size:12px;color:var(--muted)">JPG o PNG &mdash; m&aacute;x 10MB por foto</span>
+        </div>
+        <div class="fotos-grid" id="fotos-grid-modal">
+            <p style="color:var(--muted);margin:0;font-size:13px">Sin fotos cargadas.</p>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: notas de propiedad -->
 <div id="modal-notes" class="modal-overlay">
     <div class="modal-box" style="max-width:520px">
@@ -546,7 +564,8 @@
                 '</td>' +
                 '<td class="no-print">' +
                     '<button class="btn-action btn-match" onclick="verMatches(' + p.id + ', \'' + esc(p.direccion).replace(/'/g,"\\'") + '\')" title="Compradores compatibles">&#x26A1;</button>' +
-                    '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '" ' + (hasNotes ? 'style="background:#b45309"' : '') + '>&#x1F4DD;</button>' +
+                    '<button class="btn-action btn-foto"  onclick="abrirFotos(' + p.id + ', \'' + esc(p.direccion).replace(/'/g,"\\'") + '\')" title="Fotos">&#x1F4F7;</button>' +
+                    '<button class="btn-action btn-note"  onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '" ' + (hasNotes ? 'style="background:#b45309"' : '') + '>&#x1F4DD;</button>' +
                     '<button class="btn-action btn-cancel" onclick="eliminarPropiedad(' + p.id + ')">&#x2715;</button>' +
                 '</td>';
             tbody.appendChild(row);
@@ -704,6 +723,67 @@
             }
             document.getElementById('modal-matches').classList.add('active');
         }).catch(function(e) { console.error('Error al cargar matches', e); });
+    }
+
+    // ── FOTOS ─────────────────────────────────────────────────────────────────
+    let fotosPropiedadId = null;
+
+    function abrirFotos(propId, direccion) {
+        fotosPropiedadId = propId;
+        document.getElementById('fotos-modal-titulo').textContent = 'Fotos — ' + (direccion || 'Propiedad');
+        const prop = propiedades.find(function(p) { return p.id === propId; });
+        renderFotosModal(prop ? prop.fotos : []);
+        document.getElementById('modal-fotos').classList.add('active');
+    }
+
+    function renderFotosModal(fotos) {
+        const grid = document.getElementById('fotos-grid-modal');
+        if (!fotos || fotos.length === 0) {
+            grid.innerHTML = '<p style="color:var(--muted);margin:0;font-size:13px">Sin fotos cargadas.</p>';
+            return;
+        }
+        grid.innerHTML = fotos.map(function(f) {
+            return '<div class="foto-item">' +
+                '<img src="/' + esc(f) + '" onclick="window.open(\'/' + esc(f) + '\',\'_blank\')" title="Ver en tamaño completo">' +
+                '<button class="btn-del-foto" onclick="eliminarFoto(\'' + esc(f).replace(/'/g, "\\'") + '\')">&#x2715;</button>' +
+            '</div>';
+        }).join('');
+    }
+
+    function subirFotos(input) {
+        if (!input.files.length) return;
+        const files = Array.from(input.files);
+        let completados = 0;
+        files.forEach(function(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch('/api/propiedades/' + fotosPropiedadId + '/upload', { method: 'POST', body: formData })
+                .then(function(r) { if (!r.ok) throw new Error('Formato no permitido'); return r.json(); })
+                .then(function(data) {
+                    completados++;
+                    const prop = propiedades.find(function(p) { return p.id === fotosPropiedadId; });
+                    if (prop) prop.fotos = data.fotos;
+                    renderFotosModal(data.fotos);
+                    if (completados === files.length) toast(completados + ' foto(s) subida(s)', 'success');
+                })
+                .catch(function(e) { toast('Error al subir: ' + e.message, 'error'); });
+        });
+        input.value = '';
+    }
+
+    function eliminarFoto(filepath) {
+        confirmar('¿Eliminar esta foto?', 'Eliminar foto', 'Eliminar').then(function(ok) {
+            if (!ok) return;
+            fetch('/api/propiedades/' + fotosPropiedadId + '/fotos/' + filepath, { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    const prop = propiedades.find(function(p) { return p.id === fotosPropiedadId; });
+                    if (prop) prop.fotos = data.fotos;
+                    renderFotosModal(data.fotos);
+                    toast('Foto eliminada', 'success');
+                })
+                .catch(function(e) { console.error('Error al eliminar foto', e); });
+        });
     }
 
     // ── INIT ──────────────────────────────────────────────────────────────────
