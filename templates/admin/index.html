@@ -631,7 +631,7 @@
                 </td>
                 <td class="editable-text" data-field="rango_min" data-id="${p.id}" title="${p.rango_max ? 'Max: ' + p.rango_max : ''}">${precioStr}</td>
                 <td class="editable-text" data-field="ambientes"  data-id="${p.id}">${p.ambientes || ''}</td>
-                <td>${p.propietario || '-'}</td>
+                <td>${p.propietario_id ? `<a href="/cliente/${p.propietario_id}">${p.propietario}</a>` : '-'}</td>
                 <td>${p.fecha_estado || '-'}</td>
                 <td>
                     <span class="badge ${p.publicada ? 'badge-publicada' : 'badge-no-publicada'}"

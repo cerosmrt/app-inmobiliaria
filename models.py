@@ -47,6 +47,7 @@ class Propiedad(db.Model):
             'fotos': self.fotos.split(',') if self.fotos else [],
             'descripcion': self.descripcion or '',
             'fecha_estado': self.fecha_estado.strftime('%d/%m/%Y') if self.fecha_estado else None,
+            'propietario_id': self.propietario_id,
             'propietario': self.propietario.nombre + ' ' + self.propietario.apellido if self.propietario else None,
             'interesados': [c.nombre + ' ' + c.apellido for c in self.interesados]
         }
