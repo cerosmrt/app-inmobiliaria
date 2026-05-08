@@ -43,6 +43,12 @@
     .editable-select-prop:not(:has(select)):hover {
         background: #fef9c3 !important; cursor: text;
     }
+
+    .btn-map {
+        background: #dcfce7; color: #15803d; border-radius: 4px;
+        display: inline-block; line-height: 1.2;
+    }
+    .btn-map:hover { background: #bbf7d0; text-decoration: none; }
 </style>
 {% endblock %}
 
@@ -526,7 +532,10 @@
             const precioStr = p.precio_a_consultar ? 'A consultar'
                 : (p.rango_min ? (p.es_usd ? 'USD ' : '') + p.rango_min.toLocaleString('es-AR') : '');
             row.innerHTML =
-                '<td class="editable-text" data-field="direccion" data-id="' + p.id + '">' + esc(p.direccion) + '</td>' +
+                '<td>' +
+                    '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + '</a>' +
+                    ' <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((p.direccion || '') + (p.barrio ? ', ' + p.barrio : '')) + '" target="_blank" title="Ver en mapa" class="btn-action btn-map" style="font-size:11px;padding:2px 6px;text-decoration:none;vertical-align:middle">&#x1F4CD;</a>' +
+                '</td>' +
                 '<td class="editable-text" data-field="barrio" data-id="' + p.id + '">' + esc(p.barrio || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="tipo" data-id="' + p.id + '">' + esc(p.tipo || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="operacion" data-id="' + p.id + '">' + esc(p.operacion || '') + '</td>' +
@@ -546,7 +555,6 @@
                 '</td>' +
                 '<td class="no-print">' +
                     '<button class="btn-action btn-match" onclick="verMatches(' + p.id + ', \'' + esc(p.direccion).replace(/'/g,"\\'") + '\')" title="Compradores compatibles">&#x26A1;</button>' +
-                    '<a class="btn-action btn-expand" href="/admin/propiedad/' + p.id + '" title="Ver propiedad">Ver</a>' +
                     '<button class="btn-action btn-note"  onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '" ' + (hasNotes ? 'style="background:#b45309"' : '') + '>&#x1F4DD;</button>' +
                     '<button class="btn-action btn-cancel" onclick="eliminarPropiedad(' + p.id + ')">&#x2715;</button>' +
                 '</td>';
