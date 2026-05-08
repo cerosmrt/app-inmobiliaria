@@ -201,6 +201,11 @@ def admin_setup():
 def cliente_perfil(id):
     return render_template('admin/perfil.html', cliente_id=id)
 
+@app.route('/admin/propiedad/<int:id>')
+@login_required
+def admin_propiedad(id):
+    return render_template('admin/propiedad.html', propiedad_id=id)
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 @app.route('/api/public/propiedades')
@@ -404,6 +409,21 @@ def delete_foto_propiedad(id, filename):
             os.remove(filename)
     except OSError:
         pass
+    return jsonify(p.as_dict())
+
+@app.route('/api/propiedades/<int:id>/fotos/orden', methods=['PUT'])
+@api_login_required
+def reordenar_fotos(id):
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    data = request.get_json()
+    fotos = data.get('fotos', [])
+    current = set(p.fotos.split(',')) if p.fotos else set()
+    if fotos and not all(f in current for f in fotos):
+        return jsonify({"message": "Fotos inválidas"}), 400
+    p.fotos = ','.join(fotos) if fotos else None
+    db.session.commit()
     return jsonify(p.as_dict())
 
 @app.route('/api/propiedades/<int:id>/matches', methods=['GET'])

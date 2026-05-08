@@ -1,0 +1,272 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Propiedad{% endblock %}
+
+{% block header %}
+<header class="app-header">
+    <div class="header-brand">
+        <span class="moret">Moret</span>
+        <span class="sub">PANEL ADMIN</span>
+    </div>
+    <a href="/admin" class="back-link">&#x2190; Volver al panel</a>
+</header>
+{% endblock %}
+
+{% block head %}
+<style>
+    .container { max-width: 1060px; margin: 0 auto; padding: 24px; }
+
+    .prop-header { margin-bottom: 22px; }
+    .prop-header h1 { margin: 0 0 8px; font-size: 22px; font-weight: 800; color: #1a1a1a; }
+    .prop-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .section-card {
+        background: white; border-radius: 10px; padding: 22px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.09); margin-bottom: 20px;
+    }
+    .section-card h2 {
+        margin: 0 0 16px; font-size: 15px; color: #1a1a1a; font-weight: 700;
+        border-bottom: 1px solid var(--border); padding-bottom: 10px;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-card h2 .acciones { display: flex; align-items: center; gap: 8px; }
+
+    .save-confirm { font-size: 12px; color: #16a34a; }
+
+    .notes-textarea { min-height: 180px; }
+    .notes-textarea:focus { outline: 2px solid var(--red); }
+
+    /* Zona de subida */
+    .upload-drop {
+        border: 2px dashed var(--border); border-radius: 8px;
+        padding: 18px; text-align: center; color: var(--muted);
+        font-size: 13px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+        margin-bottom: 16px;
+    }
+    .upload-drop:hover { border-color: var(--red); background: #fff8f8; }
+    .upload-drop input { display: none; }
+
+    /* Grid de fotos */
+    .fotos-admin-grid { display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px; }
+    .foto-admin-item {
+        position: relative; border-radius: 8px; overflow: hidden;
+        border: 2px solid transparent; transition: border-color 0.15s, opacity 0.15s;
+        cursor: grab; user-select: none;
+    }
+    .foto-admin-item:active { cursor: grabbing; }
+    .foto-admin-item.drag-sobre { border-color: var(--red); opacity: 0.55; }
+    .foto-admin-item img {
+        width: 150px; height: 115px; object-fit: cover; display: block;
+        transition: opacity 0.15s;
+    }
+    .foto-admin-item img:hover { opacity: 0.88; }
+    .foto-num {
+        position: absolute; bottom: 4px; left: 6px;
+        background: rgba(0,0,0,0.55); color: white; font-size: 10px;
+        font-weight: 700; padding: 1px 6px; border-radius: 3px; pointer-events: none;
+    }
+    .foto-admin-item .btn-del-foto {
+        position: absolute; top: 4px; right: 4px;
+    }
+    .orden-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    #btn-guardar-orden { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="prop-header">
+        <h1 id="prop-titulo">Cargando...</h1>
+        <div class="prop-meta" id="prop-meta"></div>
+    </div>
+
+    <!-- Descripción -->
+    <div class="section-card">
+        <h2>
+            Descripci&oacute;n
+            <div class="acciones">
+                <span id="save-confirm" class="save-confirm" style="display:none">&#x2713; Guardado</span>
+                <button class="btn btn-green" onclick="guardarDescripcion()" style="font-size:12px;padding:5px 14px">Guardar</button>
+            </div>
+        </h2>
+        <textarea id="descripcion" class="notes-textarea" placeholder="Descripci&oacute;n de la propiedad..."></textarea>
+    </div>
+
+    <!-- Fotos -->
+    <div class="section-card">
+        <h2>
+            Fotos
+            <div class="acciones">
+                <span id="orden-aviso" style="font-size:12px;color:var(--muted);display:none">Orden modificado</span>
+                <button id="btn-guardar-orden" class="btn btn-blue" onclick="guardarOrden()" style="font-size:12px;padding:5px 14px">Guardar orden</button>
+            </div>
+        </h2>
+        <div class="upload-drop" onclick="document.getElementById('input-fotos').click()">
+            <input type="file" id="input-fotos" accept=".jpg,.jpeg,.png" multiple onchange="subirFotos(this)">
+            &#x1F4F7; Clic aqu&iacute; para agregar fotos &mdash; JPG o PNG, m&aacute;x 10 MB por foto
+        </div>
+        <div class="fotos-admin-grid" id="fotos-grid"></div>
+        <p class="orden-hint" id="orden-hint" style="display:none">Arrastr&aacute; las fotos para cambiar el orden.</p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const propiedadId = {{ propiedad_id }};
+    let propData    = null;
+    let fotosOrden  = [];
+    let dragSrcIdx  = null;
+
+    // ── Carga inicial ─────────────────────────────────────────────────────────
+    function cargarPropiedad() {
+        fetch('/api/propiedades/' + propiedadId)
+            .then(function(r) { if (!r.ok) throw new Error('Propiedad no encontrada'); return r.json(); })
+            .then(function(data) {
+                propData   = data;
+                fotosOrden = data.fotos ? data.fotos.slice() : [];
+
+                document.title = (data.direccion || 'Propiedad') + ' — Moret Inmobiliaria';
+                document.getElementById('prop-titulo').textContent = data.direccion || '(Sin dirección)';
+                document.getElementById('prop-meta').innerHTML =
+                    '<span class="badge badge-' + esc(data.estado) + '">' + esc(data.estado) + '</span>' +
+                    '<span class="badge" style="background:#f1f5f9;color:#475569">' + esc(data.tipo) + '</span>' +
+                    (data.operacion ? '<span class="badge" style="background:#f1f5f9;color:#475569">' + esc(data.operacion) + '</span>' : '') +
+                    (data.publicada
+                        ? '<span class="badge badge-publicada">&#x2713; Publicada</span>'
+                        : '<span class="badge badge-no-publicada">Borrador</span>');
+
+                document.getElementById('descripcion').value = data.descripcion || '';
+                renderFotos();
+            })
+            .catch(function(err) {
+                document.getElementById('prop-titulo').textContent = 'Error: ' + err.message;
+            });
+    }
+
+    // ── Fotos ─────────────────────────────────────────────────────────────────
+    function renderFotos() {
+        const grid = document.getElementById('fotos-grid');
+        const hint = document.getElementById('orden-hint');
+        if (!fotosOrden.length) {
+            grid.innerHTML = '<p style="color:var(--muted);font-size:13px;margin:0">Sin fotos. Subí una arriba.</p>';
+            hint.style.display = 'none';
+            return;
+        }
+        grid.innerHTML = fotosOrden.map(function(f, i) {
+            return '<div class="foto-admin-item" draggable="true" data-idx="' + i + '"' +
+                ' ondragstart="onDragStart(event,' + i + ')"' +
+                ' ondragover="onDragOver(event)"' +
+                ' ondrop="onDrop(event,' + i + ')"' +
+                ' ondragleave="onDragLeave(event)"' +
+                ' ondragend="onDragEnd()">' +
+                '<img src="/' + esc(f) + '" alt="Foto ' + (i+1) + '"' +
+                    ' onclick="window.open(\'/' + esc(f).replace(/'/g,"\\'") + '\',\'_blank\')" title="Ver en tamaño completo">' +
+                '<span class="foto-num">' + (i+1) + '</span>' +
+                '<button class="btn-del-foto" onclick="eliminarFoto(event,' + i + ')">&#x2715;</button>' +
+            '</div>';
+        }).join('');
+        hint.style.display = '';
+    }
+
+    // ── Drag & drop ───────────────────────────────────────────────────────────
+    function onDragStart(e, idx) {
+        dragSrcIdx = idx;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(function() { e.currentTarget.style.opacity = '0.35'; }, 0);
+    }
+    function onDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-sobre');
+    }
+    function onDragLeave(e) { e.currentTarget.classList.remove('drag-sobre'); }
+    function onDragEnd() {
+        document.querySelectorAll('.foto-admin-item').forEach(function(el) {
+            el.style.opacity = '';
+            el.classList.remove('drag-sobre');
+        });
+    }
+    function onDrop(e, targetIdx) {
+        e.preventDefault();
+        if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
+        const moved = fotosOrden.splice(dragSrcIdx, 1)[0];
+        fotosOrden.splice(targetIdx, 0, moved);
+        dragSrcIdx = null;
+        document.getElementById('btn-guardar-orden').style.display = '';
+        document.getElementById('orden-aviso').style.display = '';
+        renderFotos();
+    }
+
+    function guardarOrden() {
+        fetch('/api/propiedades/' + propiedadId + '/fotos/orden', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fotos: fotosOrden })
+        }).then(function(r) { return r.json(); })
+          .then(function(data) {
+            propData   = data;
+            fotosOrden = data.fotos ? data.fotos.slice() : [];
+            document.getElementById('btn-guardar-orden').style.display = 'none';
+            document.getElementById('orden-aviso').style.display = 'none';
+            toast('Orden guardado', 'success');
+            renderFotos();
+          }).catch(function() { toast('Error al guardar orden', 'error'); });
+    }
+
+    // ── Subir fotos ───────────────────────────────────────────────────────────
+    function subirFotos(input) {
+        if (!input.files.length) return;
+        const files = Array.from(input.files);
+        let done = 0;
+        files.forEach(function(file) {
+            const fd = new FormData();
+            fd.append('file', file);
+            fetch('/api/propiedades/' + propiedadId + '/upload', { method: 'POST', body: fd })
+                .then(function(r) { if (!r.ok) throw new Error('Formato no permitido'); return r.json(); })
+                .then(function(data) {
+                    done++;
+                    propData   = data;
+                    fotosOrden = data.fotos ? data.fotos.slice() : [];
+                    renderFotos();
+                    if (done === files.length) toast(done + ' foto(s) subida(s)', 'success');
+                })
+                .catch(function(e) { toast('Error: ' + e.message, 'error'); });
+        });
+        input.value = '';
+    }
+
+    // ── Eliminar foto ─────────────────────────────────────────────────────────
+    function eliminarFoto(e, idx) {
+        e.stopPropagation();
+        const filepath = fotosOrden[idx];
+        confirmar('¿Eliminar esta foto?', 'Eliminar foto', 'Eliminar').then(function(ok) {
+            if (!ok) return;
+            fetch('/api/propiedades/' + propiedadId + '/fotos/' + filepath, { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    propData   = data;
+                    fotosOrden = data.fotos ? data.fotos.slice() : [];
+                    renderFotos();
+                    toast('Foto eliminada', 'success');
+                })
+                .catch(function(e) { console.error(e); });
+        });
+    }
+
+    // ── Descripción ───────────────────────────────────────────────────────────
+    function guardarDescripcion() {
+        fetch('/api/propiedades/' + propiedadId, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ descripcion: document.getElementById('descripcion').value })
+        }).then(function() {
+            const el = document.getElementById('save-confirm');
+            el.style.display = 'inline';
+            setTimeout(function() { el.style.display = 'none'; }, 2000);
+        }).catch(function() { toast('Error al guardar', 'error'); });
+    }
+
+    document.addEventListener('DOMContentLoaded', cargarPropiedad);
+</script>
+{% endblock %}
