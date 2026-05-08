@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Panel Admin{% endblock %} — Moret Inmobiliaria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+{% block header %}
+<header class="app-header">
+    <div class="header-brand">
+        <span class="moret">Moret</span>
+        <span class="sub">PANEL ADMIN</span>
+    </div>
+    {% block header_nav %}
+    <nav class="header-nav">
+        <a href="/" target="_blank">Ver sitio</a>
+        <a href="/admin/consultas" id="link-consultas">
+            Consultas
+            <span class="badge-count" id="badge-consultas"></span>
+        </a>
+    </nav>
+    {% if admin_username %}<span class="admin-tag">{{ admin_username }}</span>{% endif %}
+    {% endblock %}
+    <a href="/admin/logout" class="btn-logout">Salir</a>
+</header>
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+<div id="toast-container"></div>
+
+<div id="confirm-overlay" class="modal-overlay">
+    <div class="modal-box" style="max-width:400px;max-height:none">
+        <div class="modal-header" style="border-bottom:none;margin-bottom:4px;padding-bottom:0">
+            <h3 id="confirm-titulo">Confirmar</h3>
+        </div>
+        <p id="confirm-mensaje" style="color:var(--muted);font-size:14px;margin:0 0 20px"></p>
+        <div class="modal-footer" style="margin-top:0">
+            <button class="btn btn-gray" onclick="resolveConfirm(false)">Cancelar</button>
+            <button class="btn btn-cancel" id="confirm-btn-ok" onclick="resolveConfirm(true)">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='admin.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

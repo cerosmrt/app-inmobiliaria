@@ -26,6 +26,7 @@ class Propiedad(db.Model):
     fotos = db.Column(db.String, nullable=True)
     descripcion = db.Column(db.Text, nullable=True)
     fecha_estado = db.Column(db.DateTime, nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
     propietario = db.relationship('Cliente', backref='propiedades', foreign_keys=[propietario_id])
     interesados = db.relationship('Cliente', secondary=interesados_propiedades, backref='intereses')
@@ -67,6 +68,7 @@ class Cliente(db.Model):
     operacion = db.Column(db.String, nullable=True)
     descripcion = db.Column(db.Text, nullable=True)
     fotos = db.Column(db.String, nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
 
     def as_dict(self):
         return {

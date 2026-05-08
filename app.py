@@ -11,6 +11,12 @@ import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
+try:
+    from PIL import Image as _PillowImage
+    _PILLOW = True
+except ImportError:
+    _PILLOW = False
+
 app = Flask(__name__)
 
 env = os.environ.get('FLASK_ENV', 'default')
@@ -66,6 +72,25 @@ def _unique_filename(prefix: str, original: str) -> str:
     ext = secure_filename(original).rsplit('.', 1)[-1].lower()
     return f"{prefix}_{uuid.uuid4().hex[:10]}.{ext}"
 
+def _save_image(file, filepath: str) -> None:
+    if not _PILLOW:
+        file.save(filepath)
+        return
+    try:
+        img = _PillowImage.open(file)
+        if img.width > 1920 or img.height > 1920:
+            img.thumbnail((1920, 1920), _PillowImage.LANCZOS)
+        ext = filepath.rsplit('.', 1)[-1].lower()
+        if ext in ('jpg', 'jpeg'):
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            img.save(filepath, 'JPEG', quality=85, optimize=True)
+        else:
+            img.save(filepath, 'PNG', optimize=True)
+    except Exception:
+        file.seek(0)
+        file.save(filepath)
+
 # ── Auth decorators ───────────────────────────────────────────────────────────
 
 def login_required(f):
@@ -88,6 +113,12 @@ def api_login_required(f):
                 return jsonify({"error": "Token CSRF inválido"}), 403
         return f(*args, **kwargs)
     return decorated
+
+# ── Context processor ─────────────────────────────────────────────────────────
+
+@app.context_processor
+def inject_admin_context():
+    return {'admin_username': session.get('admin_username', '')}
 
 # ── Contacto helper ───────────────────────────────────────────────────────────
 
@@ -180,7 +211,7 @@ def api_public_propiedades():
     barrio    = request.args.get('barrio', '')
     precio_max = request.args.get('precio_max', '')
 
-    query = Propiedad.query.filter_by(publicada=True)
+    query = Propiedad.query.filter_by(publicada=True).filter(Propiedad.deleted_at.is_(None))
     if tipo:
         query = query.filter(Propiedad.tipo == tipo)
     if operacion:
@@ -208,7 +239,7 @@ def api_public_propiedades():
 
 @app.route('/api/public/propiedades/<int:id>')
 def api_public_propiedad(id):
-    p = Propiedad.query.filter_by(id=id, publicada=True).first()
+    p = Propiedad.query.filter_by(id=id, publicada=True).filter(Propiedad.deleted_at.is_(None)).first()
     if not p:
         return jsonify({"error": "Propiedad no encontrada"}), 404
     return jsonify(p.as_dict())
@@ -238,7 +269,7 @@ def get_propiedades():
     propietario = request.args.get('propietario', '')
     interesado  = request.args.get('interesado', '')
 
-    query = Propiedad.query
+    query = Propiedad.query.filter(Propiedad.deleted_at.is_(None))
     if tipo:
         query = query.filter(Propiedad.tipo.ilike(f'%{tipo}%'))
     if propietario:
@@ -325,9 +356,19 @@ def update_propiedad(id):
 def delete_propiedad(id):
     p = db.session.get(Propiedad, id)
     if p:
-        db.session.delete(p)
+        p.deleted_at = datetime.utcnow()
         db.session.commit()
         return jsonify({"message": "Propiedad eliminada"})
+    return jsonify({"message": "Propiedad no encontrada"}), 404
+
+@app.route('/api/propiedades/<int:id>/restore', methods=['PUT'])
+@api_login_required
+def restore_propiedad(id):
+    p = db.session.get(Propiedad, id)
+    if p:
+        p.deleted_at = None
+        db.session.commit()
+        return jsonify({"message": "Propiedad restaurada"})
     return jsonify({"message": "Propiedad no encontrada"}), 404
 
 @app.route('/api/propiedades/<int:id>/upload', methods=['POST'])
@@ -343,7 +384,7 @@ def upload_foto_propiedad(id):
         return jsonify({"message": "Formato no permitido"}), 400
     filename = _unique_filename(f"prop_{id}", file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+    _save_image(file, filepath)
     p.fotos = (p.fotos + ',' + filepath) if p.fotos else filepath
     db.session.commit()
     return jsonify(p.as_dict()), 200
@@ -371,7 +412,7 @@ def get_matches(id):
     p = db.session.get(Propiedad, id)
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
-    query = Cliente.query.filter(Cliente.tipo == 'interesado')
+    query = Cliente.query.filter(Cliente.tipo == 'interesado', Cliente.deleted_at.is_(None))
     if p.rango_min is not None and p.rango_max is not None:
         query = query.filter(
             db.or_(Cliente.rango_max == None, Cliente.rango_max >= p.rango_min),
@@ -386,7 +427,7 @@ def get_matches(id):
 @app.route('/api/clientes', methods=['GET'])
 @api_login_required
 def get_clientes():
-    return jsonify([c.as_dict() for c in Cliente.query.all()])
+    return jsonify([c.as_dict() for c in Cliente.query.filter(Cliente.deleted_at.is_(None)).all()])
 
 @app.route('/api/clientes', methods=['POST'])
 @api_login_required
@@ -443,9 +484,19 @@ def update_cliente(id):
 def delete_cliente(id):
     c = db.session.get(Cliente, id)
     if c:
-        db.session.delete(c)
+        c.deleted_at = datetime.utcnow()
         db.session.commit()
         return jsonify({"message": "Cliente eliminado"})
+    return jsonify({"message": "Cliente no encontrado"}), 404
+
+@app.route('/api/clientes/<int:id>/restore', methods=['PUT'])
+@api_login_required
+def restore_cliente(id):
+    c = db.session.get(Cliente, id)
+    if c:
+        c.deleted_at = None
+        db.session.commit()
+        return jsonify({"message": "Cliente restaurado"})
     return jsonify({"message": "Cliente no encontrado"}), 404
 
 @app.route('/api/clientes/<int:id>/upload', methods=['POST'])
@@ -461,7 +512,7 @@ def upload_foto_cliente(id):
         return jsonify({"message": "Formato no permitido"}), 400
     filename = _unique_filename(f"cli_{id}", file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+    _save_image(file, filepath)
     c.fotos = (c.fotos + ',' + filepath) if c.fotos else filepath
     db.session.commit()
     return jsonify(c.as_dict()), 200
@@ -504,6 +555,16 @@ def delete_consulta(id):
 
 with app.app_context():
     db.create_all()
+    with db.engine.connect() as _conn:
+        for _ddl in [
+            "ALTER TABLE propiedades ADD COLUMN deleted_at DATETIME",
+            "ALTER TABLE clientes ADD COLUMN deleted_at DATETIME",
+        ]:
+            try:
+                _conn.execute(db.text(_ddl))
+                _conn.commit()
+            except Exception:
+                pass
 
 if __name__ == '__main__':
     app.run(debug=app.config.get('DEBUG', False))

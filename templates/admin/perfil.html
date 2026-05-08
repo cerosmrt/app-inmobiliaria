@@ -1,151 +1,98 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Perfil de Cliente</title>
-    <style>
-        :root {
-            --navy: #1e3a5f;
-            --blue: #2563eb;
-            --bg: #f1f5f9;
-            --border: #e2e8f0;
-            --text: #1e293b;
-            --muted: #64748b;
-        }
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
+{% extends "admin/base.html" %}
 
-        .app-header {
-            background: var(--navy); color: white;
-            padding: 12px 24px; display: flex; align-items: center; gap: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-        }
-        .app-header .icon { font-size: 24px; }
-        .app-header h1 { margin: 0; font-size: 18px; font-weight: 700; flex: 1; }
-        .back-link {
-            color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px;
-            border: 1px solid rgba(255,255,255,0.35); padding: 5px 12px;
-            border-radius: 5px; transition: background 0.15s;
-        }
-        .back-link:hover { background: rgba(255,255,255,0.15); color: white; text-decoration: none; }
+{% block title %}Perfil de Cliente{% endblock %}
 
-        .container { max-width: 1300px; margin: 0 auto; padding: 24px; }
-
-        .layout { display: flex; gap: 24px; align-items: flex-start; }
-
-        .info-card {
-            width: 240px; flex-shrink: 0; background: white;
-            border-radius: 10px; padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.09);
-            border-top: 4px solid var(--navy);
-        }
-        .info-card .avatar {
-            width: 56px; height: 56px; border-radius: 50%;
-            background: var(--navy); color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px; font-weight: 700; margin: 0 auto 14px;
-        }
-        .info-card h2 { margin: 0 0 14px; font-size: 16px; text-align: center; }
-        .info-row { margin-bottom: 10px; font-size: 13px; }
-        .info-row .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .info-row .value { font-weight: 600; word-break: break-word; }
-        .badge {
-            display: inline-block; padding: 3px 11px; border-radius: 20px;
-            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
-        }
-        .badge-propietario { background: #e0f2fe; color: #0369a1; }
-        .badge-interesado  { background: #f3e8ff; color: #7c3aed; }
-        .badge-disponible  { background: #dcfce7; color: #15803d; }
-        .badge-vendida     { background: #fee2e2; color: #b91c1c; }
-        .badge-rentada     { background: #fff7ed; color: #c2410c; }
-        .wa-btn {
-            display: inline-flex; align-items: center; gap: 5px;
-            background: #dcfce7; color: #15803d; text-decoration: none;
-            font-size: 12px; font-weight: 600; padding: 5px 12px;
-            border-radius: 6px; margin-top: 10px; width: 100%;
-            justify-content: center; transition: opacity 0.15s;
-        }
-        .wa-btn:hover { opacity: 0.8; text-decoration: none; }
-
-        .detail { flex: 1; min-width: 0; }
-
-        .section-card {
-            background: white; border-radius: 10px; padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.09); margin-bottom: 20px;
-        }
-        .section-card h2 {
-            margin: 0 0 14px; font-size: 15px; color: var(--navy);
-            border-bottom: 1px solid var(--border); padding-bottom: 10px;
-            display: flex; align-items: center; gap: 7px;
-        }
-
-        .pref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
-        .pref-item { background: var(--bg); border-radius: 6px; padding: 10px 12px; }
-        .pref-item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
-        .pref-item .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
-
-        .table-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        thead th {
-            background: #334155; color: white; padding: 9px 10px;
-            text-align: left; font-size: 11px; letter-spacing: 0.5px;
-            text-transform: uppercase; font-weight: 600;
-        }
-        td { padding: 8px 10px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
-        tbody tr:nth-child(even) td { background: #f8fafc; }
-        tbody tr:hover td { background: #dbeafe; }
-
-        .notes-textarea {
-            width: 100%; font-size: 14px; padding: 10px 12px;
-            border: 1px solid var(--border); border-radius: 6px;
-            resize: vertical; font-family: inherit; min-height: 100px; color: var(--text);
-        }
-        .notes-textarea:focus { outline: 2px solid var(--blue); border-color: transparent; }
-        .btn {
-            font-size: 13px; padding: 7px 16px; border: none; border-radius: 6px;
-            cursor: pointer; font-weight: 600; transition: opacity 0.15s;
-        }
-        .btn:hover { opacity: 0.85; }
-        .btn-green { background: #16a34a; color: white; }
-        .save-confirm { font-size: 12px; color: #16a34a; margin-left: 10px; display: none; }
-
-        .propiedad-fotos { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-        .propiedad-fotos:last-child { border-bottom: none; margin-bottom: 0; }
-        .propiedad-fotos h3 { font-size: 14px; margin: 0 0 8px; color: var(--navy); }
-        .upload-zone { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .fotos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-        .foto-preview { cursor: pointer; border-radius: 6px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.15s; }
-        .foto-preview:hover { border-color: var(--blue); }
-        .foto-preview img { width: 90px; height: 80px; object-fit: cover; display: block; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); justify-content: center; align-items: center; z-index: 100; }
-        .modal.active { display: flex; }
-        .modal-content { position: relative; }
-        .modal img { max-width: 90vw; max-height: 82vh; border-radius: 4px; display: block; }
-        .nav-btn {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            font-size: 28px; color: white; background: rgba(0,0,0,0.45);
-            border: none; padding: 10px 14px; cursor: pointer; border-radius: 4px;
-            transition: background 0.15s;
-        }
-        .nav-btn:hover { background: rgba(0,0,0,0.7); }
-        .prev-btn { left: -60px; }
-        .next-btn { right: -60px; }
-
-        a { color: var(--blue); text-decoration: none; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-
-<header class="app-header">
-    <span class="icon">&#x1F3E0;</span>
-    <h1 id="header-nombre">Perfil de Cliente</h1>
+{% block header %}
+<header class="app-header" style="background:var(--navy);padding:12px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.25)">
+    <span style="font-size:24px">&#x1F3E0;</span>
+    <h1 id="header-nombre" style="margin:0;font-size:18px;font-weight:700;flex:1">Perfil de Cliente</h1>
     <a href="/admin" class="back-link">&#x2190; Volver al panel</a>
 </header>
+{% endblock %}
 
+{% block head %}
+<style>
+    .container { max-width: 1300px; margin: 0 auto; padding: 24px; }
+
+    .layout { display: flex; gap: 24px; align-items: flex-start; }
+
+    .info-card {
+        width: 240px; flex-shrink: 0; background: white;
+        border-radius: 10px; padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+        border-top: 4px solid var(--navy);
+    }
+    .info-card .avatar {
+        width: 56px; height: 56px; border-radius: 50%;
+        background: var(--navy); color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px; font-weight: 700; margin: 0 auto 14px;
+    }
+    .info-card h2 { margin: 0 0 14px; font-size: 16px; text-align: center; }
+    .info-row { margin-bottom: 10px; font-size: 13px; }
+    .info-row .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .info-row .value { font-weight: 600; word-break: break-word; }
+    .wa-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: #dcfce7; color: #15803d; text-decoration: none;
+        font-size: 12px; font-weight: 600; padding: 5px 12px;
+        border-radius: 6px; margin-top: 10px; width: 100%;
+        justify-content: center; transition: opacity 0.15s;
+    }
+    .wa-btn:hover { opacity: 0.8; text-decoration: none; }
+
+    .detail { flex: 1; min-width: 0; }
+
+    .section-card {
+        background: white; border-radius: 10px; padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.09); margin-bottom: 20px;
+    }
+    .section-card h2 {
+        margin: 0 0 14px; font-size: 15px; color: var(--navy);
+        border-bottom: 1px solid var(--border); padding-bottom: 10px;
+        display: flex; align-items: center; gap: 7px;
+    }
+
+    .pref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+    .pref-item { background: var(--bg); border-radius: 6px; padding: 10px 12px; }
+    .pref-item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .pref-item .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+
+    .table-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); box-shadow: none; }
+    thead th { background: #334155; position: static; padding: 9px 10px; font-size: 11px; }
+    td { padding: 8px 10px; }
+    tbody tr:hover td { background: #dbeafe; }
+
+    .notes-textarea { min-height: 100px; }
+    .notes-textarea:focus { outline: 2px solid var(--blue); }
+    .save-confirm { font-size: 12px; color: #16a34a; margin-left: 10px; display: none; }
+
+    .propiedad-fotos { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .propiedad-fotos:last-child { border-bottom: none; margin-bottom: 0; }
+    .propiedad-fotos h3 { font-size: 14px; margin: 0 0 8px; color: var(--navy); }
+    .upload-zone { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .fotos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .foto-preview { cursor: pointer; border-radius: 6px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.15s; }
+    .foto-preview:hover { border-color: var(--blue); }
+    .foto-preview img { width: 90px; height: 80px; object-fit: cover; display: block; }
+
+    .foto-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); justify-content: center; align-items: center; z-index: 100; }
+    .foto-modal.active { display: flex; }
+    .foto-modal-content { position: relative; }
+    .foto-modal img { max-width: 90vw; max-height: 82vh; border-radius: 4px; display: block; }
+    .nav-btn {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        font-size: 28px; color: white; background: rgba(0,0,0,0.45);
+        border: none; padding: 10px 14px; cursor: pointer; border-radius: 4px;
+        transition: background 0.15s;
+    }
+    .nav-btn:hover { background: rgba(0,0,0,0.7); }
+    .prev-btn { left: -60px; }
+    .next-btn { right: -60px; }
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="container">
     <div class="layout">
         <div class="info-card" id="cliente-info">
@@ -155,43 +102,21 @@
     </div>
 </div>
 
-<!-- Modal visor de fotos -->
-<div id="foto-modal" class="modal">
-    <div class="modal-content">
+<!-- Visor de fotos -->
+<div id="foto-modal" class="foto-modal">
+    <div class="foto-modal-content">
         <button class="nav-btn prev-btn" onclick="cambiarFoto(-1)">&#x276E;</button>
         <img id="modal-image" src="" alt="Foto ampliada">
         <button class="nav-btn next-btn" onclick="cambiarFoto(1)">&#x276F;</button>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
     const clienteId = {{ cliente_id }};
     let fotosActuales = [];
     let indiceFotoActual = 0;
-
-    function esc(s) {
-        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    const _origFetch = window.fetch;
-    window.fetch = function(url, options) {
-        options = options || {};
-        if (_csrfToken && options.method &&
-            ['POST','PUT','DELETE','PATCH'].indexOf(options.method.toUpperCase()) !== -1) {
-            options.headers = Object.assign({}, options.headers, { 'X-CSRFToken': _csrfToken });
-        }
-        return _origFetch(url, options).then(function(r) {
-            if (r.status === 401) window.location.href = '/admin/login';
-            return r;
-        });
-    };
-
-    function waLink(phone) {
-        const d = String(phone).replace(/\D/g, '');
-        const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
-        return 'https://wa.me/' + intl;
-    }
 
     function cargarPerfil() {
         fetch('/api/clientes/' + clienteId)
@@ -203,18 +128,13 @@
                 document.getElementById('header-nombre').textContent = data.nombre + ' ' + data.apellido;
                 const initials = ((data.nombre[0] || '') + (data.apellido[0] || '')).toUpperCase();
 
-                const infoCard = document.getElementById('cliente-info');
-                infoCard.innerHTML =
+                document.getElementById('cliente-info').innerHTML =
                     '<div class="avatar">' + esc(initials) + '</div>' +
                     '<h2>' + esc(data.nombre) + ' ' + esc(data.apellido) + '</h2>' +
-                    '<div class="info-row">' +
-                        '<div class="label">Tipo</div>' +
-                        '<div class="value"><span class="badge badge-' + esc(data.tipo) + '">' + esc(data.tipo) + '</span></div>' +
-                    '</div>' +
-                    '<div class="info-row">' +
-                        '<div class="label">Teléfono</div>' +
-                        '<div class="value">' + esc(data.telefono) + '</div>' +
-                    '</div>' +
+                    '<div class="info-row"><div class="label">Tipo</div>' +
+                        '<div class="value"><span class="badge badge-' + esc(data.tipo) + '">' + esc(data.tipo) + '</span></div></div>' +
+                    '<div class="info-row"><div class="label">Teléfono</div>' +
+                        '<div class="value">' + esc(data.telefono) + '</div></div>' +
                     (data.email ? '<div class="info-row"><div class="label">Email</div><div class="value">' + esc(data.email) + '</div></div>' : '') +
                     '<a href="' + waLink(data.telefono) + '" target="_blank" class="wa-btn">&#x1F4AC; WhatsApp</a>';
 
@@ -250,20 +170,17 @@
             .then(function(r) { return r.json(); })
             .then(function(propiedades) {
                 detalleDiv.innerHTML =
-                    '<div class="section-card">' +
-                        '<h2>&#x1F3D8; Propiedades</h2>' +
+                    '<div class="section-card"><h2>&#x1F3D8; Propiedades</h2>' +
                         renderTablaPropiedades(propiedades) +
                     '</div>' +
-                    '<div class="section-card">' +
-                        '<h2>&#x1F4DD; Notas del cliente</h2>' +
+                    '<div class="section-card"><h2>&#x1F4DD; Notas del cliente</h2>' +
                         '<textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
                         '<div style="margin-top:10px;display:flex;align-items:center">' +
                             '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
                             '<span id="save-confirm" class="save-confirm">&#x2713; Guardado</span>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="section-card">' +
-                        '<h2>&#x1F4F7; Fotos</h2>' +
+                    '<div class="section-card"><h2>&#x1F4F7; Fotos</h2>' +
                         '<div id="fotos-propiedades">' +
                             propiedades.map(function(prop) {
                                 return '<div class="propiedad-fotos">' +
@@ -293,8 +210,7 @@
             .then(function(r) { return r.json(); })
             .then(function(propiedades) {
                 detalleDiv.innerHTML =
-                    '<div class="section-card">' +
-                        '<h2>&#x2699; Preferencias de búsqueda</h2>' +
+                    '<div class="section-card"><h2>&#x2699; Preferencias de búsqueda</h2>' +
                         '<div class="pref-grid">' +
                             '<div class="pref-item"><div class="label">Mínimo</div><div class="value">' + (data.rango_min ? data.rango_min.toLocaleString('es-AR') : '-') + '</div></div>' +
                             '<div class="pref-item"><div class="label">Máximo</div><div class="value">' + (data.rango_max ? data.rango_max.toLocaleString('es-AR') : '-') + '</div></div>' +
@@ -303,12 +219,10 @@
                             '<div class="pref-item"><div class="label">Operación</div><div class="value">' + esc(data.operacion || '-') + '</div></div>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="section-card">' +
-                        '<h2>&#x1F3E0; Propiedades de interés</h2>' +
+                    '<div class="section-card"><h2>&#x1F3E0; Propiedades de interés</h2>' +
                         renderTablaPropiedades(propiedades) +
                     '</div>' +
-                    '<div class="section-card">' +
-                        '<h2>&#x1F4DD; Notas del cliente</h2>' +
+                    '<div class="section-card"><h2>&#x1F4DD; Notas del cliente</h2>' +
                         '<textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
                         '<div style="margin-top:10px;display:flex;align-items:center">' +
                             '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
@@ -340,7 +254,7 @@
         fetch('/api/propiedades/' + propiedadId + '/upload', { method: 'POST', body: formData })
             .then(function(r) { if (!r.ok) throw new Error('Error al subir'); return r.json(); })
             .then(function(data) { actualizarFotos(propiedadId, data.fotos); })
-            .catch(function(e) { alert('Error al subir imagen: ' + e.message); });
+            .catch(function(e) { toast('Error al subir imagen: ' + e.message, 'error'); });
     }
 
     function actualizarFotos(propiedadId, fotos) {
@@ -374,5 +288,4 @@
 
     document.addEventListener('DOMContentLoaded', cargarPerfil);
 </script>
-</body>
-</html>
+{% endblock %}

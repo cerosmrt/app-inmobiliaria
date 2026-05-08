@@ -1,106 +1,39 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Consultas — Moret Inmobiliaria</title>
-    <style>
-        :root { --red: #C41230; --border: #e2e8f0; --text: #1e293b; --muted: #64748b; }
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f9; color: var(--text); font-size: 14px; }
+{% extends "admin/base.html" %}
 
-        .app-header {
-            background: #1a1a1a; color: white;
-            padding: 10px 24px; display: flex; align-items: center; gap: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-        }
-        .header-brand { display: flex; align-items: baseline; gap: 6px; flex: 1; }
-        .header-brand .moret { font-size: 20px; font-weight: 800; color: #C41230; }
-        .header-brand .sub { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
-        .header-nav a {
-            color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px;
-            padding: 6px 12px; border-radius: 5px; transition: background 0.15s; margin-right: 4px;
-        }
-        .header-nav a:hover { background: rgba(255,255,255,0.1); color: white; }
-        .btn-logout {
-            background: rgba(196,18,48,0.15); color: #f87171;
-            border: 1px solid rgba(196,18,48,0.3); padding: 5px 12px;
-            border-radius: 5px; font-size: 12px; cursor: pointer;
-            text-decoration: none; transition: background 0.15s;
-        }
-        .btn-logout:hover { background: rgba(196,18,48,0.3); color: white; }
+{% block title %}Consultas{% endblock %}
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        .page-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-        .page-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="/admin">Panel</a>
+    <a href="/" target="_blank">Ver sitio</a>
+</nav>
+{% endblock %}
 
-        .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-        .filters select, .filters input {
-            font-size: 13px; padding: 6px 10px; border: 1px solid var(--border);
-            border-radius: 6px; color: var(--text); outline: none;
-        }
-        .filters select:focus, .filters input:focus { border-color: var(--red); }
+{% block head %}
+<style>
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .page-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .page-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filters select, .filters input {
+        font-size: 13px; padding: 6px 10px; border: 1px solid var(--border);
+        border-radius: 6px; color: var(--text); outline: none;
+    }
+    .filters select:focus, .filters input:focus { border-color: var(--red); }
+    thead th { position: static; }
+    td { padding: 10px 12px; }
+    .msg-preview { max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
+    .prop-link { color: #2563eb; text-decoration: none; font-size: 12px; }
+    .prop-link:hover { text-decoration: underline; }
+    tbody tr.no-leida td { background: #fff8f8; font-weight: 500; }
+    tbody tr.no-leida td:first-child::before { content: '\25CF'; color: var(--red); margin-right: 6px; font-size: 10px; }
+    .empty { text-align: center; padding: 40px; color: var(--muted); }
+    .modal-box { max-width: 560px; }
+    .modal-meta span { margin-right: 16px; }
+</style>
+{% endblock %}
 
-        .table-wrap { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
-        thead th {
-            background: #1a1a1a; color: white; padding: 10px 12px;
-            text-align: left; font-weight: 600; font-size: 11px;
-            letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
-        }
-        td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
-        tbody tr:nth-child(even) td { background: #f8fafc; }
-        tbody tr:hover td { background: #ffe4e8 !important; }
-        tbody tr.no-leida td { background: #fff8f8; font-weight: 500; }
-        tbody tr.no-leida td:first-child::before {
-            content: '\25CF'; color: var(--red); margin-right: 6px; font-size: 10px;
-        }
-
-        .msg-preview { max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
-        .prop-link { color: #2563eb; text-decoration: none; font-size: 12px; }
-        .prop-link:hover { text-decoration: underline; }
-        .wa-link { color: #16a34a; text-decoration: none; font-size: 14px; }
-
-        .btn-action {
-            font-size: 11px; padding: 4px 10px; border: none; border-radius: 4px;
-            cursor: pointer; font-weight: 600; margin: 1px;
-        }
-        .btn-leer    { background: #dcfce7; color: #15803d; }
-        .btn-leer:hover { background: #bbf7d0; }
-        .btn-delete  { background: #fee2e2; color: #b91c1c; }
-        .btn-delete:hover { background: #fecaca; }
-        .btn-expand  { background: #e0f2fe; color: #0369a1; }
-
-        .empty { text-align: center; padding: 40px; color: var(--muted); }
-
-        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.55); z-index:100; justify-content:center; align-items:center; }
-        .modal-overlay.active { display: flex; }
-        .modal-box { background: white; padding: 28px; max-width: 560px; width: 92%; border-radius: 10px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .modal-header h3 { margin: 0; font-size: 16px; }
-        .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
-        .modal-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
-        .modal-meta span { margin-right: 16px; }
-        .modal-msg { font-size: 14px; line-height: 1.6; white-space: pre-wrap; background: #f8fafc; padding: 14px; border-radius: 6px; border: 1px solid var(--border); }
-
-        .badge-unread { background: var(--red); color: white; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; margin-left: 8px; }
-    </style>
-</head>
-<body>
-
-<header class="app-header">
-    <div class="header-brand">
-        <span class="moret">Moret</span>
-        <span class="sub">PANEL ADMIN</span>
-    </div>
-    <nav class="header-nav">
-        <a href="/admin">Panel</a>
-        <a href="/" target="_blank">Ver sitio</a>
-    </nav>
-    <a href="/admin/logout" class="btn-logout">Salir</a>
-</header>
-
+{% block content %}
 <div class="container">
     <div class="page-title">Consultas recibidas <span id="badge-total" class="badge-unread" style="display:none"></span></div>
     <div class="page-sub">Mensajes enviados por visitantes del sitio web.</div>
@@ -146,38 +79,34 @@
         <div class="modal-msg" id="modal-texto"></div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-    function esc(s) {
-        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    const _origFetch = window.fetch;
-    window.fetch = function(url, options) {
-        options = options || {};
-        if (_csrfToken && options.method &&
-            ['POST','PUT','DELETE','PATCH'].indexOf(options.method.toUpperCase()) !== -1) {
-            options.headers = Object.assign({}, options.headers, { 'X-CSRFToken': _csrfToken });
-        }
-        return _origFetch(url, options).then(function(r) {
-            if (r.status === 401) window.location.href = '/admin/login';
-            return r;
-        });
-    };
-
     let consultas = [];
 
-    function waLink(phone) {
-        const d = String(phone).replace(/\D/g, '');
-        const intl = d.startsWith('54') ? d : d.startsWith('0') ? '54' + d.slice(1) : '54' + d;
-        return 'https://wa.me/' + intl;
+    // ── URL filter persistence ─────────────────────────────────────────────────
+    function guardarFiltrosEnURL() {
+        const p = new URLSearchParams();
+        const leida  = document.getElementById('filtroLeida').value;
+        const buscar = document.getElementById('filtroBuscar').value;
+        if (leida)  p.set('leida', leida);
+        if (buscar) p.set('buscar', buscar);
+        const qs = p.toString();
+        history.replaceState(null, '', qs ? '?' + qs : location.pathname);
     }
 
+    function leerFiltrosDeURL() {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get('leida'))  document.getElementById('filtroLeida').value  = p.get('leida');
+        if (p.get('buscar')) document.getElementById('filtroBuscar').value = p.get('buscar');
+    }
+
+    // ── Logic ─────────────────────────────────────────────────────────────────
     function filtrar() {
         const estado = document.getElementById('filtroLeida').value;
         const buscar = document.getElementById('filtroBuscar').value.toLowerCase();
-        let filtradas = consultas.filter(function(c) {
+        const filtradas = consultas.filter(function(c) {
             const matchEstado = !estado || (estado === 'no' ? !c.leida : c.leida);
             const matchBuscar = !buscar
                 || c.nombre.toLowerCase().includes(buscar)
@@ -186,6 +115,7 @@
             return matchEstado && matchBuscar;
         });
         renderConsultas(filtradas);
+        guardarFiltrosEnURL();
     }
 
     function renderConsultas(lista) {
@@ -221,21 +151,11 @@
         const c = consultas.find(function(x) { return x.id === id; });
         if (!c) return;
         document.getElementById('modal-nombre').textContent = c.nombre;
-        // textContent es seguro — no parsea HTML
-        document.getElementById('modal-contacto').textContent =
-            (c.telefono ? '&#x260E; ' + c.telefono : '') +
-            (c.email ? '  &#x2709; ' + c.email : '');
-        // Usar textContent para contenido de usuario
         const contactoEl = document.getElementById('modal-contacto');
         contactoEl.textContent = '';
-        if (c.telefono) {
-            contactoEl.appendChild(document.createTextNode('☎ ' + c.telefono + '  '));
-        }
-        if (c.email) {
-            contactoEl.appendChild(document.createTextNode('✉ ' + c.email));
-        }
-        document.getElementById('modal-prop').textContent =
-            c.propiedad_direccion ? '🏠 ' + c.propiedad_direccion : '';
+        if (c.telefono) contactoEl.appendChild(document.createTextNode('☎ ' + c.telefono + '  '));
+        if (c.email)    contactoEl.appendChild(document.createTextNode('✉ ' + c.email));
+        document.getElementById('modal-prop').textContent  = c.propiedad_direccion ? '🏠 ' + c.propiedad_direccion : '';
         document.getElementById('modal-fecha').textContent = c.fecha ? '🕐 ' + c.fecha : '';
         document.getElementById('modal-texto').textContent = c.mensaje;
         document.getElementById('modal-msg').classList.add('active');
@@ -253,13 +173,16 @@
     }
 
     function eliminar(id) {
-        if (!confirm('¿Eliminar esta consulta?')) return;
-        fetch('/api/consultas/' + id, { method: 'DELETE' })
-            .then(function() {
-                consultas = consultas.filter(function(c) { return c.id !== id; });
-                filtrar();
-                actualizarBadge();
-            }).catch(function(e) { console.error('Error al eliminar consulta', e); });
+        confirmar('¿Eliminar esta consulta?', 'Eliminar consulta').then(function(ok) {
+            if (!ok) return;
+            fetch('/api/consultas/' + id, { method: 'DELETE' })
+                .then(function() {
+                    consultas = consultas.filter(function(c) { return c.id !== id; });
+                    toast('Consulta eliminada', 'success');
+                    filtrar();
+                    actualizarBadge();
+                }).catch(function(e) { console.error('Error al eliminar consulta', e); });
+        });
     }
 
     function actualizarBadge() {
@@ -274,6 +197,7 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
+        leerFiltrosDeURL();
         fetch('/api/consultas')
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -285,5 +209,4 @@
             .catch(function(e) { console.error(e); });
     });
 </script>
-</body>
-</html>
+{% endblock %}
