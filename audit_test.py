@@ -793,6 +793,121 @@ else:
                    headers={"X-CSRFToken": real_csrf})
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 20: SISTEMA CÓDIGO — INTEGRACIÓN COMPLETA ===")
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+CODIGOS = ["TRILLINI", "C14", "SARMIENTO", "M102", "LOTE7"]
+pids20 = []
+for i, cod in enumerate(CODIGOS):
+    r = session.post(f"{BASE}/api/propiedades",
+                     json={"codigo": cod, "direccion": f"Calle Test {i+1}", "tipo": "casa",
+                           "estado": "disponible", "operacion": "venta"},
+                     headers={"X-CSRFToken": real_csrf})
+    if r.ok:
+        pids20.append((cod, r.json()["id"]))
+
+check("Setup: 5 propiedades con código creadas", len(pids20) == 5, str(len(pids20)))
+
+# ── 1. Persistencia: GET devuelve codigo exacto ───────────────────────────────
+for cod, pid in pids20:
+    r = session.get(f"{BASE}/api/propiedades/{pid}")
+    check(f"GET persiste codigo={cod}", r.json().get("codigo") == cod, r.json().get("codigo"))
+
+# ── 2. Búsqueda exacta por ?codigo= ──────────────────────────────────────────
+for cod, _ in pids20:
+    r = session.get(f"{BASE}/api/propiedades?codigo={cod}")
+    found = any(p["codigo"] == cod for p in r.json())
+    check(f"Búsqueda exacta ?codigo={cod}", found, str([p['codigo'] for p in r.json()]))
+
+# ── 3. Búsqueda parcial (subcadena) ──────────────────────────────────────────
+partial_cases = [("TRILL", "TRILLINI"), ("C1", "C14"), ("SARM", "SARMIENTO"),
+                 ("M10", "M102"), ("LOT", "LOTE7")]
+for q, expected in partial_cases:
+    r = session.get(f"{BASE}/api/propiedades?codigo={q}")
+    found = any(p["codigo"] == expected for p in r.json())
+    check(f"Búsqueda parcial ?codigo={q} encuentra {expected}", found,
+          str([p['codigo'] for p in r.json()]))
+
+# ── 4. Update código ──────────────────────────────────────────────────────────
+if pids20:
+    _, pid_upd = pids20[0]
+    r = session.put(f"{BASE}/api/propiedades/{pid_upd}",
+                    json={"codigo": "TRILLINI-A"},
+                    headers={"X-CSRFToken": real_csrf, "Content-Type": "application/json"})
+    check("PUT actualiza codigo 200", r.status_code == 200, str(r.status_code))
+    r2 = session.get(f"{BASE}/api/propiedades/{pid_upd}")
+    check("Codigo actualizado persiste", r2.json().get("codigo") == "TRILLINI-A",
+          r2.json().get("codigo"))
+    # Restore
+    session.put(f"{BASE}/api/propiedades/{pid_upd}",
+                json={"codigo": "TRILLINI"},
+                headers={"X-CSRFToken": real_csrf, "Content-Type": "application/json"})
+
+# ── 5. as_dict incluye codigo en lista de propiedades del cliente ─────────────
+if pids20:
+    _, pid_cli = pids20[1]
+    rc = session.post(f"{BASE}/api/clientes",
+                      json={"nombre": "Codigo", "apellido": "Test20", "telefono": "200001",
+                            "tipo": "propietario"},
+                      headers={"X-CSRFToken": real_csrf})
+    cid20 = rc.json().get("id") if rc.ok else None
+    if cid20:
+        session.post(f"{BASE}/api/propiedades/{pid_cli}/propietarios/{cid20}",
+                     headers={"X-CSRFToken": real_csrf})
+        r = session.get(f"{BASE}/api/clientes/{cid20}")
+        pp = r.json().get("propiedades_propietario", [])
+        check("Cliente.as_dict propiedades_propietario incluye codigo",
+              any(p.get("codigo") == "C14" for p in pp), str(pp))
+        session.delete(f"{BASE}/api/clientes/{cid20}/permanente",
+                       headers={"X-CSRFToken": real_csrf})
+
+# ── 6. HTML: columna se llama "Código" (no "ID") ─────────────────────────────
+r_admin = session.get(f"{BASE}/admin")
+check("Columna tabla propiedades dice 'Código'", '>Código <' in r_admin.text,
+      "sigue diciendo 'ID' o no encontrado")
+check("Columna NO dice '>ID <'", '>ID <' not in r_admin.text,
+      "header viejo todavía presente")
+
+# ── 7. HTML: placeholder del filtro menciona código ──────────────────────────
+check("Placeholder filtro menciona Código",
+      'Código, dirección' in r_admin.text or 'digo, direcci' in r_admin.text,
+      "placeholder no actualizado")
+
+# ── 8. admin.js: command palette busca por codigo ────────────────────────────
+r_js = requests.get(f"{BASE}/static/admin.js")
+check("admin.js incluye p.codigo en palette search",
+      'p.codigo' in r_js.text, "no encontrado en admin.js")
+check("admin.js muestra codigo en label del palette",
+      'p.codigo + \']' in r_js.text or "p.codigo + ']" in r_js.text or '[' + '" + p.codigo' in r_js.text or "p.codigo ? '['" in r_js.text,
+      "código no aparece en label")
+
+# ── 9. propiedad.html: _CAMPOS tiene campo código ────────────────────────────
+if pids20:
+    _, pid_det = pids20[2]
+    r_det = session.get(f"{BASE}/admin/propiedad/{pid_det}")
+    check("propiedad.html _CAMPOS tiene 'Código'",
+          "'C\\u00f3digo'" in r_det.text or "'Código'" in r_det.text or "C\\u00f3digo" in r_det.text
+          or "label: 'C" in r_det.text,
+          "campo Código no encontrado en _CAMPOS")
+    check("propiedad.html campo codigo es editable (field='codigo')",
+          "field: 'codigo'" in r_det.text, "field codigo no encontrado")
+
+# ── 10. Ordenamiento: API devuelve codigo en todos los registros ──────────────
+r_all = session.get(f"{BASE}/api/propiedades")
+all_with_codigo = [p for p in r_all.json() if "codigo" in p]
+check("Todas las propiedades tienen campo codigo en as_dict",
+      len(all_with_codigo) == len(r_all.json()),
+      f"{len(all_with_codigo)}/{len(r_all.json())}")
+mis_codigos = [p["codigo"] for p in r_all.json() if p["codigo"] in CODIGOS]
+check("Los 5 códigos de prueba aparecen en listado general",
+      len(mis_codigos) == 5, str(mis_codigos))
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
+for _, pid in pids20:
+    session.delete(f"{BASE}/api/propiedades/{pid}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)

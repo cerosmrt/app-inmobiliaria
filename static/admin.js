@@ -110,8 +110,11 @@ function buscarEnPalette(q) {
     });
     if (_paletteCache) {
         _paletteCache.propiedades.forEach(function(p) {
-            if ((p.direccion || '').toLowerCase().includes(q) || (p.barrio || '').toLowerCase().includes(q)) {
-                items.push({ label: p.direccion || '(sin dirección)', sub: (p.estado || '') + (p.barrio ? ' · ' + p.barrio : ''),
+            if ((p.codigo    || '').toLowerCase().includes(q) ||
+                (p.direccion || '').toLowerCase().includes(q) ||
+                (p.barrio    || '').toLowerCase().includes(q)) {
+                var label = (p.codigo ? '[' + p.codigo + '] ' : '') + (p.direccion || '(sin dirección)');
+                items.push({ label: label, sub: (p.estado || '') + (p.barrio ? ' · ' + p.barrio : ''),
                     badge: { text: p.estado, cls: 'badge-' + p.estado }, href: '/admin/propiedad/' + p.id });
             }
         });

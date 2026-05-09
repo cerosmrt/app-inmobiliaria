@@ -115,7 +115,7 @@
             <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
-            <input type="text" id="filtroDireccion" placeholder="Dirección o barrio" onkeyup="filtrarPropiedades()" style="min-width:200px">
+            <input type="text" id="filtroDireccion" placeholder="Código, dirección o barrio" onkeyup="filtrarPropiedades()" style="min-width:200px">
             <div class="sep"></div>
             <select id="filtroTipo" onchange="filtrarPropiedades()">
                 <option value="">Todos los tipos</option>
@@ -145,7 +145,7 @@
         <div class="table-wrap">
             <table id="tablaPropiedades">
                 <thead><tr>
-                    <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">ID <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">Código <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Ubicación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="tipo"         onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="operacion"    onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
