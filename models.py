@@ -9,9 +9,15 @@ interesados_propiedades = db.Table('interesados_propiedades',
     db.Column('cliente_id', db.Integer, db.ForeignKey('clientes.id'), primary_key=True)
 )
 
+propietarios_propiedades = db.Table('propietarios_propiedades',
+    db.Column('propiedad_id', db.Integer, db.ForeignKey('propiedades.id'), primary_key=True),
+    db.Column('cliente_id', db.Integer, db.ForeignKey('clientes.id'), primary_key=True)
+)
+
 class Propiedad(db.Model):
     __tablename__ = 'propiedades'
     id = db.Column(db.Integer, primary_key=True, index=True)
+    codigo = db.Column(db.String, nullable=True, index=True)
     direccion = db.Column(db.String, index=True)
     barrio = db.Column(db.String, nullable=True)
     rango_min = db.Column(db.Float, nullable=True)
@@ -21,19 +27,26 @@ class Propiedad(db.Model):
     ambientes = db.Column(db.Integer, nullable=True)
     tipo = db.Column(db.String)         # casa, departamento, local, terreno, otro
     operacion = db.Column(db.String, nullable=True)  # venta, alquiler
-    estado = db.Column(db.String)       # disponible, vendida, rentada
+    estado = db.Column(db.String)       # disponible, reservada, vendida, rentada, cerrada
     publicada = db.Column(db.Boolean, default=False)
     fotos = db.Column(db.String, nullable=True)
     descripcion = db.Column(db.Text, nullable=True)
     fecha_estado = db.Column(db.DateTime, nullable=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
     propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
-    propietario = db.relationship('Cliente', backref='propiedades', foreign_keys=[propietario_id])
+    propietario = db.relationship('Cliente', backref='propiedades_legacy', foreign_keys=[propietario_id])
+    propietarios = db.relationship('Cliente', secondary=propietarios_propiedades, backref='propiedades_como_propietario')
     interesados = db.relationship('Cliente', secondary=interesados_propiedades, backref='intereses')
+
+    def _fotos_list(self):
+        if not self.fotos:
+            return []
+        return [f.replace('\\', '/') for f in self.fotos.split(',') if f.strip()]
 
     def as_dict(self):
         return {
             'id': self.id,
+            'codigo': self.codigo or '',
             'direccion': self.direccion,
             'barrio': self.barrio or '',
             'rango_min': self.rango_min,
@@ -45,11 +58,13 @@ class Propiedad(db.Model):
             'operacion': self.operacion or '',
             'estado': self.estado,
             'publicada': self.publicada,
-            'fotos': self.fotos.split(',') if self.fotos else [],
+            'fotos': self._fotos_list(),
             'descripcion': self.descripcion or '',
             'fecha_estado': self.fecha_estado.strftime('%d/%m/%Y') if self.fecha_estado else None,
             'propietario_id': self.propietario_id,
             'propietario': self.propietario.nombre + ' ' + self.propietario.apellido if self.propietario else None,
+            'propietarios': [{'id': c.id, 'nombre': c.nombre, 'apellido': c.apellido, 'telefono': c.telefono} for c in self.propietarios],
+            'propietarios_ids': [c.id for c in self.propietarios],
             'interesados': [{'id': c.id, 'nombre': c.nombre, 'apellido': c.apellido, 'telefono': c.telefono} for c in self.interesados],
             'interesados_ids': [c.id for c in self.interesados],
         }
@@ -72,6 +87,16 @@ class Cliente(db.Model):
     deleted_at = db.Column(db.DateTime, nullable=True)
 
     def as_dict(self):
+        propiedades_propietario = [
+            {'id': p.id, 'direccion': p.direccion, 'codigo': p.codigo or '', 'estado': p.estado}
+            for p in self.propiedades_como_propietario
+            if p.deleted_at is None
+        ]
+        propiedades_interesado = [
+            {'id': p.id, 'direccion': p.direccion, 'codigo': p.codigo or '', 'estado': p.estado}
+            for p in self.intereses
+            if p.deleted_at is None
+        ]
         return {
             'id': self.id,
             'nombre': self.nombre,
@@ -85,7 +110,9 @@ class Cliente(db.Model):
             'ambientes': self.ambientes,
             'operacion': self.operacion,
             'descripcion': self.descripcion,
-            'fotos': self.fotos.split(',') if self.fotos else []
+            'fotos': [f.replace('\\', '/') for f in self.fotos.split(',') if f.strip()] if self.fotos else [],
+            'propiedades_propietario': propiedades_propietario,
+            'propiedades_interesado': propiedades_interesado,
         }
 
 class Admin(db.Model):

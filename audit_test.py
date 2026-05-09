@@ -77,7 +77,7 @@ admin_user = admin_row[0]
 # Intentamos con contraseñas comunes del proyecto
 csrf = get_csrf()
 logged_in = False
-for pwd in ["audit_tmp_123", "admin", "admin123", "moret", "1234", "moret123"]:
+for pwd in ["moret2026", "audit_tmp_123", "admin", "admin123", "moret", "1234", "moret123"]:
     r = session.post(f"{BASE}/admin/login",
                      data={"username": admin_user, "password": pwd, "csrf_token": csrf},
                      allow_redirects=True)
@@ -414,6 +414,278 @@ r = session.get(f"{BASE}/api/consultas/no_leidas")
 check("GET /api/consultas/no_leidas 200", r.status_code == 200, str(r.status_code))
 if r.ok:
     check("no_leidas tiene campo count", "count" in r.json(), str(r.json()))
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 12: CAMPO CODIGO ===")
+
+# Create property with codigo
+r = session.post(f"{BASE}/api/propiedades",
+                 json={"codigo": "TEST-01", "direccion": "Test Codigo 1", "barrio": "Centro",
+                       "tipo": "casa", "operacion": "venta", "estado": "disponible"},
+                 headers={"X-CSRFToken": real_csrf})
+check("POST propiedad con codigo 201", r.status_code == 201, str(r.status_code))
+cod_prop_id = None
+if r.ok:
+    cod_prop_id = r.json().get("id")
+    check("Propiedad devuelve campo codigo", r.json().get("codigo") == "TEST-01", str(r.json().get("codigo")))
+
+# Update codigo
+if cod_prop_id:
+    r = session.put(f"{BASE}/api/propiedades/{cod_prop_id}",
+                    json={"codigo": "TRILLINI"},
+                    headers={"X-CSRFToken": real_csrf})
+    check("PUT codigo actualiza 200", r.status_code == 200, str(r.status_code))
+    r2 = session.get(f"{BASE}/api/propiedades/{cod_prop_id}")
+    check("GET devuelve codigo actualizado", r2.json().get("codigo") == "TRILLINI", str(r2.json().get("codigo")))
+
+# Search by codigo via propiedades list
+    r3 = session.get(f"{BASE}/api/propiedades?codigo=TRILLINI")
+    check("GET /api/propiedades?codigo busqueda exacta", r.status_code == 200)
+    check("Busqueda por codigo devuelve resultado", any(p.get("codigo") == "TRILLINI" for p in r3.json()))
+
+    r4 = session.get(f"{BASE}/api/propiedades?codigo=TRILL")
+    check("Busqueda parcial por codigo funciona", any(p.get("codigo") == "TRILLINI" for p in r4.json()))
+
+# Cleanup
+if cod_prop_id:
+    session.delete(f"{BASE}/api/propiedades/{cod_prop_id}", headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 13: PROPIETARIOS M2M ===")
+
+r = session.post(f"{BASE}/api/propiedades",
+                 json={"codigo": "PROP-M2M", "direccion": "Test Propietarios", "barrio": "Sur",
+                       "tipo": "terreno", "operacion": "venta", "estado": "disponible"},
+                 headers={"X-CSRFToken": real_csrf})
+m2m_pid = r.json().get("id") if r.ok else None
+
+r = session.post(f"{BASE}/api/clientes",
+                 json={"nombre": "Ana", "apellido": "Trillini", "tipo": "propietario", "telefono": "1100001111"},
+                 headers={"X-CSRFToken": real_csrf})
+m2m_cid1 = r.json().get("id") if r.ok else None
+
+r = session.post(f"{BASE}/api/clientes",
+                 json={"nombre": "Bruno", "apellido": "Trillini", "tipo": "propietario", "telefono": "1100002222"},
+                 headers={"X-CSRFToken": real_csrf})
+m2m_cid2 = r.json().get("id") if r.ok else None
+
+if m2m_pid and m2m_cid1 and m2m_cid2:
+    # Asignar propietario 1
+    r = session.post(f"{BASE}/api/propiedades/{m2m_pid}/propietarios/{m2m_cid1}",
+                     headers={"X-CSRFToken": real_csrf})
+    check("POST asignar propietario 1 200", r.status_code == 200, str(r.status_code))
+    if r.ok:
+        d = r.json()
+        check("propietarios_ids tiene cid1", m2m_cid1 in d.get("propietarios_ids", []))
+        check("propietarios lista de dicts", all(isinstance(x, dict) for x in d.get("propietarios", [])))
+
+    # Asignar propietario 2 (N:N)
+    r = session.post(f"{BASE}/api/propiedades/{m2m_pid}/propietarios/{m2m_cid2}",
+                     headers={"X-CSRFToken": real_csrf})
+    check("POST asignar propietario 2 (N:N) 200", r.status_code == 200, str(r.status_code))
+    if r.ok:
+        ids = r.json().get("propietarios_ids", [])
+        check("Propiedad tiene 2 propietarios", len(ids) == 2, str(ids))
+
+    # Cliente debe ver propiedades como propietario
+    r = session.get(f"{BASE}/api/clientes/{m2m_cid1}")
+    check("GET cliente tiene propiedades_propietario", r.ok)
+    if r.ok:
+        pp = r.json().get("propiedades_propietario", [])
+        check("Cliente ve propiedad asignada", any(p["id"] == m2m_pid for p in pp), str(pp))
+
+    # Desasignar propietario 1
+    r = session.delete(f"{BASE}/api/propiedades/{m2m_pid}/propietarios/{m2m_cid1}",
+                       headers={"X-CSRFToken": real_csrf})
+    check("DELETE desasignar propietario 200", r.status_code == 200, str(r.status_code))
+    if r.ok:
+        ids = r.json().get("propietarios_ids", [])
+        check("cid1 ya no es propietario", m2m_cid1 not in ids, str(ids))
+        check("cid2 sigue siendo propietario", m2m_cid2 in ids, str(ids))
+
+    # Cleanup
+    session.delete(f"{BASE}/api/propiedades/{m2m_pid}", headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/clientes/{m2m_cid1}", headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/clientes/{m2m_cid2}", headers={"X-CSRFToken": real_csrf})
+else:
+    fail("Propietarios M2M", f"no se pudo crear datos (pid={m2m_pid} cid1={m2m_cid1} cid2={m2m_cid2})")
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 14: ESTADOS OPERATIVOS ===")
+
+estados_nuevos = ["reservada", "cerrada"]
+for est in estados_nuevos:
+    r = session.post(f"{BASE}/api/propiedades",
+                     json={"direccion": f"Test Estado {est}", "tipo": "casa",
+                           "operacion": "venta", "estado": est},
+                     headers={"X-CSRFToken": real_csrf})
+    check(f"POST propiedad estado={est} 201", r.status_code == 201, str(r.status_code))
+    tid = r.json().get("id") if r.ok else None
+    if tid:
+        r2 = session.get(f"{BASE}/api/propiedades/{tid}")
+        check(f"GET persiste estado={est}", r2.json().get("estado") == est, str(r2.json().get("estado")))
+        # Transition between states
+        r3 = session.put(f"{BASE}/api/propiedades/{tid}", json={"estado": "disponible"},
+                         headers={"X-CSRFToken": real_csrf})
+        check(f"PUT {est}->disponible 200", r3.status_code == 200)
+        # Cleanup
+        session.delete(f"{BASE}/api/propiedades/{tid}", headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 15: FOTOS — PATH Y PERSISTENCIA ===")
+
+# Create fresh property for photo tests
+r = session.post(f"{BASE}/api/propiedades",
+                 json={"direccion": "Test Fotos Path", "tipo": "casa",
+                       "operacion": "venta", "estado": "disponible"},
+                 headers={"X-CSRFToken": real_csrf})
+foto_pid = r.json().get("id") if r.ok else None
+
+jpeg_bytes = (
+    b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00'
+    b'\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t'
+    b'\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a'
+    b'\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\x1e'
+    b'\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01\x11\x00'
+    b'\xff\xc4\x00\x1f\x00\x00\x01\x05\x01\x01\x01\x01\x01\x01\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b'
+    b'\xff\xda\x00\x08\x01\x01\x00\x00?\x00\xfb\xd2\x8a(\x03\xff\xd9'
+)
+
+if foto_pid:
+    # Upload foto 1
+    r = session.post(f"{BASE}/api/propiedades/{foto_pid}/upload",
+                     files={"file": ("test1.jpg", io.BytesIO(jpeg_bytes), "image/jpeg")},
+                     headers={"X-CSRFToken": real_csrf})
+    check("Upload foto 1 200", r.status_code == 200, str(r.status_code))
+    if r.ok:
+        fotos = r.json().get("fotos", [])
+        check("Foto 1 en lista", len(fotos) >= 1)
+        if fotos:
+            check("Foto path usa forward slash", "/" in fotos[0] and "\\" not in fotos[0], fotos[0])
+            check("Foto path comienza con static/", fotos[0].startswith("static/"), fotos[0])
+
+    # Upload foto 2 (test sequential safety)
+    r2 = session.post(f"{BASE}/api/propiedades/{foto_pid}/upload",
+                      files={"file": ("test2.jpg", io.BytesIO(jpeg_bytes), "image/jpeg")},
+                      headers={"X-CSRFToken": real_csrf})
+    check("Upload foto 2 200", r2.status_code == 200, str(r2.status_code))
+    if r2.ok:
+        fotos2 = r2.json().get("fotos", [])
+        check("Ambas fotos presentes tras 2 uploads", len(fotos2) >= 2, str(len(fotos2)))
+
+    # Upload 5 more (total 7) to test bulk
+    uploaded = 2
+    for i in range(3, 8):
+        rb = session.post(f"{BASE}/api/propiedades/{foto_pid}/upload",
+                          files={"file": (f"test{i}.jpg", io.BytesIO(jpeg_bytes), "image/jpeg")},
+                          headers={"X-CSRFToken": real_csrf})
+        if rb.ok:
+            uploaded += 1
+    r_check = session.get(f"{BASE}/api/propiedades/{foto_pid}")
+    check(f"Todas las fotos persisten ({uploaded}/7)", len(r_check.json().get("fotos", [])) == uploaded,
+          str(len(r_check.json().get("fotos", []))))
+
+    # Verify no backslash in DB
+    check("Sin backslash en paths", all("\\" not in f for f in r_check.json().get("fotos", [])))
+
+    # Delete foto intermedia (index 3)
+    fotos_actual = r_check.json().get("fotos", [])
+    if len(fotos_actual) >= 4:
+        target = fotos_actual[3]
+        r_del = session.delete(f"{BASE}/api/propiedades/{foto_pid}/fotos/{target}",
+                               headers={"X-CSRFToken": real_csrf})
+        check("DELETE foto intermedia 200", r_del.status_code == 200, str(r_del.status_code))
+        if r_del.ok:
+            fotos_post = r_del.json().get("fotos", [])
+            check("Foto intermedia eliminada", target not in fotos_post)
+            check("Resto de fotos intactas", len(fotos_post) == len(fotos_actual) - 1,
+                  f"{len(fotos_post)} vs {len(fotos_actual)-1}")
+
+    # Reorder
+    fotos_reorder = session.get(f"{BASE}/api/propiedades/{foto_pid}").json().get("fotos", [])
+    if len(fotos_reorder) >= 2:
+        reversed_order = list(reversed(fotos_reorder))
+        r_ord = session.put(f"{BASE}/api/propiedades/{foto_pid}/fotos/orden",
+                            json={"fotos": reversed_order},
+                            headers={"X-CSRFToken": real_csrf})
+        check("PUT reordenar 7 fotos 200", r_ord.status_code == 200, str(r_ord.status_code))
+        if r_ord.ok:
+            check("Orden persistido correctamente",
+                  r_ord.json().get("fotos") == reversed_order, str(r_ord.json().get("fotos")[:2]))
+
+    # Persistencia: re-fetch via GET
+    r_persist = session.get(f"{BASE}/api/propiedades/{foto_pid}")
+    check("Fotos persisten en GET fresco", len(r_persist.json().get("fotos", [])) > 0)
+
+    # Cleanup
+    session.delete(f"{BASE}/api/propiedades/{foto_pid}", headers={"X-CSRFToken": real_csrf})
+else:
+    fail("Fotos path test", "no se pudo crear propiedad de prueba")
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 16: FORMULARIOS DE CONTACTO ===")
+
+r = session.get(BASE)
+check("Sitio publico carga 200", r.status_code == 200)
+check("Email destino en pagina publica", "robertomoret55@gmail.com" in r.text, "email no encontrado")
+check("WA en pagina publica contiene 543444460856", "543444460856" in r.text, "WA no encontrado")
+
+# Test public consulta form endpoint
+r_c = requests.post(f"{BASE}/api/public/consultas",
+                    json={"nombre": "Test Contacto", "mensaje": "Test de contacto audit", "propiedad_id": None},
+                    headers={"Content-Type": "application/json"})
+check("POST consulta publica 201", r_c.status_code == 201, str(r_c.status_code))
+check("Consulta mensaje guardado", "correctamente" in r_c.json().get("message", ""), str(r_c.json()))
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 17: STATS EXPANDIDOS ===")
+
+r = session.get(f"{BASE}/api/stats")
+check("GET /api/stats 200", r.status_code == 200, str(r.status_code))
+if r.ok:
+    s = r.json()
+    for k in ["disponibles", "reservadas", "vendidas", "rentadas", "cerradas", "publicadas",
+              "clientes", "consultas_no_leidas"]:
+        check(f"stats tiene campo '{k}'", k in s, str(list(s.keys())))
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 18: CLIENTES VEN SUS PROPIEDADES ===")
+
+r = session.post(f"{BASE}/api/propiedades",
+                 json={"codigo": "CLV-01", "direccion": "Test Cliente Vista", "tipo": "casa",
+                       "operacion": "venta", "estado": "disponible"},
+                 headers={"X-CSRFToken": real_csrf})
+clv_pid = r.json().get("id") if r.ok else None
+
+r = session.post(f"{BASE}/api/clientes",
+                 json={"nombre": "Vista", "apellido": "Test", "tipo": "propietario", "telefono": "1188887777"},
+                 headers={"X-CSRFToken": real_csrf})
+clv_cid = r.json().get("id") if r.ok else None
+
+if clv_pid and clv_cid:
+    # Assign as propietario
+    session.post(f"{BASE}/api/propiedades/{clv_pid}/propietarios/{clv_cid}",
+                 headers={"X-CSRFToken": real_csrf})
+    r = session.get(f"{BASE}/api/clientes/{clv_cid}")
+    check("Cliente tiene propiedades_propietario en as_dict", "propiedades_propietario" in r.json())
+    check("Cliente tiene propiedades_interesado en as_dict", "propiedades_interesado" in r.json())
+    pp = r.json().get("propiedades_propietario", [])
+    check("Cliente ve codigo de propiedad asignada",
+          any(p.get("id") == clv_pid for p in pp), str(pp))
+
+    # Assign as interesado
+    session.post(f"{BASE}/api/propiedades/{clv_pid}/interesados/{clv_cid}",
+                 headers={"X-CSRFToken": real_csrf})
+    r2 = session.get(f"{BASE}/api/clientes/{clv_cid}")
+    pi = r2.json().get("propiedades_interesado", [])
+    check("Cliente ve propiedades como interesado", any(p.get("id") == clv_pid for p in pi), str(pi))
+
+    # Cleanup
+    session.delete(f"{BASE}/api/propiedades/{clv_pid}", headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/clientes/{clv_cid}", headers={"X-CSRFToken": real_csrf})
+else:
+    fail("Cliente vista propiedades", f"no se pudo crear datos (pid={clv_pid} cid={clv_cid})")
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)

@@ -3,6 +3,8 @@ from flask_migrate import Migrate
 from models import db, Propiedad, Cliente, Admin, Consulta
 from config import config as app_config
 from functools import wraps
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import hmac
 import secrets
@@ -90,6 +92,22 @@ def _save_image(file, filepath: str) -> None:
     except Exception:
         file.seek(0)
         file.save(filepath)
+
+def _foto_path(filename: str) -> str:
+    """Return a forward-slash photo path for URL-safe DB storage."""
+    return '/'.join([app.config['UPLOAD_FOLDER'], filename])
+
+def _normalize_foto(path: str) -> str:
+    """Normalize stored path: forward slashes, no leading slash."""
+    return path.replace('\\', '/').lstrip('/')
+
+def _fotos_from_str(raw: str):
+    if not raw:
+        return []
+    return [_normalize_foto(f) for f in raw.split(',') if f.strip()]
+
+def _fotos_to_str(fotos: list) -> str:
+    return ','.join(_normalize_foto(f) for f in fotos if f)
 
 # ── Auth decorators ───────────────────────────────────────────────────────────
 
@@ -210,10 +228,10 @@ def admin_propiedad(id):
 
 @app.route('/api/public/propiedades')
 def api_public_propiedades():
-    tipo      = request.args.get('tipo', '')
-    operacion = request.args.get('operacion', '')
-    ambientes = request.args.get('ambientes', '')
-    barrio    = request.args.get('barrio', '')
+    tipo       = request.args.get('tipo', '')
+    operacion  = request.args.get('operacion', '')
+    ambientes  = request.args.get('ambientes', '')
+    barrio     = request.args.get('barrio', '')
     precio_max = request.args.get('precio_max', '')
 
     query = Propiedad.query.filter_by(publicada=True).filter(Propiedad.deleted_at.is_(None))
@@ -273,10 +291,13 @@ def get_propiedades():
     tipo       = request.args.get('tipo', '')
     propietario = request.args.get('propietario', '')
     interesado  = request.args.get('interesado', '')
+    codigo      = request.args.get('codigo', '')
 
     query = Propiedad.query.filter(Propiedad.deleted_at.is_(None))
     if tipo:
         query = query.filter(Propiedad.tipo.ilike(f'%{tipo}%'))
+    if codigo:
+        query = query.filter(Propiedad.codigo.ilike(f'%{codigo}%'))
     if propietario:
         parts   = propietario.split()
         nombre  = parts[0]
@@ -301,6 +322,7 @@ def get_propiedades():
 def add_propiedad():
     data = request.get_json()
     nueva = Propiedad(
+        codigo=data.get('codigo'),
         direccion=data['direccion'],
         barrio=data.get('barrio'),
         rango_min=data.get('rango_min'),
@@ -316,6 +338,8 @@ def add_propiedad():
     )
     if 'interesados_ids' in data:
         nueva.interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
+    if 'propietarios_ids' in data:
+        nueva.propietarios = Cliente.query.filter(Cliente.id.in_(data['propietarios_ids'])).all()
     db.session.add(nueva)
     db.session.commit()
     return jsonify(nueva.as_dict()), 201
@@ -341,6 +365,7 @@ def update_propiedad(id):
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     data = request.get_json()
+    p.codigo           = data.get('codigo', p.codigo)
     p.direccion        = data.get('direccion', p.direccion)
     p.barrio           = data.get('barrio', p.barrio)
     p.rango_min        = data.get('rango_min', p.rango_min)
@@ -359,6 +384,8 @@ def update_propiedad(id):
     p.propietario_id   = data.get('propietario_id', p.propietario_id)
     if 'interesados_ids' in data:
         p.interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
+    if 'propietarios_ids' in data:
+        p.propietarios = Cliente.query.filter(Cliente.id.in_(data['propietarios_ids'])).all()
     db.session.commit()
     return jsonify({"message": "Propiedad actualizada"})
 
@@ -404,9 +431,11 @@ def upload_foto_propiedad(id):
     if not allowed_file(file):
         return jsonify({"message": "Formato no permitido"}), 400
     filename = _unique_filename(f"prop_{id}", file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    filepath = _foto_path(filename)                # forward-slash path
     _save_image(file, filepath)
-    p.fotos = (p.fotos + ',' + filepath) if p.fotos else filepath
+    existing = _fotos_from_str(p.fotos)
+    existing.append(_normalize_foto(filepath))
+    p.fotos = _fotos_to_str(existing)
     db.session.commit()
     return jsonify(p.as_dict()), 200
 
@@ -416,15 +445,18 @@ def delete_foto_propiedad(id, filename):
     p = db.session.get(Propiedad, id)
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
-    fotos = p.fotos.split(',') if p.fotos else []
-    fotos = [f for f in fotos if f != filename]
-    p.fotos = ','.join(fotos) if fotos else None
+    target = _normalize_foto(filename)
+    fotos = [f for f in _fotos_from_str(p.fotos) if _normalize_foto(f) != target]
+    p.fotos = _fotos_to_str(fotos) if fotos else None
     db.session.commit()
-    try:
-        if os.path.exists(filename):
-            os.remove(filename)
-    except OSError:
-        pass
+    # Try to delete the physical file (both path variants)
+    for candidate in [target, target.replace('/', os.sep)]:
+        try:
+            if os.path.exists(candidate):
+                os.remove(candidate)
+                break
+        except OSError:
+            pass
     return jsonify(p.as_dict())
 
 @app.route('/api/propiedades/<int:id>/fotos/orden', methods=['PUT'])
@@ -434,13 +466,15 @@ def reordenar_fotos(id):
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     data = request.get_json()
-    fotos = data.get('fotos', [])
-    current = set(p.fotos.split(',')) if p.fotos else set()
-    if fotos and not all(f in current for f in fotos):
+    new_order = [_normalize_foto(f) for f in data.get('fotos', []) if f]
+    current = set(_normalize_foto(f) for f in _fotos_from_str(p.fotos))
+    if new_order and not all(f in current for f in new_order):
         return jsonify({"message": "Fotos inválidas"}), 400
-    p.fotos = ','.join(fotos) if fotos else None
+    p.fotos = _fotos_to_str(new_order) if new_order else None
     db.session.commit()
     return jsonify(p.as_dict())
+
+# ── Interesados M2M ───────────────────────────────────────────────────────────
 
 @app.route('/api/propiedades/<int:id>/interesados/<int:cliente_id>', methods=['POST'])
 @api_login_required
@@ -463,6 +497,32 @@ def remove_interesado(id, cliente_id):
         return jsonify({"message": "No encontrado"}), 404
     if c in p.interesados:
         p.interesados.remove(c)
+        db.session.commit()
+    return jsonify(p.as_dict())
+
+# ── Propietarios M2M ──────────────────────────────────────────────────────────
+
+@app.route('/api/propiedades/<int:id>/propietarios/<int:cliente_id>', methods=['POST'])
+@api_login_required
+def add_propietario(id, cliente_id):
+    p = db.session.get(Propiedad, id)
+    c = db.session.get(Cliente, cliente_id)
+    if not p or not c:
+        return jsonify({"message": "No encontrado"}), 404
+    if c not in p.propietarios:
+        p.propietarios.append(c)
+        db.session.commit()
+    return jsonify(p.as_dict())
+
+@app.route('/api/propiedades/<int:id>/propietarios/<int:cliente_id>', methods=['DELETE'])
+@api_login_required
+def remove_propietario(id, cliente_id):
+    p = db.session.get(Propiedad, id)
+    c = db.session.get(Cliente, cliente_id)
+    if not p or not c:
+        return jsonify({"message": "No encontrado"}), 404
+    if c in p.propietarios:
+        p.propietarios.remove(c)
         db.session.commit()
     return jsonify(p.as_dict())
 
@@ -587,9 +647,11 @@ def upload_foto_cliente(id):
     if not allowed_file(file):
         return jsonify({"message": "Formato no permitido"}), 400
     filename = _unique_filename(f"cli_{id}", file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    filepath = _foto_path(filename)
     _save_image(file, filepath)
-    c.fotos = (c.fotos + ',' + filepath) if c.fotos else filepath
+    existing = _fotos_from_str(c.fotos)
+    existing.append(_normalize_foto(filepath))
+    c.fotos = _fotos_to_str(existing)
     db.session.commit()
     return jsonify(c.as_dict()), 200
 
@@ -633,8 +695,10 @@ def get_stats():
     base = Propiedad.query.filter(Propiedad.deleted_at.is_(None))
     return jsonify({
         'disponibles':          base.filter_by(estado='disponible').count(),
+        'reservadas':           base.filter_by(estado='reservada').count(),
         'vendidas':             base.filter_by(estado='vendida').count(),
         'rentadas':             base.filter_by(estado='rentada').count(),
+        'cerradas':             base.filter_by(estado='cerrada').count(),
         'publicadas':           base.filter_by(publicada=True).count(),
         'clientes':             Cliente.query.filter(Cliente.deleted_at.is_(None)).count(),
         'consultas_no_leidas':  Consulta.query.filter_by(leida=False).count(),
@@ -648,12 +712,41 @@ with app.app_context():
         for _ddl in [
             "ALTER TABLE propiedades ADD COLUMN deleted_at DATETIME",
             "ALTER TABLE clientes ADD COLUMN deleted_at DATETIME",
+            "ALTER TABLE propiedades ADD COLUMN codigo VARCHAR",
         ]:
             try:
                 _conn.execute(db.text(_ddl))
                 _conn.commit()
             except Exception:
                 pass
+        # Migrate existing propietario_id to propietarios M2M
+        try:
+            rows = _conn.execute(db.text(
+                "SELECT id, propietario_id FROM propiedades WHERE propietario_id IS NOT NULL"
+            )).fetchall()
+            for row in rows:
+                try:
+                    _conn.execute(db.text(
+                        "INSERT OR IGNORE INTO propietarios_propiedades (propiedad_id, cliente_id) VALUES (:pid, :cid)"
+                    ), {"pid": row[0], "cid": row[1]})
+                except Exception:
+                    pass
+            _conn.commit()
+        except Exception:
+            pass
+        # Normalize backslash foto paths in DB
+        try:
+            rows = _conn.execute(db.text("SELECT id, fotos FROM propiedades WHERE fotos LIKE '%\\\\%'")).fetchall()
+            for row in rows:
+                fixed = row[1].replace('\\', '/')
+                _conn.execute(db.text("UPDATE propiedades SET fotos=:f WHERE id=:i"), {"f": fixed, "i": row[0]})
+            rows2 = _conn.execute(db.text("SELECT id, fotos FROM clientes WHERE fotos LIKE '%\\\\%'")).fetchall()
+            for row in rows2:
+                fixed = row[1].replace('\\', '/')
+                _conn.execute(db.text("UPDATE clientes SET fotos=:f WHERE id=:i"), {"f": fixed, "i": row[0]})
+            _conn.commit()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     app.run(debug=app.config.get('DEBUG', False))

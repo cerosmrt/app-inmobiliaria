@@ -409,11 +409,10 @@
 
         grid.innerHTML = lista.map(p => {
             const foto = p.fotos && p.fotos.length > 0 ? p.fotos[0] : null;
-            const precio = p.precio_a_consultar
-                ? `<span class="consultar">A consultar</span>`
-                : p.rango_min
-                    ? `<span class="currency">USD</span>${p.rango_min.toLocaleString('es-AR')}`
-                    : `<span class="consultar">A consultar</span>`;
+            const moneda = p.es_usd ? 'USD' : '$';
+            const precio = p.precio_a_consultar || !p.rango_min
+                ? `<span class="consultar">$ consultar</span>`
+                : `<span class="currency">${moneda}</span>${p.rango_min.toLocaleString('es-AR')}`;
 
             return `
             <article class="prop-card" onclick="window.location.href='/propiedad/${p.id}'" style="cursor:pointer">

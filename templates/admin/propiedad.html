@@ -151,9 +151,15 @@
         <div class="campos-grid" id="campos-grid"></div>
     </div>
 
+    <!-- Propietarios -->
+    <div class="section-card">
+        <h2>Propietarios</h2>
+        <div id="propietarios-container"><p class="inter-vacio">Cargando...</p></div>
+    </div>
+
     <!-- Interesados -->
     <div class="section-card">
-        <h2>Interesados</h2>
+        <h2>Interesados / Compradores</h2>
         <div id="interesados-container"><p class="inter-vacio">Cargando...</p></div>
     </div>
 
@@ -199,11 +205,12 @@
     let _clientesCache = null;
 
     const _CAMPOS = [
+        { label: 'Código',         field: 'codigo',             type: 'text' },
         { label: 'Dirección', field: 'direccion',          type: 'text',   span2: true },
         { label: 'Barrio',         field: 'barrio',             type: 'text' },
         { label: 'Tipo',           field: 'tipo',               type: 'select', opts: ['casa','departamento','local','terreno','otro'] },
         { label: 'Operación', field: 'operacion',          type: 'select', opts: ['venta','alquiler'] },
-        { label: 'Estado',         field: 'estado',             type: 'select', opts: ['disponible','vendida','rentada'], badge: true },
+        { label: 'Estado',         field: 'estado',             type: 'select', opts: ['disponible','reservada','vendida','rentada','cerrada'], badge: true },
         { label: 'Ambientes',      field: 'ambientes',          type: 'number' },
         { label: 'Precio',         field: 'rango_min',          type: 'number' },
         { label: 'USD',            field: 'es_usd',             type: 'bool' },
@@ -218,9 +225,10 @@
             .then(function(data) {
                 propData   = data;
                 fotosOrden = data.fotos ? data.fotos.slice() : [];
-                document.title = (data.direccion || 'Propiedad') + ' — Moret';
+                document.title = (data.codigo ? '[' + data.codigo + '] ' : '') + (data.direccion || 'Propiedad') + ' — Moret';
                 renderDatos();
                 cargarInteresados();
+                renderPropietarios();
                 document.getElementById('descripcion').value = data.descripcion || '';
                 renderFotos();
             })
@@ -306,6 +314,43 @@
           .catch(function() { toast('Error al guardar', 'error'); renderDatos(); });
     }
 
+    // ── Helpers comunes ───────────────────────────────────────────────────────
+    function filaPersona(c, botones) {
+        return '<div class="inter-row">' +
+            '<span class="inter-nombre"><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></span>' +
+            '<span class="inter-tel">' + esc(c.telefono || '') + '</span>' +
+            '<a href="' + waLink(c.telefono) + '" target="_blank" class="btn-action btn-save" title="WhatsApp" style="font-size:13px">&#x1F4AC;</a>' +
+            botones + '</div>';
+    }
+
+    function buscarClienteGeneric(q, excludeSet, resultDivId, onSelect) {
+        var res = document.getElementById(resultDivId);
+        if (!res) return;
+        if (!q.trim()) { res.style.display = 'none'; return; }
+        if (!_clientesCache) {
+            fetch('/api/clientes').then(function(r) { return r.json(); }).then(function(data) {
+                _clientesCache = data;
+                buscarClienteGeneric(q, excludeSet, resultDivId, onSelect);
+            });
+            return;
+        }
+        var q2 = q.toLowerCase();
+        var filtrados = _clientesCache.filter(function(c) {
+            if (excludeSet[c.id]) return false;
+            return (c.nombre + ' ' + c.apellido).toLowerCase().includes(q2) || (c.telefono || '').includes(q2);
+        }).slice(0, 6);
+        if (!filtrados.length) { res.style.display = 'none'; return; }
+        res.innerHTML = filtrados.map(function(c) {
+            return '<div class="buscar-item" onclick="' + onSelect + '(' + c.id + ');' +
+                'document.getElementById(\'' + resultDivId + '\').style.display=\'none\'">' +
+                '<strong>' + esc(c.nombre) + ' ' + esc(c.apellido) + '</strong>' +
+                '&nbsp;<span style="color:var(--muted)">' + esc(c.telefono || '') + '</span>' +
+                (c.tipo ? ' <span class="badge badge-' + esc(c.tipo) + '" style="font-size:10px">' + esc(c.tipo) + '</span>' : '') +
+            '</div>';
+        }).join('');
+        res.style.display = '';
+    }
+
     // ── Interesados ───────────────────────────────────────────────────────────
     function cargarInteresados() {
         fetch('/api/propiedades/' + propiedadId + '/matches')
@@ -319,35 +364,25 @@
         var asigSet = {};
         asignados.forEach(function(c) { asigSet[c.id] = true; });
         var matchesLibres = matches.filter(function(m) { return !asigSet[m.id]; });
-
-        function filaInter(c, botones) {
-            return '<div class="inter-row">' +
-                '<span class="inter-nombre"><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></span>' +
-                '<span class="inter-tel">' + esc(c.telefono || '') + '</span>' +
-                '<a href="' + waLink(c.telefono) + '" target="_blank" class="btn-action btn-save" title="WhatsApp" style="font-size:13px">&#x1F4AC;</a>' +
-                botones + '</div>';
-        }
-
         var html =
             '<p class="inter-subtitulo">Asignados (' + asignados.length + ')</p>' +
             (asignados.length
                 ? asignados.map(function(c) {
-                    return filaInter(c, '<button class="btn-action btn-cancel" onclick="desasignarInteresado(' + c.id + ')" title="Desasignar">&#x2715;</button>');
+                    return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarInteresado(' + c.id + ')" title="Desasignar">&#x2715;</button>');
                   }).join('')
                 : '<p class="inter-vacio">Ninguno asignado.</p>') +
             '<hr class="inter-sep">' +
-            '<p class="inter-subtitulo">Matches automáticos (' + matchesLibres.length + ')</p>' +
+            '<p class="inter-subtitulo">Matches autom&aacute;ticos (' + matchesLibres.length + ')</p>' +
             (matchesLibres.length
                 ? matchesLibres.slice(0, 8).map(function(c) {
-                    return filaInter(c, '<button class="btn-action btn-match" onclick="asignarInteresado(' + c.id + ')" style="font-size:11px">+ Asignar</button>');
+                    return filaPersona(c, '<button class="btn-action btn-match" onclick="asignarInteresado(' + c.id + ')" style="font-size:11px">+ Asignar</button>');
                   }).join('')
                 : '<p class="inter-vacio">Sin matches.</p>') +
             '<div class="buscar-wrap">' +
-                '<input id="buscar-interesado" type="text" placeholder="Buscar cliente para asignar..." ' +
+                '<input id="buscar-interesado" type="text" placeholder="Buscar comprador para asignar..." ' +
                     'oninput="buscarCliente(this.value)" autocomplete="off">' +
                 '<div id="buscar-resultados"></div>' +
             '</div>';
-
         document.getElementById('interesados-container').innerHTML = html;
     }
 
@@ -366,34 +401,51 @@
     }
 
     function buscarCliente(q) {
-        var res = document.getElementById('buscar-resultados');
-        if (!res) return;
-        if (!q.trim()) { res.style.display = 'none'; return; }
-        if (!_clientesCache) {
-            fetch('/api/clientes').then(function(r) { return r.json(); }).then(function(data) {
-                _clientesCache = data;
-                buscarCliente(q);
-            });
-            return;
-        }
         var asigSet = {};
         (propData.interesados || []).forEach(function(c) { asigSet[c.id] = true; });
-        var q2 = q.toLowerCase();
-        var filtrados = _clientesCache.filter(function(c) {
-            if (asigSet[c.id]) return false;
-            return (c.nombre + ' ' + c.apellido).toLowerCase().includes(q2) || (c.telefono || '').includes(q2);
-        }).slice(0, 6);
-        if (!filtrados.length) { res.style.display = 'none'; return; }
-        res.innerHTML = filtrados.map(function(c) {
-            return '<div class="buscar-item" onclick="asignarInteresado(' + c.id + ');' +
-                'var i=document.getElementById(\'buscar-interesado\');if(i)i.value=\'\';' +
-                'var r=document.getElementById(\'buscar-resultados\');if(r)r.style.display=\'none\'">' +
-                '<strong>' + esc(c.nombre) + ' ' + esc(c.apellido) + '</strong>' +
-                '&nbsp;<span style="color:var(--muted)">' + esc(c.telefono || '') + '</span>' +
-                (c.tipo ? ' <span class="badge badge-' + esc(c.tipo) + '" style="font-size:10px">' + esc(c.tipo) + '</span>' : '') +
+        buscarClienteGeneric(q, asigSet, 'buscar-resultados', 'asignarInteresado');
+    }
+
+    // ── Propietarios ──────────────────────────────────────────────────────────
+    function renderPropietarios() {
+        var propietarios = propData.propietarios || [];
+        var asigSet = {};
+        propietarios.forEach(function(c) { asigSet[c.id] = true; });
+        var html =
+            '<p class="inter-subtitulo">Propietarios (' + propietarios.length + ')</p>' +
+            (propietarios.length
+                ? propietarios.map(function(c) {
+                    return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarPropietario(' + c.id + ')" title="Quitar">&#x2715;</button>');
+                  }).join('')
+                : '<p class="inter-vacio">Sin propietarios asignados.</p>') +
+            '<div class="buscar-wrap" style="margin-top:14px">' +
+                '<input id="buscar-propietario" type="text" placeholder="Buscar propietario para asignar..." ' +
+                    'oninput="buscarPropietario(this.value)" autocomplete="off">' +
+                '<div id="buscar-prop-resultados"></div>' +
             '</div>';
-        }).join('');
-        res.style.display = '';
+        document.getElementById('propietarios-container').innerHTML = html;
+    }
+
+    function asignarPropietario(clienteId) {
+        fetch('/api/propiedades/' + propiedadId + '/propietarios/' + clienteId, { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) { propData = data; renderPropietarios(); toast('Propietario asignado', 'success'); })
+            .catch(function() { toast('Error', 'error'); });
+        var inp = document.getElementById('buscar-propietario');
+        if (inp) inp.value = '';
+    }
+
+    function desasignarPropietario(clienteId) {
+        fetch('/api/propiedades/' + propiedadId + '/propietarios/' + clienteId, { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) { propData = data; renderPropietarios(); toast('Propietario removido', 'success'); })
+            .catch(function() { toast('Error', 'error'); });
+    }
+
+    function buscarPropietario(q) {
+        var asigSet = {};
+        (propData.propietarios || []).forEach(function(c) { asigSet[c.id] = true; });
+        buscarClienteGeneric(q, asigSet, 'buscar-prop-resultados', 'asignarPropietario');
     }
 
     // ── Descripción con autosave ──────────────────────────────────────────────
@@ -490,21 +542,31 @@
     function subirFotos(input) {
         if (!input.files.length) return;
         var files = Array.from(input.files);
-        var done = 0;
-        files.forEach(function(file) {
-            var fd = new FormData(); fd.append('file', file);
-            fetch('/api/propiedades/' + propiedadId + '/upload', { method: 'POST', body: fd })
-                .then(function(r) { if (!r.ok) throw new Error('Formato no permitido'); return r.json(); })
-                .then(function(data) {
-                    done++;
-                    propData   = data;
-                    fotosOrden = data.fotos ? data.fotos.slice() : [];
-                    renderFotos();
-                    if (done === files.length) toast(done + ' foto(s) subida(s)', 'success');
-                })
-                .catch(function(e) { toast('Error: ' + e.message, 'error'); });
-        });
         input.value = '';
+        var ok = 0, fail = 0;
+        // Sequential upload: each starts after the previous finishes to avoid race conditions
+        function subirSiguiente(i) {
+            if (i >= files.length) {
+                if (ok > 0) toast(ok + ' foto(s) subida(s)' + (fail > 0 ? ', ' + fail + ' error(es)' : ''), 'success');
+                else if (fail > 0) toast(fail + ' archivo(s) rechazado(s)', 'error');
+                return;
+            }
+            var fd = new FormData();
+            fd.append('file', files[i]);
+            fetch('/api/propiedades/' + propiedadId + '/upload', { method: 'POST', body: fd })
+                .then(function(r) {
+                    if (!r.ok) { fail++; return r.json().then(function(d) { toast((d.message || 'Error'), 'error'); }); }
+                    return r.json().then(function(data) {
+                        ok++;
+                        propData   = data;
+                        fotosOrden = data.fotos ? data.fotos.slice() : [];
+                        renderFotos();
+                    });
+                })
+                .catch(function() { fail++; toast('Error de red al subir foto', 'error'); })
+                .finally(function() { subirSiguiente(i + 1); });
+        }
+        subirSiguiente(0);
     }
 
     function eliminarFoto(e, idx) {
