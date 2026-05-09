@@ -908,6 +908,94 @@ for _, pid in pids20:
                    headers={"X-CSRFToken": real_csrf})
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 21: CATÁLOGO PÚBLICO — NAVEGACIÓN CON TABS ===")
+
+# ── 1. HTML structure ─────────────────────────────────────────────────────────
+r_pub = requests.get(BASE)
+check("Catálogo público carga 200", r_pub.status_code == 200, str(r_pub.status_code))
+check("HTML tiene tabs-bar", 'class="tabs-bar"' in r_pub.text, "tabs-bar no encontrado")
+check("HTML tiene tab-todas",    'id="tab-todas"'    in r_pub.text, "tab-todas no encontrado")
+check("HTML tiene tab-venta",    'id="tab-venta"'    in r_pub.text, "tab-venta no encontrado")
+check("HTML tiene tab-alquiler", 'id="tab-alquiler"' in r_pub.text, "tab-alquiler no encontrado")
+check("HTML NO tiene f-operacion select",
+      'id="f-operacion"' not in r_pub.text, "select f-operacion todavía presente")
+
+# ── 2. JS functions present ───────────────────────────────────────────────────
+check("JS tiene función setTab",    'function setTab'    in r_pub.text, "setTab no encontrado")
+check("JS tiene variable _activeTab", '_activeTab'       in r_pub.text, "_activeTab no encontrado")
+check("JS limpiar no resetea operacion",
+      "f-operacion" not in r_pub.text, "limpiar sigue reseteando f-operacion")
+check("JS buscar usa _activeTab para operacion",
+      "_activeTab !== 'todas'" in r_pub.text or "_activeTab != 'todas'" in r_pub.text,
+      "buscar() no usa _activeTab para filtrar operacion")
+
+# ── 3. Setup: propiedades públicas para filtrar ───────────────────────────────
+r_v = session.post(f"{BASE}/api/propiedades",
+                   json={"codigo": "F21-V", "direccion": "Fase21 Venta", "tipo": "casa",
+                         "operacion": "venta", "estado": "disponible", "publicada": True},
+                   headers={"X-CSRFToken": real_csrf})
+r_a = session.post(f"{BASE}/api/propiedades",
+                   json={"codigo": "F21-A", "direccion": "Fase21 Alquiler", "tipo": "casa",
+                         "operacion": "alquiler", "estado": "disponible", "publicada": True},
+                   headers={"X-CSRFToken": real_csrf})
+pid21v = r_v.json().get("id") if r_v.ok else None
+pid21a = r_a.json().get("id") if r_a.ok else None
+
+# Publicar
+if pid21v:
+    session.put(f"{BASE}/api/propiedades/{pid21v}",
+                json={"publicada": True},
+                headers={"X-CSRFToken": real_csrf, "Content-Type": "application/json"})
+if pid21a:
+    session.put(f"{BASE}/api/propiedades/{pid21a}",
+                json={"publicada": True},
+                headers={"X-CSRFToken": real_csrf, "Content-Type": "application/json"})
+
+if not (pid21v and pid21a):
+    fail("FASE 21 setup", f"pid_v={pid21v} pid_a={pid21a}")
+else:
+    # ── 4. Tab "todas" — API devuelve ambas ──────────────────────────────────
+    r_all = requests.get(f"{BASE}/api/public/propiedades")
+    ids_all = [p["id"] for p in r_all.json()]
+    check("Tab Todas: venta aparece en listado general", pid21v in ids_all, str(ids_all[:5]))
+    check("Tab Todas: alquiler aparece en listado general", pid21a in ids_all, str(ids_all[:5]))
+
+    # ── 5. Tab "venta" — solo venta ───────────────────────────────────────────
+    r_ven = requests.get(f"{BASE}/api/public/propiedades?operacion=venta")
+    ids_ven = [p["id"] for p in r_ven.json()]
+    ops_ven = [p["operacion"] for p in r_ven.json()]
+    check("Tab Venta: propiedad de venta aparece", pid21v in ids_ven, str(ids_ven[:5]))
+    check("Tab Venta: propiedad de alquiler NO aparece", pid21a not in ids_ven, str(ids_ven[:5]))
+    check("Tab Venta: todos los resultados son 'venta'",
+          all(o == "venta" for o in ops_ven), str(set(ops_ven)))
+
+    # ── 6. Tab "alquiler" — solo alquiler ─────────────────────────────────────
+    r_alq = requests.get(f"{BASE}/api/public/propiedades?operacion=alquiler")
+    ids_alq = [p["id"] for p in r_alq.json()]
+    ops_alq = [p["operacion"] for p in r_alq.json()]
+    check("Tab Alquiler: propiedad de alquiler aparece", pid21a in ids_alq, str(ids_alq[:5]))
+    check("Tab Alquiler: propiedad de venta NO aparece", pid21v not in ids_alq, str(ids_alq[:5]))
+    check("Tab Alquiler: todos los resultados son 'alquiler'",
+          all(o == "alquiler" for o in ops_alq), str(set(ops_alq)))
+
+    # ── 7. Orden descendente (IDs decrecientes) ───────────────────────────────
+    if len(ids_all) >= 2:
+        check("Orden descendente por ID (primero >= último)",
+              ids_all[0] >= ids_all[-1], f"first={ids_all[0]} last={ids_all[-1]}")
+
+    # ── 8. URL persistence: ?tab=venta en HTML ────────────────────────────────
+    check("JS usa history.replaceState para URL persistence",
+          'replaceState' in r_pub.text, "history.replaceState no encontrado")
+    check("JS lee ?tab= en DOMContentLoaded",
+          "params.get('tab')" in r_pub.text, "no lee query param tab")
+
+    # ── Cleanup ───────────────────────────────────────────────────────────────
+    session.delete(f"{BASE}/api/propiedades/{pid21v}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/propiedades/{pid21a}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)

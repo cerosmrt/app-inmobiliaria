@@ -113,6 +113,21 @@
         .btn-limpiar:hover { border-color: #999; color: var(--text); }
         .results-count { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
 
+        /* ── TABS ── */
+        .tabs-bar {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; gap: 0; border-bottom: 1px solid var(--border);
+        }
+        .tab-btn {
+            background: none; border: none; border-bottom: 3px solid transparent;
+            font-size: 14px; font-weight: 600; color: var(--muted);
+            padding: 14px 22px; cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+            margin-bottom: -1px; white-space: nowrap;
+        }
+        .tab-btn:hover { color: var(--text); border-bottom-color: #ddd; }
+        .tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
+
         /* ── LISTINGS ── */
         .listings { max-width: 1200px; margin: 0 auto; padding: 32px 24px 60px; }
         .listings-grid {
@@ -231,6 +246,8 @@
         @keyframes shimmer { to { background-position: -200% 0; } }
 
         @media (max-width: 640px) {
+            .tabs-bar { padding: 0 12px; }
+            .tab-btn { padding: 12px 14px; font-size: 13px; }
             .search-inner { gap: 8px; }
             .search-inner select,
             .search-inner input { font-size: 14px; width: 100%; }
@@ -273,12 +290,12 @@
 
 <!-- ── BUSCADOR ── -->
 <section class="search-section" id="propiedades">
+    <div class="tabs-bar">
+        <button class="tab-btn" id="tab-todas"    onclick="setTab('todas')">Todas</button>
+        <button class="tab-btn" id="tab-venta"    onclick="setTab('venta')">En Venta</button>
+        <button class="tab-btn" id="tab-alquiler" onclick="setTab('alquiler')">En Alquiler</button>
+    </div>
     <div class="search-inner">
-        <select id="f-operacion" onchange="buscar()">
-            <option value="">Venta y Alquiler</option>
-            <option value="venta">Venta</option>
-            <option value="alquiler">Alquiler</option>
-        </select>
         <select id="f-tipo" onchange="buscar()">
             <option value="">Todo tipo</option>
             <option value="casa">Casa</option>
@@ -359,6 +376,19 @@
 
     let propiedades = [];
     let buscarTimer = null;
+    let _activeTab  = 'todas';
+
+    function setTab(tab) {
+        _activeTab = (tab === 'venta' || tab === 'alquiler') ? tab : 'todas';
+        ['todas', 'venta', 'alquiler'].forEach(t => {
+            const btn = document.getElementById('tab-' + t);
+            if (btn) btn.classList.toggle('active', t === _activeTab);
+        });
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', _activeTab);
+        window.history.replaceState({}, '', url.toString());
+        buscar();
+    }
 
     function buscarDebounce() {
         clearTimeout(buscarTimer);
@@ -366,13 +396,12 @@
     }
 
     function buscar() {
-        const operacion = document.getElementById('f-operacion').value;
         const tipo      = document.getElementById('f-tipo').value;
         const ambientes = document.getElementById('f-ambientes').value;
         const barrio    = document.getElementById('f-barrio').value.trim();
 
         const params = new URLSearchParams();
-        if (operacion) params.set('operacion', operacion);
+        if (_activeTab !== 'todas') params.set('operacion', _activeTab);
         if (tipo)      params.set('tipo', tipo);
         if (ambientes) params.set('ambientes', ambientes);
         if (barrio)    params.set('barrio', barrio);
@@ -387,7 +416,7 @@
     }
 
     function limpiar() {
-        ['f-operacion','f-tipo','f-ambientes'].forEach(id => document.getElementById(id).value = '');
+        ['f-tipo', 'f-ambientes'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('f-barrio').value = '';
         buscar();
     }
@@ -451,7 +480,10 @@
             </div>`;
     }
 
-    document.addEventListener('DOMContentLoaded', buscar);
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        setTab(params.get('tab'));
+    });
 </script>
 </body>
 </html>
