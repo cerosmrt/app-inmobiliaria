@@ -996,6 +996,131 @@ else:
                    headers={"X-CSRFToken": real_csrf})
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 22: ASSIGNMENT UI — LISTAS INMEDIATAS ===")
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+r22p = session.post(f"{BASE}/api/propiedades",
+                    json={"codigo": "F22-P", "direccion": "Fase22 Prop", "tipo": "casa",
+                          "operacion": "venta", "estado": "disponible"},
+                    headers={"X-CSRFToken": real_csrf})
+pid22 = r22p.json().get("id") if r22p.ok else None
+
+r22c = session.post(f"{BASE}/api/clientes",
+                    json={"nombre": "Cliente", "apellido": "F22", "telefono": "220001",
+                          "tipo": "propietario"},
+                    headers={"X-CSRFToken": real_csrf})
+cid22 = r22c.json().get("id") if r22c.ok else None
+
+if not (pid22 and cid22):
+    fail("FASE 22 setup", f"pid={pid22} cid={cid22}")
+else:
+    # ── 1. propiedad.html — estructura JS del nuevo UI ────────────────────────
+    rph22 = session.get(f"{BASE}/admin/propiedad/{pid22}")
+    check("propiedad.html carga 200", rph22.status_code == 200, str(rph22.status_code))
+    check("propiedad.html tiene renderDispList (lista inmediata)",
+          'renderDispList' in rph22.text, "función renderDispList no encontrada")
+    check("propiedad.html tiene filtrarDisp (filtro inline)",
+          'filtrarDisp' in rph22.text, "función filtrarDisp no encontrada")
+    check("propiedad.html tiene ensureClientesCache",
+          'ensureClientesCache' in rph22.text, "función ensureClientesCache no encontrada")
+    check("propiedad.html NO tiene buscarClienteGeneric (eliminada)",
+          'buscarClienteGeneric' not in rph22.text, "función vieja aún presente")
+    check("propiedad.html interesados sin cap slice(0, 8)",
+          '.slice(0, 8)' not in rph22.text, "cap de 8 registros todavía presente")
+    check("propiedad.html ID buscar-propietario presente en JS",
+          "'buscar-propietario'" in rph22.text or 'id="buscar-propietario"' in rph22.text,
+          "id buscar-propietario no encontrado")
+    check("propiedad.html ID buscar-prop-resultados presente en JS",
+          "'buscar-prop-resultados'" in rph22.text or 'id="buscar-prop-resultados"' in rph22.text,
+          "id buscar-prop-resultados no encontrado")
+    check("propiedad.html ID buscar-interesado presente en JS",
+          "'buscar-interesado'" in rph22.text or 'id="buscar-interesado"' in rph22.text,
+          "id buscar-interesado no encontrado")
+    check("propiedad.html tiene disp-empty para estado vacío",
+          'disp-empty' in rph22.text, "clase disp-empty no encontrada")
+    check("propiedad.html CSS #buscar-prop-resultados como lista inline",
+          '#buscar-prop-resultados' in rph22.text, "selector CSS no encontrado")
+
+    # ── 2. perfil.html — estructura JS del nuevo UI ───────────────────────────
+    rpf22 = session.get(f"{BASE}/cliente/{cid22}")
+    check("perfil.html carga 200", rpf22.status_code == 200, str(rpf22.status_code))
+    check("perfil.html tiene renderDispListProp",
+          'renderDispListProp' in rpf22.text, "función renderDispListProp no encontrada")
+    check("perfil.html tiene filtrarDisponiblesProp",
+          'filtrarDisponiblesProp' in rpf22.text, "función filtrarDisponiblesProp no encontrada")
+    check("perfil.html renderDetalle llama renderDispListProp",
+          'renderDispListProp' in rpf22.text and 'renderDetalle' in rpf22.text,
+          "renderDetalle no invoca renderDispListProp")
+    check("perfil.html NO tiene buscarPropiedadParaCliente (eliminada)",
+          'buscarPropiedadParaCliente' not in rpf22.text, "función vieja aún presente")
+    check("perfil.html NO tiene slice(0, 6) cap",
+          '.slice(0, 6)' not in rpf22.text, "cap de 6 resultados todavía presente")
+    check("perfil.html ID buscar-propiedad-cli presente en JS",
+          "'buscar-propiedad-cli'" in rpf22.text or 'id="buscar-propiedad-cli"' in rpf22.text,
+          "input filtro no encontrado")
+    check("perfil.html ID buscar-prop-cli-resultados presente en JS",
+          "'buscar-prop-cli-resultados'" in rpf22.text or 'id="buscar-prop-cli-resultados"' in rpf22.text,
+          "div lista no encontrado")
+    check("perfil.html tiene disp-empty para estado vacío",
+          'disp-empty' in rpf22.text, "clase disp-empty no encontrada")
+    check("perfil.html CSS #buscar-prop-cli-resultados como lista inline",
+          '#buscar-prop-cli-resultados' in rpf22.text, "selector CSS no encontrado")
+
+    # ── 3. API: GET /api/clientes sin paginación (para lista inmediata) ────────
+    r_clientes = session.get(f"{BASE}/api/clientes")
+    check("GET /api/clientes 200", r_clientes.status_code == 200, str(r_clientes.status_code))
+    check("GET /api/clientes incluye cliente F22",
+          any(c["id"] == cid22 for c in r_clientes.json()), "cliente F22 no encontrado")
+
+    r_props22 = session.get(f"{BASE}/api/propiedades")
+    check("GET /api/propiedades 200", r_props22.status_code == 200, str(r_props22.status_code))
+    check("GET /api/propiedades incluye propiedad F22",
+          any(p["id"] == pid22 for p in r_props22.json()), "propiedad F22 no encontrada")
+
+    # ── 4. Round-trip asignar / desasignar propietario ────────────────────────
+    r_asgn22 = session.post(f"{BASE}/api/propiedades/{pid22}/propietarios/{cid22}",
+                             headers={"X-CSRFToken": real_csrf})
+    check("POST asignar propietario 200", r_asgn22.status_code == 200, str(r_asgn22.status_code))
+    r_check22 = session.get(f"{BASE}/api/propiedades/{pid22}")
+    check("Propietario aparece en propietarios_ids",
+          cid22 in r_check22.json().get("propietarios_ids", []),
+          str(r_check22.json().get("propietarios_ids")))
+    r_cli22 = session.get(f"{BASE}/api/clientes/{cid22}")
+    check("Propiedad aparece en propiedades_propietario del cliente",
+          any(p["id"] == pid22 for p in r_cli22.json().get("propiedades_propietario", [])),
+          str(r_cli22.json().get("propiedades_propietario")))
+
+    r_del22 = session.delete(f"{BASE}/api/propiedades/{pid22}/propietarios/{cid22}",
+                              headers={"X-CSRFToken": real_csrf})
+    check("DELETE desasignar propietario 200", r_del22.status_code == 200, str(r_del22.status_code))
+    r_after22 = session.get(f"{BASE}/api/propiedades/{pid22}")
+    check("Propietario removido de propietarios_ids",
+          cid22 not in r_after22.json().get("propietarios_ids", []),
+          str(r_after22.json().get("propietarios_ids")))
+
+    # ── 5. Render con 10+ clientes (verifica sin cap) ─────────────────────────
+    ids_extra22 = []
+    for i in range(10):
+        rx = session.post(f"{BASE}/api/clientes",
+                          json={"nombre": f"Extra{i:02d}", "apellido": "F22",
+                                "telefono": f"2299{i:02d}", "tipo": "propietario"},
+                          headers={"X-CSRFToken": real_csrf})
+        if rx.ok:
+            ids_extra22.append(rx.json()["id"])
+    r_all22 = session.get(f"{BASE}/api/clientes")
+    check(f"GET /api/clientes devuelve todos sin cap (>=10)",
+          len(r_all22.json()) >= 10, f"solo {len(r_all22.json())} clientes")
+    for eid in ids_extra22:
+        session.delete(f"{BASE}/api/clientes/{eid}/permanente",
+                       headers={"X-CSRFToken": real_csrf})
+
+    # ── Cleanup ───────────────────────────────────────────────────────────────
+    session.delete(f"{BASE}/api/propiedades/{pid22}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/clientes/{cid22}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)

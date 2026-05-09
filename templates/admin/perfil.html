@@ -74,19 +74,21 @@
     }
     .buscar-wrap input:focus { outline: 2px solid var(--blue); border-color: transparent; }
     #buscar-prop-cli-resultados {
-        position: absolute; top: 100%; left: 0; right: 0; background: white;
-        border: 1px solid var(--border); border-radius: 6px; z-index: 20;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.13); max-height: 220px; overflow-y: auto;
-        display: none;
+        max-height: 260px; overflow-y: auto;
+        border: 1px solid var(--border); border-radius: 6px; margin-top: 8px;
     }
-    .buscar-item {
-        padding: 9px 14px; cursor: pointer; font-size: 13px;
-        border-bottom: 1px solid var(--border);
+    .disp-empty { color: var(--muted); font-size: 13px; padding: 8px 4px; }
+    .inter-subtitulo {
+        font-size: 11px; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.5px; font-weight: 700; margin: 14px 0 6px;
     }
-    .buscar-item:last-child { border-bottom: none; }
-    .buscar-item:hover { background: var(--bg); }
-    .prop-row-actions { display: flex; align-items: center; gap: 8px; }
-    .prop-row-actions a { flex: 1; }
+    .inter-row {
+        display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+        border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .inter-row:last-child { border-bottom: none; }
+    .inter-nombre { flex: 1; font-weight: 600; word-break: break-word; }
+    .inter-sep { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 </style>
 {% endblock %}
 
@@ -141,6 +143,13 @@
         html += renderPropiedades(data);
         html += renderNotas(data);
         document.getElementById('detalle-cliente').innerHTML = html;
+        // Populate the disponibles list after DOM is ready
+        var esProp = data.tipo === 'propietario';
+        var props   = esProp ? (data.propiedades_propietario || []) : (data.propiedades_interesado || []);
+        var vinculadas = {};
+        props.forEach(function(p) { vinculadas[p.id] = true; });
+        var rol = esProp ? 'propietarios' : 'interesados';
+        renderDispListProp('buscar-prop-cli-resultados', vinculadas, rol);
     }
 
     function renderPreferencias(data) {
@@ -162,9 +171,9 @@
         var titulo = esProp ? '&#x1F3D8; Propiedades' : '&#x1F3E0; Propiedades de inter&eacute;s';
 
         var tabla = props.length === 0
-            ? '<p style="color:#64748b;margin:0 0 12px">Sin propiedades asociadas.</p>'
-            : '<div class="table-wrap" style="margin-bottom:12px"><table>' +
-                '<thead><tr><th>ID</th><th>Direcci&oacute;n</th><th>Estado</th><th class="no-print"></th></tr></thead>' +
+            ? '<p style="color:#64748b;margin:0 0 4px">Sin propiedades asociadas.</p>'
+            : '<div class="table-wrap" style="margin-bottom:4px"><table>' +
+                '<thead><tr><th>C&oacute;digo</th><th>Direcci&oacute;n</th><th>Estado</th><th class="no-print"></th></tr></thead>' +
                 '<tbody>' + props.map(function(p) {
                     return '<tr>' +
                         '<td><a href="/admin/propiedad/' + p.id + '">' + esc(p.codigo || ('#' + p.id)) + '</a></td>' +
@@ -178,11 +187,12 @@
 
         return '<div class="section-card"><h2>' + titulo + '</h2>' +
             tabla +
-            '<div class="buscar-wrap">' +
-                '<input type="text" id="buscar-propiedad-cli" placeholder="Buscar propiedad para asignar..." ' +
-                    'autocomplete="off" oninput="buscarPropiedadParaCliente(this.value)">' +
-                '<div id="buscar-prop-cli-resultados"></div>' +
-            '</div>' +
+            '<hr class="inter-sep">' +
+            '<p class="inter-subtitulo">Disponibles para asignar</p>' +
+            '<input type="text" id="buscar-propiedad-cli" placeholder="Filtrar propiedades..." ' +
+                'autocomplete="off" oninput="filtrarDisponiblesProp(this)" ' +
+                'style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;margin-bottom:0">' +
+            '<div id="buscar-prop-cli-resultados"></div>' +
         '</div>';
     }
 
@@ -197,50 +207,65 @@
         '</div>';
     }
 
-    // ── Búsqueda y asignación de propiedades ──────────────────────────────────
-    function buscarPropiedadParaCliente(q) {
-        var res = document.getElementById('buscar-prop-cli-resultados');
-        if (!res) return;
-        if (!q.trim()) { res.style.display = 'none'; return; }
-
-        function doSearch(todas) {
-            var data = _clienteData;
-            var vinculadas = []
-                .concat(data ? (data.propiedades_propietario || []) : [])
-                .concat(data ? (data.propiedades_interesado  || []) : [])
-                .map(function(p) { return p.id; });
-            var q2 = q.toLowerCase();
-            var resultados = todas.filter(function(p) {
-                return ((p.direccion || '').toLowerCase().includes(q2) ||
-                        (p.codigo    || '').toLowerCase().includes(q2))
-                    && !vinculadas.includes(p.id);
-            }).slice(0, 6);
-            if (!resultados.length) { res.style.display = 'none'; return; }
-            var rol = data && data.tipo === 'propietario' ? 'propietarios' : 'interesados';
-            res.innerHTML = resultados.map(function(p) {
-                return '<div class="buscar-item" onclick="asignarPropiedad(' + p.id + ',\'' + rol + '\')">' +
-                    '<strong>' + esc(p.codigo || ('#' + p.id)) + ' &mdash; ' + esc(p.direccion) + '</strong>' +
-                    '&nbsp;<span style="color:var(--muted)">' + esc(p.estado || '') + (p.tipo ? ' &middot; ' + esc(p.tipo) : '') + '</span>' +
+    // ── Inline disponibles list ───────────────────────────────────────────────
+    function renderDispListProp(listId, vinculadas, rol) {
+        var list = document.getElementById(listId);
+        if (!list) return;
+        list.innerHTML = '<p class="disp-empty">Cargando...</p>';
+        function doRender(propiedades) {
+            if (!propiedades) {
+                list.innerHTML = '<p class="disp-empty" style="color:#dc2626">Error al cargar propiedades.</p>';
+                return;
+            }
+            var disponibles = propiedades.filter(function(p) { return !vinculadas[p.id]; });
+            if (!disponibles.length) {
+                list.innerHTML = '<p class="disp-empty">No hay propiedades disponibles.</p>';
+                return;
+            }
+            list.innerHTML = disponibles.map(function(p) {
+                var label = (p.codigo ? '[' + esc(p.codigo) + '] ' : '') + esc(p.direccion || '(sin dirección)');
+                var qStr  = esc(((p.codigo || '') + ' ' + (p.direccion || '') + ' ' + (p.estado || '') + ' ' + (p.barrio || '')).toLowerCase());
+                return '<div class="inter-row" data-q="' + qStr + '">' +
+                    '<span class="inter-nombre"><a href="/admin/propiedad/' + p.id + '" target="_blank">' + label + '</a></span>' +
+                    (p.estado ? '<span class="badge badge-' + esc(p.estado) + '" style="font-size:10px">' + esc(p.estado) + '</span>' : '') +
+                    '<button class="btn-action btn-match" onclick="asignarPropiedad(' + p.id + ',\'' + rol + '\')" style="font-size:11px;white-space:nowrap">+ Asignar</button>' +
                 '</div>';
             }).join('');
-            res.style.display = '';
         }
-
         if (!_propiedadesCache) {
             fetch('/api/propiedades')
                 .then(function(r) { return r.json(); })
-                .then(function(data) { _propiedadesCache = data; doSearch(data); });
+                .then(function(data) { _propiedadesCache = data; doRender(data); })
+                .catch(function() { doRender(null); });
         } else {
-            doSearch(_propiedadesCache);
+            doRender(_propiedadesCache);
         }
     }
 
+    function filtrarDisponiblesProp(input) {
+        var q    = input.value.trim().toLowerCase();
+        var list = document.getElementById('buscar-prop-cli-resultados');
+        if (!list) return;
+        var rows = list.querySelectorAll('.inter-row[data-q]');
+        var visible = 0;
+        rows.forEach(function(r) {
+            var show = !q || r.dataset.q.includes(q);
+            r.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        var emp = list.querySelector('.disp-empty-filter');
+        if (!emp) {
+            emp = document.createElement('p');
+            emp.className = 'disp-empty disp-empty-filter';
+            list.appendChild(emp);
+        }
+        emp.textContent = visible === 0 ? 'Sin resultados para "' + q + '"' : '';
+        emp.style.display = visible === 0 ? '' : 'none';
+    }
+
+    // ── Asignación de propiedades ─────────────────────────────────────────────
     function asignarPropiedad(propId, rol) {
-        var res = document.getElementById('buscar-prop-cli-resultados');
-        if (res) res.style.display = 'none';
-        var inp = document.getElementById('buscar-propiedad-cli');
-        if (inp) inp.value = '';
-        _propiedadesCache = null; // invalidate so next search is fresh
+        _propiedadesCache = null;
         fetch('/api/propiedades/' + propId + '/' + rol + '/' + clienteId, { method: 'POST' })
             .then(function() { toast('Propiedad asignada', 'success'); cargarPerfil(); })
             .catch(function() { toast('Error al asignar', 'error'); });

@@ -84,17 +84,10 @@
     .buscar-wrap input:focus { outline: 2px solid var(--red); border-color: transparent; }
     #buscar-resultados,
     #buscar-prop-resultados {
-        position: absolute; top: 100%; left: 0; right: 0; background: white;
-        border: 1px solid var(--border); border-radius: 6px; z-index: 20;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.13); max-height: 220px; overflow-y: auto;
-        display: none;
+        max-height: 260px; overflow-y: auto;
+        border: 1px solid var(--border); border-radius: 6px; margin-top: 8px;
     }
-    .buscar-item {
-        padding: 9px 14px; cursor: pointer; font-size: 13px;
-        border-bottom: 1px solid var(--border);
-    }
-    .buscar-item:last-child { border-bottom: none; }
-    .buscar-item:hover { background: var(--bg); }
+    .disp-empty { color: var(--muted); font-size: 13px; padding: 8px 4px; }
 
     /* ── Descripción ───────────────────────────────────────────────────────── */
     .notes-textarea { min-height: 160px; }
@@ -324,32 +317,61 @@
             botones + '</div>';
     }
 
-    function buscarClienteGeneric(q, excludeSet, resultDivId, onSelect) {
-        var res = document.getElementById(resultDivId);
-        if (!res) return;
-        if (!q.trim()) { res.style.display = 'none'; return; }
-        if (!_clientesCache) {
-            fetch('/api/clientes').then(function(r) { return r.json(); }).then(function(data) {
-                _clientesCache = data;
-                buscarClienteGeneric(q, excludeSet, resultDivId, onSelect);
-            });
-            return;
+    // ── Cache ─────────────────────────────────────────────────────────────────
+    function ensureClientesCache(cb) {
+        if (_clientesCache) { cb(_clientesCache); return; }
+        fetch('/api/clientes')
+            .then(function(r) { return r.json(); })
+            .then(function(data) { _clientesCache = data; cb(data); })
+            .catch(function() { cb(null); });
+    }
+
+    // ── Inline disponibles list ───────────────────────────────────────────────
+    function renderDispList(listId, excludeSet, onAssign) {
+        var list = document.getElementById(listId);
+        if (!list) return;
+        list.innerHTML = '<p class="disp-empty">Cargando...</p>';
+        ensureClientesCache(function(clientes) {
+            if (!clientes) {
+                list.innerHTML = '<p class="disp-empty" style="color:#dc2626">Error al cargar clientes.</p>';
+                return;
+            }
+            var disponibles = clientes.filter(function(c) { return !excludeSet[c.id]; });
+            if (!disponibles.length) {
+                list.innerHTML = '<p class="disp-empty">No hay clientes disponibles.</p>';
+                return;
+            }
+            list.innerHTML = disponibles.map(function(c) {
+                var qStr = esc((c.nombre + ' ' + c.apellido + ' ' + (c.telefono || '')).toLowerCase());
+                return '<div class="inter-row" data-q="' + qStr + '">' +
+                    '<span class="inter-nombre"><a href="/cliente/' + c.id + '" target="_blank">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></span>' +
+                    '<span class="inter-tel">' + esc(c.telefono || '') + '</span>' +
+                    (c.tipo ? '<span class="badge badge-' + esc(c.tipo) + '" style="font-size:10px">' + esc(c.tipo) + '</span>' : '') +
+                    '<button class="btn-action btn-match" onclick="' + onAssign + '(' + c.id + ')" style="font-size:11px;white-space:nowrap">+ Asignar</button>' +
+                '</div>';
+            }).join('');
+        });
+    }
+
+    function filtrarDisp(input, listId) {
+        var q = input.value.trim().toLowerCase();
+        var list = document.getElementById(listId);
+        if (!list) return;
+        var rows = list.querySelectorAll('.inter-row[data-q]');
+        var visible = 0;
+        rows.forEach(function(r) {
+            var show = !q || r.dataset.q.includes(q);
+            r.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        var emp = list.querySelector('.disp-empty-filter');
+        if (!emp) {
+            emp = document.createElement('p');
+            emp.className = 'disp-empty disp-empty-filter';
+            list.appendChild(emp);
         }
-        var q2 = q.toLowerCase();
-        var filtrados = _clientesCache.filter(function(c) {
-            if (excludeSet[c.id]) return false;
-            return (c.nombre + ' ' + c.apellido).toLowerCase().includes(q2) || (c.telefono || '').includes(q2);
-        }).slice(0, 6);
-        if (!filtrados.length) { res.style.display = 'none'; return; }
-        res.innerHTML = filtrados.map(function(c) {
-            return '<div class="buscar-item" onclick="' + onSelect + '(' + c.id + ');' +
-                'document.getElementById(\'' + resultDivId + '\').style.display=\'none\'">' +
-                '<strong>' + esc(c.nombre) + ' ' + esc(c.apellido) + '</strong>' +
-                '&nbsp;<span style="color:var(--muted)">' + esc(c.telefono || '') + '</span>' +
-                (c.tipo ? ' <span class="badge badge-' + esc(c.tipo) + '" style="font-size:10px">' + esc(c.tipo) + '</span>' : '') +
-            '</div>';
-        }).join('');
-        res.style.display = '';
+        emp.textContent = visible === 0 ? 'Sin resultados para "' + q + '"' : '';
+        emp.style.display = visible === 0 ? '' : 'none';
     }
 
     // ── Interesados ───────────────────────────────────────────────────────────
@@ -365,6 +387,9 @@
         var asigSet = {};
         asignados.forEach(function(c) { asigSet[c.id] = true; });
         var matchesLibres = matches.filter(function(m) { return !asigSet[m.id]; });
+        var excluirBusqueda = {};
+        asignados.forEach(function(c) { excluirBusqueda[c.id] = true; });
+        matchesLibres.forEach(function(c) { excluirBusqueda[c.id] = true; });
         var html =
             '<p class="inter-subtitulo">Asignados (' + asignados.length + ')</p>' +
             (asignados.length
@@ -375,16 +400,19 @@
             '<hr class="inter-sep">' +
             '<p class="inter-subtitulo">Matches autom&aacute;ticos (' + matchesLibres.length + ')</p>' +
             (matchesLibres.length
-                ? matchesLibres.slice(0, 8).map(function(c) {
+                ? matchesLibres.map(function(c) {
                     return filaPersona(c, '<button class="btn-action btn-match" onclick="asignarInteresado(' + c.id + ')" style="font-size:11px">+ Asignar</button>');
                   }).join('')
                 : '<p class="inter-vacio">Sin matches.</p>') +
+            '<hr class="inter-sep">' +
+            '<p class="inter-subtitulo">Buscar m&aacute;s</p>' +
             '<div class="buscar-wrap">' +
-                '<input id="buscar-interesado" type="text" placeholder="Buscar comprador para asignar..." ' +
-                    'oninput="buscarCliente(this.value)" autocomplete="off">' +
-                '<div id="buscar-resultados"></div>' +
-            '</div>';
+                '<input id="buscar-interesado" type="text" placeholder="Filtrar clientes..." ' +
+                    'oninput="filtrarDisp(this,\'buscar-resultados\')" autocomplete="off">' +
+            '</div>' +
+            '<div id="buscar-resultados" class="disp-list"></div>';
         document.getElementById('interesados-container').innerHTML = html;
+        renderDispList('buscar-resultados', excluirBusqueda, 'asignarInteresado');
     }
 
     function asignarInteresado(clienteId) {
@@ -401,12 +429,6 @@
             .catch(function() { toast('Error', 'error'); });
     }
 
-    function buscarCliente(q) {
-        var asigSet = {};
-        (propData.interesados || []).forEach(function(c) { asigSet[c.id] = true; });
-        buscarClienteGeneric(q, asigSet, 'buscar-resultados', 'asignarInteresado');
-    }
-
     // ── Propietarios ──────────────────────────────────────────────────────────
     function renderPropietarios() {
         var propietarios = propData.propietarios || [];
@@ -419,12 +441,15 @@
                     return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarPropietario(' + c.id + ')" title="Quitar">&#x2715;</button>');
                   }).join('')
                 : '<p class="inter-vacio">Sin propietarios asignados.</p>') +
-            '<div class="buscar-wrap" style="margin-top:14px">' +
-                '<input id="buscar-propietario" type="text" placeholder="Buscar propietario para asignar..." ' +
-                    'oninput="buscarPropietario(this.value)" autocomplete="off">' +
-                '<div id="buscar-prop-resultados"></div>' +
-            '</div>';
+            '<hr class="inter-sep">' +
+            '<p class="inter-subtitulo">Disponibles para asignar</p>' +
+            '<div class="buscar-wrap">' +
+                '<input id="buscar-propietario" type="text" placeholder="Filtrar clientes..." ' +
+                    'oninput="filtrarDisp(this,\'buscar-prop-resultados\')" autocomplete="off">' +
+            '</div>' +
+            '<div id="buscar-prop-resultados" class="disp-list"></div>';
         document.getElementById('propietarios-container').innerHTML = html;
+        renderDispList('buscar-prop-resultados', asigSet, 'asignarPropietario');
     }
 
     function asignarPropietario(clienteId) {
@@ -432,8 +457,6 @@
             .then(function(r) { return r.json(); })
             .then(function(data) { propData = data; renderPropietarios(); toast('Propietario asignado', 'success'); })
             .catch(function() { toast('Error', 'error'); });
-        var inp = document.getElementById('buscar-propietario');
-        if (inp) inp.value = '';
     }
 
     function desasignarPropietario(clienteId) {
@@ -441,12 +464,6 @@
             .then(function(r) { return r.json(); })
             .then(function(data) { propData = data; renderPropietarios(); toast('Propietario removido', 'success'); })
             .catch(function() { toast('Error', 'error'); });
-    }
-
-    function buscarPropietario(q) {
-        var asigSet = {};
-        (propData.propietarios || []).forEach(function(c) { asigSet[c.id] = true; });
-        buscarClienteGeneric(q, asigSet, 'buscar-prop-resultados', 'asignarPropietario');
     }
 
     // ── Descripción con autosave ──────────────────────────────────────────────
