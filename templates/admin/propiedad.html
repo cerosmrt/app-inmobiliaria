@@ -8,7 +8,7 @@
         <span class="moret">Moret</span>
         <span class="sub">PANEL ADMIN</span>
     </div>
-    <a href="/admin" class="back-link">&#x2190; Volver al panel</a>
+    <a href="/admin?tab=propiedades" class="back-link">&#x2190; Propiedades</a>
 </header>
 {% endblock %}
 
@@ -16,9 +16,8 @@
 <style>
     .container { max-width: 1060px; margin: 0 auto; padding: 24px; }
 
-    .prop-header { margin-bottom: 22px; }
-    .prop-header h1 { margin: 0 0 8px; font-size: 22px; font-weight: 800; color: #1a1a1a; }
-    .prop-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .prop-header { margin-bottom: 20px; }
+    .prop-header h1 { margin: 0; font-size: 22px; font-weight: 800; color: #1a1a1a; }
 
     .section-card {
         background: white; border-radius: 10px; padding: 22px;
@@ -31,22 +30,85 @@
     }
     .section-card h2 .acciones { display: flex; align-items: center; gap: 8px; }
 
-    .save-confirm { font-size: 12px; color: #16a34a; }
+    /* ── Campos editables ──────────────────────────────────────────────────── */
+    .campos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+        gap: 10px;
+    }
+    .campo-item {
+        background: var(--bg); border-radius: 7px; padding: 10px 12px;
+        cursor: pointer; transition: background 0.12s; user-select: none;
+        min-width: 0;
+    }
+    .campo-item:hover { background: #fef9c3; }
+    .campo-item.campo-bool { cursor: default; }
+    .campo-item.campo-bool:hover { background: var(--bg); }
+    .campo-item.span2 { grid-column: span 2; }
+    .campo-label {
+        font-size: 11px; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.4px; margin-bottom: 4px;
+    }
+    .campo-valor { font-size: 15px; font-weight: 700; word-break: break-word; }
+    .campo-input {
+        width: 100%; font-size: 14px; font-weight: 600; padding: 4px 7px;
+        border: 2px solid var(--red); border-radius: 4px; background: white;
+        margin-top: 2px; box-sizing: border-box;
+    }
+    .campo-bool-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+    .campo-bool-row input[type="checkbox"] {
+        width: 17px; height: 17px; cursor: pointer; accent-color: var(--red);
+    }
+    .campo-bool-row label { font-size: 14px; font-weight: 700; cursor: pointer; }
 
-    .notes-textarea { min-height: 180px; }
-    .notes-textarea:focus { outline: 2px solid var(--red); }
+    /* ── Interesados ───────────────────────────────────────────────────────── */
+    .inter-subtitulo {
+        font-size: 11px; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.5px; font-weight: 700; margin: 0 0 8px;
+    }
+    .inter-row {
+        display: flex; align-items: center; gap: 8px; padding: 7px 0;
+        border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .inter-row:last-child { border-bottom: none; }
+    .inter-nombre { flex: 1; font-weight: 600; }
+    .inter-tel { color: var(--muted); font-size: 12px; min-width: 85px; }
+    .inter-vacio { color: var(--muted); font-size: 13px; margin: 4px 0; }
+    .inter-sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 
-    /* Zona de subida */
+    .buscar-wrap { position: relative; margin-top: 14px; }
+    .buscar-wrap input {
+        width: 100%; font-size: 14px; padding: 8px 12px;
+        border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;
+    }
+    .buscar-wrap input:focus { outline: 2px solid var(--red); border-color: transparent; }
+    #buscar-resultados {
+        position: absolute; top: 100%; left: 0; right: 0; background: white;
+        border: 1px solid var(--border); border-radius: 6px; z-index: 20;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.13); max-height: 220px; overflow-y: auto;
+        display: none;
+    }
+    .buscar-item {
+        padding: 9px 14px; cursor: pointer; font-size: 13px;
+        border-bottom: 1px solid var(--border);
+    }
+    .buscar-item:last-child { border-bottom: none; }
+    .buscar-item:hover { background: var(--bg); }
+
+    /* ── Descripción ───────────────────────────────────────────────────────── */
+    .notes-textarea { min-height: 160px; }
+    #desc-estado { font-size: 12px; margin-left: 8px; }
+
+    /* ── Fotos ─────────────────────────────────────────────────────────────── */
     .upload-drop {
         border: 2px dashed var(--border); border-radius: 8px;
-        padding: 18px; text-align: center; color: var(--muted);
-        font-size: 13px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-        margin-bottom: 16px;
+        padding: 16px; text-align: center; color: var(--muted);
+        font-size: 13px; cursor: pointer;
+        transition: border-color 0.15s, background 0.15s; margin-bottom: 14px;
     }
     .upload-drop:hover { border-color: var(--red); background: #fff8f8; }
     .upload-drop input { display: none; }
 
-    /* Grid de fotos */
     .fotos-admin-grid { display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px; }
     .foto-admin-item {
         position: relative; border-radius: 8px; overflow: hidden;
@@ -67,6 +129,9 @@
     }
     .foto-admin-item .btn-del-foto {
         position: absolute; top: 4px; right: 4px;
+        background: rgba(220,38,38,0.88); color: white; border: none;
+        border-radius: 3px; font-size: 11px; font-weight: 700;
+        padding: 1px 5px; cursor: pointer; line-height: 1.4;
     }
     .orden-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
     #btn-guardar-orden { display: none; }
@@ -78,7 +143,18 @@
 
     <div class="prop-header">
         <h1 id="prop-titulo">Cargando...</h1>
-        <div class="prop-meta" id="prop-meta"></div>
+    </div>
+
+    <!-- Datos -->
+    <div class="section-card">
+        <h2>Datos</h2>
+        <div class="campos-grid" id="campos-grid"></div>
+    </div>
+
+    <!-- Interesados -->
+    <div class="section-card">
+        <h2>Interesados</h2>
+        <div id="interesados-container"><p class="inter-vacio">Cargando...</p></div>
     </div>
 
     <!-- Descripción -->
@@ -86,7 +162,7 @@
         <h2>
             Descripci&oacute;n
             <div class="acciones">
-                <span id="save-confirm" class="save-confirm" style="display:none">&#x2713; Guardado</span>
+                <span id="desc-estado" style="display:none"></span>
                 <button class="btn btn-green" onclick="guardarDescripcion()" style="font-size:12px;padding:5px 14px">Guardar</button>
             </div>
         </h2>
@@ -116,9 +192,24 @@
 {% block scripts %}
 <script>
     const propiedadId = {{ propiedad_id }};
-    let propData    = null;
-    let fotosOrden  = [];
-    let dragSrcIdx  = null;
+    let propData     = null;
+    let fotosOrden   = [];
+    let dragSrcIdx   = null;
+    let _descTimer   = null;
+    let _clientesCache = null;
+
+    const _CAMPOS = [
+        { label: 'Dirección', field: 'direccion',          type: 'text',   span2: true },
+        { label: 'Barrio',         field: 'barrio',             type: 'text' },
+        { label: 'Tipo',           field: 'tipo',               type: 'select', opts: ['casa','departamento','local','terreno','otro'] },
+        { label: 'Operación', field: 'operacion',          type: 'select', opts: ['venta','alquiler'] },
+        { label: 'Estado',         field: 'estado',             type: 'select', opts: ['disponible','vendida','rentada'], badge: true },
+        { label: 'Ambientes',      field: 'ambientes',          type: 'number' },
+        { label: 'Precio',         field: 'rango_min',          type: 'number' },
+        { label: 'USD',            field: 'es_usd',             type: 'bool' },
+        { label: 'A consultar',    field: 'precio_a_consultar', type: 'bool' },
+        { label: 'Publicada',      field: 'publicada',          type: 'bool' },
+    ];
 
     // ── Carga inicial ─────────────────────────────────────────────────────────
     function cargarPropiedad() {
@@ -127,17 +218,9 @@
             .then(function(data) {
                 propData   = data;
                 fotosOrden = data.fotos ? data.fotos.slice() : [];
-
-                document.title = (data.direccion || 'Propiedad') + ' — Moret Inmobiliaria';
-                document.getElementById('prop-titulo').textContent = data.direccion || '(Sin dirección)';
-                document.getElementById('prop-meta').innerHTML =
-                    '<span class="badge badge-' + esc(data.estado) + '">' + esc(data.estado) + '</span>' +
-                    '<span class="badge" style="background:#f1f5f9;color:#475569">' + esc(data.tipo) + '</span>' +
-                    (data.operacion ? '<span class="badge" style="background:#f1f5f9;color:#475569">' + esc(data.operacion) + '</span>' : '') +
-                    (data.publicada
-                        ? '<span class="badge badge-publicada">&#x2713; Publicada</span>'
-                        : '<span class="badge badge-no-publicada">Borrador</span>');
-
+                document.title = (data.direccion || 'Propiedad') + ' — Moret';
+                renderDatos();
+                cargarInteresados();
                 document.getElementById('descripcion').value = data.descripcion || '';
                 renderFotos();
             })
@@ -146,24 +229,213 @@
             });
     }
 
+    // ── Datos editables ───────────────────────────────────────────────────────
+    function renderDatos() {
+        document.getElementById('prop-titulo').textContent = propData.direccion || '(Sin dirección)';
+        document.getElementById('campos-grid').innerHTML = _CAMPOS.map(buildCampo).join('');
+        attachCampoEvents();
+    }
+
+    function buildCampo(c) {
+        var val = propData[c.field];
+        var cls = 'campo-item' + (c.span2 ? ' span2' : '') + (c.type === 'bool' ? ' campo-bool' : '');
+        var inner;
+        if (c.type === 'bool') {
+            inner = '<div class="campo-bool-row">' +
+                '<input type="checkbox" id="chk-' + c.field + '"' + (val ? ' checked' : '') +
+                ' onchange="guardarCampo(\'' + c.field + '\', this.checked)">' +
+                '<label for="chk-' + c.field + '">' + (val ? 'Sí' : 'No') + '</label>' +
+                '</div>';
+        } else if (c.badge) {
+            inner = '<div class="campo-valor"><span class="badge badge-' + esc(val || '') + '">' + esc(val || '—') + '</span></div>';
+        } else {
+            inner = '<div class="campo-valor">' + esc(val != null && val !== '' ? String(val) : '—') + '</div>';
+        }
+        var attrs = c.type !== 'bool'
+            ? ' data-field="' + c.field + '" data-type="' + c.type + '"' + (c.opts ? ' data-opts=\'' + JSON.stringify(c.opts) + '\'' : '')
+            : '';
+        return '<div class="' + cls + '"' + attrs + '>' +
+            '<div class="campo-label">' + esc(c.label) + '</div>' + inner + '</div>';
+    }
+
+    function attachCampoEvents() {
+        document.querySelectorAll('#campos-grid .campo-item:not(.campo-bool)').forEach(function(item) {
+            item.addEventListener('click', function() {
+                if (this.querySelector('input.campo-input,select.campo-input')) return;
+                var field = this.dataset.field;
+                var type  = this.dataset.type;
+                var opts  = this.dataset.opts ? JSON.parse(this.dataset.opts) : null;
+                var val   = propData[field];
+                var label = this.querySelector('.campo-label').textContent;
+                var inputEl;
+                if (opts) {
+                    inputEl = '<select class="campo-input">' +
+                        opts.map(function(o) {
+                            return '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>';
+                        }).join('') + '</select>';
+                } else {
+                    inputEl = '<input class="campo-input" type="' + type + '" value="' + esc(val != null ? String(val) : '') + '">';
+                }
+                this.innerHTML = '<div class="campo-label">' + esc(label) + '</div>' + inputEl;
+                var input = this.querySelector('input.campo-input,select.campo-input');
+                input.focus();
+                if (input.type === 'text') try { input.select(); } catch(e) {}
+                var saved = false;
+                function commit() {
+                    if (saved) return; saved = true;
+                    var v = type === 'number' ? (parseFloat(input.value) || null) : input.value;
+                    guardarCampo(field, v);
+                }
+                input.addEventListener('blur', commit);
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && input.tagName !== 'SELECT') commit();
+                    if (e.key === 'Escape') { e.stopPropagation(); renderDatos(); }
+                });
+                if (input.tagName === 'SELECT') input.addEventListener('change', commit);
+            });
+        });
+    }
+
+    function guardarCampo(field, value) {
+        var body = {}; body[field] = value;
+        fetch('/api/propiedades/' + propiedadId, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function() { propData[field] = value; renderDatos(); toast('Guardado', 'success'); })
+          .catch(function() { toast('Error al guardar', 'error'); renderDatos(); });
+    }
+
+    // ── Interesados ───────────────────────────────────────────────────────────
+    function cargarInteresados() {
+        fetch('/api/propiedades/' + propiedadId + '/matches')
+            .then(function(r) { return r.json(); })
+            .then(renderInteresados)
+            .catch(function() { renderInteresados([]); });
+    }
+
+    function renderInteresados(matches) {
+        var asignados = propData.interesados || [];
+        var asigSet = {};
+        asignados.forEach(function(c) { asigSet[c.id] = true; });
+        var matchesLibres = matches.filter(function(m) { return !asigSet[m.id]; });
+
+        function filaInter(c, botones) {
+            return '<div class="inter-row">' +
+                '<span class="inter-nombre"><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></span>' +
+                '<span class="inter-tel">' + esc(c.telefono || '') + '</span>' +
+                '<a href="' + waLink(c.telefono) + '" target="_blank" class="btn-action btn-save" title="WhatsApp" style="font-size:13px">&#x1F4AC;</a>' +
+                botones + '</div>';
+        }
+
+        var html =
+            '<p class="inter-subtitulo">Asignados (' + asignados.length + ')</p>' +
+            (asignados.length
+                ? asignados.map(function(c) {
+                    return filaInter(c, '<button class="btn-action btn-cancel" onclick="desasignarInteresado(' + c.id + ')" title="Desasignar">&#x2715;</button>');
+                  }).join('')
+                : '<p class="inter-vacio">Ninguno asignado.</p>') +
+            '<hr class="inter-sep">' +
+            '<p class="inter-subtitulo">Matches automáticos (' + matchesLibres.length + ')</p>' +
+            (matchesLibres.length
+                ? matchesLibres.slice(0, 8).map(function(c) {
+                    return filaInter(c, '<button class="btn-action btn-match" onclick="asignarInteresado(' + c.id + ')" style="font-size:11px">+ Asignar</button>');
+                  }).join('')
+                : '<p class="inter-vacio">Sin matches.</p>') +
+            '<div class="buscar-wrap">' +
+                '<input id="buscar-interesado" type="text" placeholder="Buscar cliente para asignar..." ' +
+                    'oninput="buscarCliente(this.value)" autocomplete="off">' +
+                '<div id="buscar-resultados"></div>' +
+            '</div>';
+
+        document.getElementById('interesados-container').innerHTML = html;
+    }
+
+    function asignarInteresado(clienteId) {
+        fetch('/api/propiedades/' + propiedadId + '/interesados/' + clienteId, { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) { propData = data; cargarInteresados(); toast('Asignado', 'success'); })
+            .catch(function() { toast('Error', 'error'); });
+    }
+
+    function desasignarInteresado(clienteId) {
+        fetch('/api/propiedades/' + propiedadId + '/interesados/' + clienteId, { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) { propData = data; cargarInteresados(); toast('Desasignado', 'success'); })
+            .catch(function() { toast('Error', 'error'); });
+    }
+
+    function buscarCliente(q) {
+        var res = document.getElementById('buscar-resultados');
+        if (!res) return;
+        if (!q.trim()) { res.style.display = 'none'; return; }
+        if (!_clientesCache) {
+            fetch('/api/clientes').then(function(r) { return r.json(); }).then(function(data) {
+                _clientesCache = data;
+                buscarCliente(q);
+            });
+            return;
+        }
+        var asigSet = {};
+        (propData.interesados || []).forEach(function(c) { asigSet[c.id] = true; });
+        var q2 = q.toLowerCase();
+        var filtrados = _clientesCache.filter(function(c) {
+            if (asigSet[c.id]) return false;
+            return (c.nombre + ' ' + c.apellido).toLowerCase().includes(q2) || (c.telefono || '').includes(q2);
+        }).slice(0, 6);
+        if (!filtrados.length) { res.style.display = 'none'; return; }
+        res.innerHTML = filtrados.map(function(c) {
+            return '<div class="buscar-item" onclick="asignarInteresado(' + c.id + ');' +
+                'var i=document.getElementById(\'buscar-interesado\');if(i)i.value=\'\';' +
+                'var r=document.getElementById(\'buscar-resultados\');if(r)r.style.display=\'none\'">' +
+                '<strong>' + esc(c.nombre) + ' ' + esc(c.apellido) + '</strong>' +
+                '&nbsp;<span style="color:var(--muted)">' + esc(c.telefono || '') + '</span>' +
+                (c.tipo ? ' <span class="badge badge-' + esc(c.tipo) + '" style="font-size:10px">' + esc(c.tipo) + '</span>' : '') +
+            '</div>';
+        }).join('');
+        res.style.display = '';
+    }
+
+    // ── Descripción con autosave ──────────────────────────────────────────────
+    function setDescEstado(msg, ok) {
+        var el = document.getElementById('desc-estado');
+        el.innerHTML = msg;
+        el.style.color = ok ? '#16a34a' : 'var(--muted)';
+        el.style.display = 'inline';
+    }
+
+    function guardarDescripcion() {
+        fetch('/api/propiedades/' + propiedadId, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ descripcion: document.getElementById('descripcion').value })
+        }).then(function() {
+            setDescEstado('&#x2713; Guardado', true);
+            setTimeout(function() {
+                var el = document.getElementById('desc-estado');
+                if (el) el.style.display = 'none';
+            }, 2000);
+        }).catch(function() { toast('Error al guardar descripción', 'error'); });
+    }
+
     // ── Fotos ─────────────────────────────────────────────────────────────────
     function renderFotos() {
-        const grid = document.getElementById('fotos-grid');
-        const hint = document.getElementById('orden-hint');
+        var grid = document.getElementById('fotos-grid');
+        var hint = document.getElementById('orden-hint');
         if (!fotosOrden.length) {
             grid.innerHTML = '<p style="color:var(--muted);font-size:13px;margin:0">Sin fotos. Subí una arriba.</p>';
             hint.style.display = 'none';
             return;
         }
         grid.innerHTML = fotosOrden.map(function(f, i) {
-            return '<div class="foto-admin-item" draggable="true" data-idx="' + i + '"' +
+            return '<div class="foto-admin-item" draggable="true"' +
                 ' ondragstart="onDragStart(event,' + i + ')"' +
                 ' ondragover="onDragOver(event)"' +
                 ' ondrop="onDrop(event,' + i + ')"' +
                 ' ondragleave="onDragLeave(event)"' +
                 ' ondragend="onDragEnd()">' +
                 '<img src="/' + esc(f) + '" alt="Foto ' + (i+1) + '"' +
-                    ' onclick="window.open(\'/' + esc(f).replace(/'/g,"\\'") + '\',\'_blank\')" title="Ver en tamaño completo">' +
+                    ' onclick="window.open(\'/' + esc(f).replace(/'/g,"\\'") + '\',\'_blank\')"' +
+                    ' title="Ver en tamaño completo">' +
                 '<span class="foto-num">' + (i+1) + '</span>' +
                 '<button class="btn-del-foto" onclick="eliminarFoto(event,' + i + ')">&#x2715;</button>' +
             '</div>';
@@ -192,7 +464,7 @@
     function onDrop(e, targetIdx) {
         e.preventDefault();
         if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
-        const moved = fotosOrden.splice(dragSrcIdx, 1)[0];
+        var moved = fotosOrden.splice(dragSrcIdx, 1)[0];
         fotosOrden.splice(targetIdx, 0, moved);
         dragSrcIdx = null;
         document.getElementById('btn-guardar-orden').style.display = '';
@@ -215,14 +487,12 @@
           }).catch(function() { toast('Error al guardar orden', 'error'); });
     }
 
-    // ── Subir fotos ───────────────────────────────────────────────────────────
     function subirFotos(input) {
         if (!input.files.length) return;
-        const files = Array.from(input.files);
-        let done = 0;
+        var files = Array.from(input.files);
+        var done = 0;
         files.forEach(function(file) {
-            const fd = new FormData();
-            fd.append('file', file);
+            var fd = new FormData(); fd.append('file', file);
             fetch('/api/propiedades/' + propiedadId + '/upload', { method: 'POST', body: fd })
                 .then(function(r) { if (!r.ok) throw new Error('Formato no permitido'); return r.json(); })
                 .then(function(data) {
@@ -237,10 +507,9 @@
         input.value = '';
     }
 
-    // ── Eliminar foto ─────────────────────────────────────────────────────────
     function eliminarFoto(e, idx) {
         e.stopPropagation();
-        const filepath = fotosOrden[idx];
+        var filepath = fotosOrden[idx];
         confirmar('¿Eliminar esta foto?', 'Eliminar foto', 'Eliminar').then(function(ok) {
             if (!ok) return;
             fetch('/api/propiedades/' + propiedadId + '/fotos/' + filepath, { method: 'DELETE' })
@@ -250,23 +519,18 @@
                     fotosOrden = data.fotos ? data.fotos.slice() : [];
                     renderFotos();
                     toast('Foto eliminada', 'success');
-                })
-                .catch(function(e) { console.error(e); });
+                }).catch(function(e) { console.error(e); });
         });
     }
 
-    // ── Descripción ───────────────────────────────────────────────────────────
-    function guardarDescripcion() {
-        fetch('/api/propiedades/' + propiedadId, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descripcion: document.getElementById('descripcion').value })
-        }).then(function() {
-            const el = document.getElementById('save-confirm');
-            el.style.display = 'inline';
-            setTimeout(function() { el.style.display = 'none'; }, 2000);
-        }).catch(function() { toast('Error al guardar', 'error'); });
-    }
-
-    document.addEventListener('DOMContentLoaded', cargarPropiedad);
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarPropiedad();
+        document.getElementById('descripcion').addEventListener('input', function() {
+            clearTimeout(_descTimer);
+            setDescEstado('Guardando...', false);
+            _descTimer = setTimeout(guardarDescripcion, 1500);
+        });
+    });
 </script>
 {% endblock %}

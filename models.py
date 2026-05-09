@@ -50,7 +50,8 @@ class Propiedad(db.Model):
             'fecha_estado': self.fecha_estado.strftime('%d/%m/%Y') if self.fecha_estado else None,
             'propietario_id': self.propietario_id,
             'propietario': self.propietario.nombre + ' ' + self.propietario.apellido if self.propietario else None,
-            'interesados': [c.nombre + ' ' + c.apellido for c in self.interesados]
+            'interesados': [{'id': c.id, 'nombre': c.nombre, 'apellido': c.apellido, 'telefono': c.telefono} for c in self.interesados],
+            'interesados_ids': [c.id for c in self.interesados],
         }
 
 class Cliente(db.Model):

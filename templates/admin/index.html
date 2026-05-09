@@ -44,6 +44,9 @@
         background: #fef9c3 !important; cursor: text;
     }
 
+    .tab-btn[onclick*="archivados"] { color: #94a3b8; }
+    .tab-btn[onclick*="archivados"].active { color: #d97706; border-bottom-color: #d97706; }
+
     .btn-map {
         background: #dcfce7; color: #15803d; border-radius: 4px;
         display: inline-block; line-height: 1.2;
@@ -55,9 +58,12 @@
 {% block content %}
 <div class="container">
 
+    <div id="stats-bar" class="stats-bar no-print"></div>
+
     <div class="tab-nav">
         <button class="tab-btn active" onclick="mostrarTab('clientes', this)">Clientes</button>
         <button class="tab-btn" onclick="mostrarTab('propiedades', this)">Propiedades</button>
+        <button class="tab-btn" onclick="mostrarTab('archivados', this)">Archivados</button>
     </div>
 
     <!-- ═══ TAB CLIENTES ═══ -->
@@ -152,6 +158,17 @@
             </table>
         </div>
     </div>
+
+    <!-- ═══ TAB ARCHIVADOS ═══ -->
+    <div id="tab-archivados" style="display:none">
+        <div class="toolbar no-print">
+            <button class="btn btn-gray" onclick="verArchivados('propiedades')">Propiedades archivadas</button>
+            <button class="btn btn-gray" onclick="verArchivados('clientes')">Clientes archivados</button>
+        </div>
+        <div id="archivados-content">
+            <p style="color:var(--muted);padding:8px 0">Seleccioná qué querés ver arriba.</p>
+        </div>
+    </div>
 </div>
 
 <!-- Modal: compradores compatibles -->
@@ -242,7 +259,8 @@
     function mostrarTab(tab, btn) {
         document.getElementById('tab-clientes').style.display    = tab === 'clientes'    ? '' : 'none';
         document.getElementById('tab-propiedades').style.display = tab === 'propiedades' ? '' : 'none';
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-archivados').style.display  = tab === 'archivados'  ? '' : 'none';
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
         if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
         guardarFiltrosEnURL();
@@ -715,6 +733,87 @@
         }).catch(function(e) { console.error('Error al cargar matches', e); });
     }
 
+    // ── STATS ─────────────────────────────────────────────────────────────────
+    function cargarStats() {
+        fetch('/api/stats')
+            .then(function(r) { return r.json(); })
+            .then(function(s) {
+                var defs = [
+                    { label: 'Disponibles', val: s.disponibles,         cls: 'green' },
+                    { label: 'Vendidas',    val: s.vendidas,            cls: 'red' },
+                    { label: 'Rentadas',    val: s.rentadas,            cls: 'orange' },
+                    { label: 'Publicadas',  val: s.publicadas,          cls: 'blue' },
+                    { label: 'Clientes',    val: s.clientes,            cls: 'navy' },
+                    { label: 'Sin leer',    val: s.consultas_no_leidas, cls: 'red' },
+                ];
+                document.getElementById('stats-bar').innerHTML = defs.map(function(d) {
+                    return '<div class="stat-card stat-' + d.cls + '">' +
+                        '<div class="stat-val">' + d.val + '</div>' +
+                        '<div class="stat-label">' + esc(d.label) + '</div>' +
+                    '</div>';
+                }).join('');
+            }).catch(function() {});
+    }
+
+    // ── ARCHIVADOS ────────────────────────────────────────────────────────────
+    function verArchivados(tipo) {
+        var contenido = document.getElementById('archivados-content');
+        contenido.innerHTML = '<p style="color:var(--muted);padding:8px 0">Cargando...</p>';
+        fetch('/api/' + tipo + '/archivados')
+            .then(function(r) { return r.json(); })
+            .then(function(data) { renderArchivados(tipo, data); })
+            .catch(function() { contenido.innerHTML = '<p style="color:#dc2626">Error al cargar.</p>'; });
+    }
+
+    function renderArchivados(tipo, data) {
+        var c = document.getElementById('archivados-content');
+        if (!data.length) {
+            c.innerHTML = '<p style="color:var(--muted);padding:8px 0">Sin registros archivados.</p>';
+            return;
+        }
+        var filas, encabezado;
+        if (tipo === 'propiedades') {
+            encabezado = '<th>Dirección</th><th>Tipo</th><th>Estado</th><th class="no-print">Acciones</th>';
+            filas = data.map(function(p) {
+                return '<tr><td>' + esc(p.direccion || '—') + '</td><td>' + esc(p.tipo || '') + '</td>' +
+                    '<td><span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado) + '</span></td>' +
+                    '<td class="no-print">' +
+                        '<button class="btn-action btn-leer" onclick="restaurarRegistro(\'propiedades\',' + p.id + ')">Restaurar</button> ' +
+                        '<button class="btn-action btn-cancel" onclick="borrarPermanente(\'propiedades\',' + p.id + ')">Borrar</button>' +
+                    '</td></tr>';
+            }).join('');
+        } else {
+            encabezado = '<th>Nombre</th><th>Teléfono</th><th>Tipo</th><th class="no-print">Acciones</th>';
+            filas = data.map(function(cl) {
+                return '<tr><td>' + esc(cl.nombre) + ' ' + esc(cl.apellido) + '</td>' +
+                    '<td>' + esc(cl.telefono || '') + '</td>' +
+                    '<td><span class="badge badge-' + esc(cl.tipo) + '">' + esc(cl.tipo) + '</span></td>' +
+                    '<td class="no-print">' +
+                        '<button class="btn-action btn-leer" onclick="restaurarRegistro(\'clientes\',' + cl.id + ')">Restaurar</button> ' +
+                        '<button class="btn-action btn-cancel" onclick="borrarPermanente(\'clientes\',' + cl.id + ')">Borrar</button>' +
+                    '</td></tr>';
+            }).join('');
+        }
+        c.innerHTML = '<div class="table-wrap"><table>' +
+            '<thead><tr>' + encabezado + '</tr></thead>' +
+            '<tbody>' + filas + '</tbody></table></div>';
+    }
+
+    function restaurarRegistro(tipo, id) {
+        fetch('/api/' + tipo + '/' + id + '/restore', { method: 'PUT' })
+            .then(function() { toast('Restaurado', 'success'); verArchivados(tipo); cargarStats(); })
+            .catch(function() { toast('Error', 'error'); });
+    }
+
+    function borrarPermanente(tipo, id) {
+        confirmar('Esta acción no se puede deshacer.', 'Eliminar definitivo', 'Eliminar').then(function(ok) {
+            if (!ok) return;
+            fetch('/api/' + tipo + '/' + id + '/permanente', { method: 'DELETE' })
+                .then(function() { toast('Eliminado definitivamente', 'success'); verArchivados(tipo); })
+                .catch(function() { toast('Error', 'error'); });
+        });
+    }
+
     // ── INIT ──────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
         leerFiltrosDeURL();
@@ -725,6 +824,7 @@
             cargarClientes();
         }
         cargarBadgeConsultas();
+        cargarStats();
     });
 </script>
 {% endblock %}

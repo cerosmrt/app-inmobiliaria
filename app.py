@@ -320,6 +320,12 @@ def add_propiedad():
     db.session.commit()
     return jsonify(nueva.as_dict()), 201
 
+@app.route('/api/propiedades/archivados', methods=['GET'])
+@api_login_required
+def get_propiedades_archivadas():
+    props = Propiedad.query.filter(Propiedad.deleted_at.isnot(None)).all()
+    return jsonify([p.as_dict() for p in props])
+
 @app.route('/api/propiedades/<int:id>', methods=['GET'])
 @api_login_required
 def get_propiedad(id):
@@ -365,6 +371,16 @@ def delete_propiedad(id):
         db.session.commit()
         return jsonify({"message": "Propiedad eliminada"})
     return jsonify({"message": "Propiedad no encontrada"}), 404
+
+@app.route('/api/propiedades/<int:id>/permanente', methods=['DELETE'])
+@api_login_required
+def delete_propiedad_permanente(id):
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    db.session.delete(p)
+    db.session.commit()
+    return jsonify({"message": "Eliminada permanentemente"})
 
 @app.route('/api/propiedades/<int:id>/restore', methods=['PUT'])
 @api_login_required
@@ -426,6 +442,30 @@ def reordenar_fotos(id):
     db.session.commit()
     return jsonify(p.as_dict())
 
+@app.route('/api/propiedades/<int:id>/interesados/<int:cliente_id>', methods=['POST'])
+@api_login_required
+def add_interesado(id, cliente_id):
+    p = db.session.get(Propiedad, id)
+    c = db.session.get(Cliente, cliente_id)
+    if not p or not c:
+        return jsonify({"message": "No encontrado"}), 404
+    if c not in p.interesados:
+        p.interesados.append(c)
+        db.session.commit()
+    return jsonify(p.as_dict())
+
+@app.route('/api/propiedades/<int:id>/interesados/<int:cliente_id>', methods=['DELETE'])
+@api_login_required
+def remove_interesado(id, cliente_id):
+    p = db.session.get(Propiedad, id)
+    c = db.session.get(Cliente, cliente_id)
+    if not p or not c:
+        return jsonify({"message": "No encontrado"}), 404
+    if c in p.interesados:
+        p.interesados.remove(c)
+        db.session.commit()
+    return jsonify(p.as_dict())
+
 @app.route('/api/propiedades/<int:id>/matches', methods=['GET'])
 @api_login_required
 def get_matches(id):
@@ -469,6 +509,12 @@ def add_cliente():
     db.session.add(nuevo)
     db.session.commit()
     return jsonify(nuevo.as_dict()), 201
+
+@app.route('/api/clientes/archivados', methods=['GET'])
+@api_login_required
+def get_clientes_archivados():
+    clientes = Cliente.query.filter(Cliente.deleted_at.isnot(None)).all()
+    return jsonify([c.as_dict() for c in clientes])
 
 @app.route('/api/clientes/<int:id>', methods=['GET'])
 @api_login_required
@@ -518,6 +564,16 @@ def restore_cliente(id):
         db.session.commit()
         return jsonify({"message": "Cliente restaurado"})
     return jsonify({"message": "Cliente no encontrado"}), 404
+
+@app.route('/api/clientes/<int:id>/permanente', methods=['DELETE'])
+@api_login_required
+def delete_cliente_permanente(id):
+    c = db.session.get(Cliente, id)
+    if not c:
+        return jsonify({"message": "Cliente no encontrado"}), 404
+    db.session.delete(c)
+    db.session.commit()
+    return jsonify({"message": "Eliminado permanentemente"})
 
 @app.route('/api/clientes/<int:id>/upload', methods=['POST'])
 @api_login_required
@@ -570,6 +626,19 @@ def delete_consulta(id):
     db.session.delete(c)
     db.session.commit()
     return jsonify({"message": "Eliminada"})
+
+@app.route('/api/stats', methods=['GET'])
+@api_login_required
+def get_stats():
+    base = Propiedad.query.filter(Propiedad.deleted_at.is_(None))
+    return jsonify({
+        'disponibles':          base.filter_by(estado='disponible').count(),
+        'vendidas':             base.filter_by(estado='vendida').count(),
+        'rentadas':             base.filter_by(estado='rentada').count(),
+        'publicadas':           base.filter_by(publicada=True).count(),
+        'clientes':             Cliente.query.filter(Cliente.deleted_at.is_(None)).count(),
+        'consultas_no_leidas':  Consulta.query.filter_by(leida=False).count(),
+    })
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 
