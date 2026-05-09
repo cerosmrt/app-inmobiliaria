@@ -66,6 +66,27 @@
     .notes-textarea { min-height: 100px; }
     .notes-textarea:focus { outline: 2px solid var(--blue); }
     .save-confirm { font-size: 12px; color: #16a34a; margin-left: 10px; display: none; }
+
+    .buscar-wrap { position: relative; margin-top: 12px; }
+    .buscar-wrap input {
+        width: 100%; font-size: 13px; padding: 8px 12px;
+        border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;
+    }
+    .buscar-wrap input:focus { outline: 2px solid var(--blue); border-color: transparent; }
+    #buscar-prop-cli-resultados {
+        position: absolute; top: 100%; left: 0; right: 0; background: white;
+        border: 1px solid var(--border); border-radius: 6px; z-index: 20;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.13); max-height: 220px; overflow-y: auto;
+        display: none;
+    }
+    .buscar-item {
+        padding: 9px 14px; cursor: pointer; font-size: 13px;
+        border-bottom: 1px solid var(--border);
+    }
+    .buscar-item:last-child { border-bottom: none; }
+    .buscar-item:hover { background: var(--bg); }
+    .prop-row-actions { display: flex; align-items: center; gap: 8px; }
+    .prop-row-actions a { flex: 1; }
 </style>
 {% endblock %}
 
@@ -83,7 +104,10 @@
 {% block scripts %}
 <script>
     const clienteId = {{ cliente_id }};
+    var _clienteData      = null;
+    var _propiedadesCache = null;
 
+    // ── Carga principal ───────────────────────────────────────────────────────
     function cargarPerfil() {
         fetch('/api/clientes/' + clienteId)
             .then(function(r) {
@@ -91,104 +115,151 @@
                 return r.json();
             })
             .then(function(data) {
+                _clienteData = data;
                 document.getElementById('header-nombre').textContent = data.nombre + ' ' + data.apellido;
-                const initials = ((data.nombre[0] || '') + (data.apellido[0] || '')).toUpperCase();
-
+                var initials = ((data.nombre[0] || '') + (data.apellido[0] || '')).toUpperCase();
                 document.getElementById('cliente-info').innerHTML =
                     '<div class="avatar">' + esc(initials) + '</div>' +
                     '<h2>' + esc(data.nombre) + ' ' + esc(data.apellido) + '</h2>' +
                     '<div class="info-row"><div class="label">Tipo</div>' +
                         '<div class="value"><span class="badge badge-' + esc(data.tipo) + '">' + esc(data.tipo) + '</span></div></div>' +
-                    '<div class="info-row"><div class="label">Teléfono</div>' +
+                    '<div class="info-row"><div class="label">Tel&eacute;fono</div>' +
                         '<div class="value">' + esc(data.telefono) + '</div></div>' +
                     (data.email ? '<div class="info-row"><div class="label">Email</div><div class="value">' + esc(data.email) + '</div></div>' : '') +
                     '<a href="' + waLink(data.telefono) + '" target="_blank" class="wa-btn">&#x1F4AC; WhatsApp</a>';
-
-                const detalleDiv = document.getElementById('detalle-cliente');
-                if (data.tipo === 'propietario') cargarPropiedadesPropietario(data, detalleDiv);
-                else cargarPropiedadesInteresado(data, detalleDiv);
+                renderDetalle(data);
             })
             .catch(function(err) {
                 document.getElementById('cliente-info').innerHTML = '<p style="color:#dc2626">' + esc(err.message) + '</p>';
             });
     }
 
-    function renderTablaPropiedades(propiedades) {
-        if (propiedades.length === 0) return '<p style="color:#64748b;margin:0">No hay propiedades asociadas.</p>';
-        return '<div class="table-wrap"><table>' +
-            '<thead><tr><th>Dirección</th><th>Tipo</th><th>Estado</th><th>Precio</th><th>Amb</th></tr></thead>' +
-            '<tbody>' + propiedades.map(function(p) {
-                const precio = p.precio_a_consultar ? 'A consultar'
-                    : (p.rango_min ? (p.es_usd ? 'USD ' : '') + p.rango_min.toLocaleString('es-AR') : '-');
-                return '<tr>' +
-                    '<td>' + esc(p.direccion || '—') + '</td>' +
-                    '<td>' + esc(p.tipo) + '</td>' +
-                    '<td><span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado) + '</span></td>' +
-                    '<td>' + esc(precio) + '</td>' +
-                    '<td>' + (p.ambientes || '-') + '</td>' +
-                '</tr>';
-            }).join('') +
-            '</tbody></table></div>';
+    // ── Render del panel derecho ──────────────────────────────────────────────
+    function renderDetalle(data) {
+        var html = '';
+        if (data.tipo === 'interesado') html += renderPreferencias(data);
+        html += renderPropiedades(data);
+        html += renderNotas(data);
+        document.getElementById('detalle-cliente').innerHTML = html;
     }
 
-    function cargarPropiedadesPropietario(data, detalleDiv) {
-        fetch('/api/propiedades?propietario=' + encodeURIComponent(data.nombre + ' ' + data.apellido))
-            .then(function(r) { return r.json(); })
-            .then(function(propiedades) {
-                detalleDiv.innerHTML =
-                    '<div class="section-card"><h2>&#x1F3D8; Propiedades</h2>' +
-                        renderTablaPropiedades(propiedades) +
-                    '</div>' +
-                    '<div class="section-card"><h2>&#x1F4DD; Notas del cliente</h2>' +
-                        '<textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
-                        '<div style="margin-top:10px;display:flex;align-items:center">' +
-                            '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
-                            '<span id="save-confirm" class="save-confirm">&#x2713; Guardado</span>' +
-                        '</div>' +
-                    '</div>';
-            })
-            .catch(function(err) {
-                detalleDiv.innerHTML = '<p style="color:#dc2626">Error: ' + esc(err.message) + '</p>';
-            });
+    function renderPreferencias(data) {
+        return '<div class="section-card"><h2>&#x2699; Preferencias de b&uacute;squeda</h2>' +
+            '<div class="pref-grid">' +
+                '<div class="pref-item"><div class="label">M&iacute;nimo</div><div class="value">' + (data.rango_min ? data.rango_min.toLocaleString('es-AR') : '-') + '</div></div>' +
+                '<div class="pref-item"><div class="label">M&aacute;ximo</div><div class="value">' + (data.rango_max ? data.rango_max.toLocaleString('es-AR') : '-') + '</div></div>' +
+                '<div class="pref-item"><div class="label">Moneda</div><div class="value">' + (data.es_usd ? 'USD' : 'ARS') + '</div></div>' +
+                '<div class="pref-item"><div class="label">Ambientes</div><div class="value">' + (data.ambientes || '-') + '</div></div>' +
+                '<div class="pref-item"><div class="label">Operaci&oacute;n</div><div class="value">' + esc(data.operacion || '-') + '</div></div>' +
+            '</div>' +
+        '</div>';
     }
 
-    function cargarPropiedadesInteresado(data, detalleDiv) {
-        fetch('/api/propiedades?interesado=' + encodeURIComponent(data.nombre + ' ' + data.apellido))
-            .then(function(r) { return r.json(); })
-            .then(function(propiedades) {
-                detalleDiv.innerHTML =
-                    '<div class="section-card"><h2>&#x2699; Preferencias de búsqueda</h2>' +
-                        '<div class="pref-grid">' +
-                            '<div class="pref-item"><div class="label">Mínimo</div><div class="value">' + (data.rango_min ? data.rango_min.toLocaleString('es-AR') : '-') + '</div></div>' +
-                            '<div class="pref-item"><div class="label">Máximo</div><div class="value">' + (data.rango_max ? data.rango_max.toLocaleString('es-AR') : '-') + '</div></div>' +
-                            '<div class="pref-item"><div class="label">Moneda</div><div class="value">' + (data.es_usd ? 'USD' : 'ARS') + '</div></div>' +
-                            '<div class="pref-item"><div class="label">Ambientes</div><div class="value">' + (data.ambientes || '-') + '</div></div>' +
-                            '<div class="pref-item"><div class="label">Operación</div><div class="value">' + esc(data.operacion || '-') + '</div></div>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="section-card"><h2>&#x1F3E0; Propiedades de interés</h2>' +
-                        renderTablaPropiedades(propiedades) +
-                    '</div>' +
-                    '<div class="section-card"><h2>&#x1F4DD; Notas del cliente</h2>' +
-                        '<textarea id="descripcion" class="notes-textarea" placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
-                        '<div style="margin-top:10px;display:flex;align-items:center">' +
-                            '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
-                            '<span id="save-confirm" class="save-confirm">&#x2713; Guardado</span>' +
-                        '</div>' +
-                    '</div>';
-            })
-            .catch(function(err) {
-                detalleDiv.innerHTML = '<p style="color:#dc2626">Error: ' + esc(err.message) + '</p>';
-            });
+    function renderPropiedades(data) {
+        var esProp = data.tipo === 'propietario';
+        var props  = esProp ? (data.propiedades_propietario || []) : (data.propiedades_interesado || []);
+        var rol    = esProp ? 'propietarios' : 'interesados';
+        var titulo = esProp ? '&#x1F3D8; Propiedades' : '&#x1F3E0; Propiedades de inter&eacute;s';
+
+        var tabla = props.length === 0
+            ? '<p style="color:#64748b;margin:0 0 12px">Sin propiedades asociadas.</p>'
+            : '<div class="table-wrap" style="margin-bottom:12px"><table>' +
+                '<thead><tr><th>ID</th><th>Direcci&oacute;n</th><th>Estado</th><th class="no-print"></th></tr></thead>' +
+                '<tbody>' + props.map(function(p) {
+                    return '<tr>' +
+                        '<td><a href="/admin/propiedad/' + p.id + '">' + esc(p.codigo || ('#' + p.id)) + '</a></td>' +
+                        '<td><a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion || '—') + '</a></td>' +
+                        '<td><span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado) + '</span></td>' +
+                        '<td class="no-print"><button class="btn-action btn-cancel" ' +
+                            'onclick="desasignarPropiedad(' + p.id + ',\'' + rol + '\')">&#x2715;</button></td>' +
+                    '</tr>';
+                }).join('') +
+                '</tbody></table></div>';
+
+        return '<div class="section-card"><h2>' + titulo + '</h2>' +
+            tabla +
+            '<div class="buscar-wrap">' +
+                '<input type="text" id="buscar-propiedad-cli" placeholder="Buscar propiedad para asignar..." ' +
+                    'autocomplete="off" oninput="buscarPropiedadParaCliente(this.value)">' +
+                '<div id="buscar-prop-cli-resultados"></div>' +
+            '</div>' +
+        '</div>';
     }
 
+    function renderNotas(data) {
+        return '<div class="section-card"><h2>&#x1F4DD; Notas del cliente</h2>' +
+            '<textarea id="descripcion" class="notes-textarea" ' +
+                'placeholder="Notas sobre este cliente...">' + esc(data.descripcion || '') + '</textarea>' +
+            '<div style="margin-top:10px;display:flex;align-items:center">' +
+                '<button class="btn btn-green" onclick="guardarDescripcion()">Guardar</button>' +
+                '<span id="save-confirm" class="save-confirm">&#x2713; Guardado</span>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // ── Búsqueda y asignación de propiedades ──────────────────────────────────
+    function buscarPropiedadParaCliente(q) {
+        var res = document.getElementById('buscar-prop-cli-resultados');
+        if (!res) return;
+        if (!q.trim()) { res.style.display = 'none'; return; }
+
+        function doSearch(todas) {
+            var data = _clienteData;
+            var vinculadas = []
+                .concat(data ? (data.propiedades_propietario || []) : [])
+                .concat(data ? (data.propiedades_interesado  || []) : [])
+                .map(function(p) { return p.id; });
+            var q2 = q.toLowerCase();
+            var resultados = todas.filter(function(p) {
+                return ((p.direccion || '').toLowerCase().includes(q2) ||
+                        (p.codigo    || '').toLowerCase().includes(q2))
+                    && !vinculadas.includes(p.id);
+            }).slice(0, 6);
+            if (!resultados.length) { res.style.display = 'none'; return; }
+            var rol = data && data.tipo === 'propietario' ? 'propietarios' : 'interesados';
+            res.innerHTML = resultados.map(function(p) {
+                return '<div class="buscar-item" onclick="asignarPropiedad(' + p.id + ',\'' + rol + '\')">' +
+                    '<strong>' + esc(p.codigo || ('#' + p.id)) + ' &mdash; ' + esc(p.direccion) + '</strong>' +
+                    '&nbsp;<span style="color:var(--muted)">' + esc(p.estado || '') + (p.tipo ? ' &middot; ' + esc(p.tipo) : '') + '</span>' +
+                '</div>';
+            }).join('');
+            res.style.display = '';
+        }
+
+        if (!_propiedadesCache) {
+            fetch('/api/propiedades')
+                .then(function(r) { return r.json(); })
+                .then(function(data) { _propiedadesCache = data; doSearch(data); });
+        } else {
+            doSearch(_propiedadesCache);
+        }
+    }
+
+    function asignarPropiedad(propId, rol) {
+        var res = document.getElementById('buscar-prop-cli-resultados');
+        if (res) res.style.display = 'none';
+        var inp = document.getElementById('buscar-propiedad-cli');
+        if (inp) inp.value = '';
+        _propiedadesCache = null; // invalidate so next search is fresh
+        fetch('/api/propiedades/' + propId + '/' + rol + '/' + clienteId, { method: 'POST' })
+            .then(function() { toast('Propiedad asignada', 'success'); cargarPerfil(); })
+            .catch(function() { toast('Error al asignar', 'error'); });
+    }
+
+    function desasignarPropiedad(propId, rol) {
+        _propiedadesCache = null;
+        fetch('/api/propiedades/' + propId + '/' + rol + '/' + clienteId, { method: 'DELETE' })
+            .then(function() { toast('Propiedad quitada', 'success'); cargarPerfil(); })
+            .catch(function() { toast('Error al quitar', 'error'); });
+    }
+
+    // ── Notas ─────────────────────────────────────────────────────────────────
     function guardarDescripcion() {
-        const descripcion = document.getElementById('descripcion').value;
         fetch('/api/clientes/' + clienteId, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descripcion: descripcion })
+            body: JSON.stringify({ descripcion: document.getElementById('descripcion').value })
         }).then(function() {
-            const el = document.getElementById('save-confirm');
+            var el = document.getElementById('save-confirm');
             el.style.display = 'inline';
             setTimeout(function() { el.style.display = 'none'; }, 2000);
         }).catch(function(e) { console.error('Error al guardar descripción', e); });

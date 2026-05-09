@@ -94,6 +94,7 @@
                     <th>Teléfono</th>
                     <th class="sortable" data-sort="clientes" data-field="email"     onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="clientes" data-field="tipo"      onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
+                    <th>Propiedad</th>
                     <th class="sortable" data-sort="clientes" data-field="rango_min" onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="clientes" data-field="rango_max" onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
                     <th>USD</th>
@@ -144,14 +145,14 @@
         <div class="table-wrap">
             <table id="tablaPropiedades">
                 <thead><tr>
-                    <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">Código <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Dirección <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="barrio"       onclick="sortBy(this)">Barrio <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">ID <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Ubicación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="tipo"         onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="operacion"    onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="estado"       onclick="sortBy(this)">Estado <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="rango_min"    onclick="sortBy(this)">Precio <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="ambientes"    onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
+                    <th>Propietario</th>
                     <th class="sortable" data-sort="propiedades" data-field="fecha_estado" onclick="sortBy(this)">Fecha estado <span class="sort-icon"></span></th>
                     <th>Publicada</th>
                     <th class="no-print">Acciones</th>
@@ -181,6 +182,44 @@
             <button class="modal-close" onclick="cerrarModal('modal-matches')">&#x2715;</button>
         </div>
         <div id="modal-contenido"></div>
+    </div>
+</div>
+
+<!-- Modal: propietarios de propiedad (inline desde tabla) -->
+<div id="modal-propietarios-inline" class="modal-overlay">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-header">
+            <h3 id="modal-prop-titulo">Propietarios</h3>
+            <button class="modal-close" onclick="cerrarModal('modal-propietarios-inline')">&#x2715;</button>
+        </div>
+        <div id="modal-propietarios-lista" style="min-height:32px"></div>
+        <div style="margin-top:10px">
+            <input type="text" id="modal-propietarios-buscar" placeholder="Buscar cliente para asignar..." oninput="buscarClienteParaPropietario()"
+                style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+            <div id="modal-propietarios-resultados" style="margin-top:4px;border-radius:6px;overflow:hidden"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-gray" onclick="cerrarModal('modal-propietarios-inline')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: propiedades de cliente (inline desde tabla) -->
+<div id="modal-cliprop" class="modal-overlay">
+    <div class="modal-box" style="max-width:500px">
+        <div class="modal-header">
+            <h3 id="modal-cliprop-titulo">Propiedades</h3>
+            <button class="modal-close" onclick="cerrarModal('modal-cliprop')">&#x2715;</button>
+        </div>
+        <div id="modal-cliprop-lista" style="min-height:32px"></div>
+        <div style="margin-top:10px">
+            <input type="text" id="modal-cliprop-buscar" placeholder="Buscar propiedad por dirección o ID..." oninput="buscarPropParaCliente()"
+                style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+            <div id="modal-cliprop-resultados" style="margin-top:4px;border-radius:6px;overflow:hidden"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-gray" onclick="cerrarModal('modal-cliprop')">Cerrar</button>
+        </div>
     </div>
 </div>
 
@@ -377,6 +416,12 @@
         tbody.innerHTML = '';
         filtrados.forEach(function(c) {
             const row = document.createElement('tr');
+            const propIds = []
+                .concat(c.propiedades_propietario || [])
+                .concat(c.propiedades_interesado  || [])
+                .filter(function(p, i, arr) { return arr.findIndex(function(x) { return x.id === p.id; }) === i; })
+                .map(function(p) { return p.codigo ? esc(p.codigo) : ('#' + p.id); })
+                .join(', ') || '—';
             row.innerHTML =
                 '<td><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></td>' +
                 '<td class="editable-text" data-field="telefono" data-id="' + c.id + '">' +
@@ -384,6 +429,7 @@
                 '</td>' +
                 '<td class="editable-text" data-field="email" data-id="' + c.id + '">' + esc(c.email || '') + '</td>' +
                 '<td class="editable-select" data-field="tipo" data-id="' + c.id + '"><span class="badge badge-' + esc(c.tipo) + '">' + esc(c.tipo) + '</span></td>' +
+                '<td style="font-size:12px;color:var(--muted);cursor:pointer" onclick="abrirPropiedadesModal(' + c.id + ')" title="Asignar / quitar propiedades">' + propIds + '</td>' +
                 '<td class="editable-text" data-field="rango_min" data-id="' + c.id + '">' + (c.rango_min || '') + '</td>' +
                 '<td class="editable-text" data-field="rango_max" data-id="' + c.id + '">' + (c.rango_max || '') + '</td>' +
                 '<td><input type="checkbox" ' + (c.es_usd ? 'checked' : '') + ' onchange="actualizarCliente(' + c.id + ', \'es_usd\', this.checked)"></td>' +
@@ -412,6 +458,7 @@
             '<td data-field="telefono"><input type="text" placeholder="Teléfono"></td>' +
             '<td data-field="email"><input type="text" placeholder="Email"></td>' +
             '<td data-field="tipo"><select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select></td>' +
+            '<td>—</td>' +
             '<td data-field="rango_min"><input type="number" placeholder="Min"></td>' +
             '<td data-field="rango_max"><input type="number" placeholder="Max"></td>' +
             '<td><input type="checkbox" data-field="es_usd"></td>' +
@@ -563,7 +610,6 @@
                     '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + '</a>' +
                     ' <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((p.direccion || '') + (p.barrio ? ', ' + p.barrio : '')) + '" target="_blank" title="Ver en mapa" class="btn-action btn-map" style="font-size:11px;padding:2px 6px;text-decoration:none;vertical-align:middle">&#x1F4CD;</a>' +
                 '</td>' +
-                '<td class="editable-text" data-field="barrio" data-id="' + p.id + '">' + esc(p.barrio || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="tipo" data-id="' + p.id + '">' + esc(p.tipo || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="operacion" data-id="' + p.id + '">' + esc(p.operacion || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="estado" data-id="' + p.id + '">' +
@@ -571,7 +617,7 @@
                 '</td>' +
                 '<td class="editable-text" data-field="rango_min" data-id="' + p.id + '" title="' + (p.rango_max ? 'Max: ' + p.rango_max : '') + '">' + esc(precioStr) + '</td>' +
                 '<td class="editable-text" data-field="ambientes" data-id="' + p.id + '">' + (p.ambientes || '') + '</td>' +
-                '<td>' + propNames + '</td>' +
+                '<td style="cursor:pointer" onclick="abrirPropietariosModal(' + p.id + ')" title="Asignar / quitar propietarios">' + (propNames || '<span style="color:var(--muted);font-size:12px">+ agregar</span>') + '</td>' +
                 '<td>' + esc(p.fecha_estado || '-') + '</td>' +
                 '<td>' +
                     '<span class="badge ' + (p.publicada ? 'badge-publicada' : 'badge-no-publicada') + '"' +
@@ -617,15 +663,14 @@
         const row = document.createElement('tr');
         row.classList.add('new-row');
         row.innerHTML =
-            '<td><input type="text" placeholder="Código" style="width:80px"></td>' +
-            '<td><input type="text" placeholder="Dirección"></td>' +
-            '<td><input type="text" placeholder="Barrio"></td>' +
+            '<td><input type="text" placeholder="ID" style="width:80px"></td>' +
+            '<td><input type="text" placeholder="Ubicación"></td>' +
             '<td><select><option value="casa">Casa</option><option value="departamento">Departamento</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>' +
             '<td><select><option value="venta">Venta</option><option value="alquiler">Alquiler</option></select></td>' +
             '<td><select><option value="disponible">Disponible</option><option value="reservada">Reservada</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option><option value="cerrada">Cerrada</option></select></td>' +
             '<td><input type="number" placeholder="Precio USD"></td>' +
             '<td><input type="number" placeholder="Amb"></td>' +
-            '<td>-</td><td>-</td>' +
+            '<td>-</td><td>-</td><td>-</td>' +
             '<td class="no-print">' +
                 '<button class="btn-action btn-save" onclick="guardarNuevaPropiedad(this)">&#x2714;</button>' +
                 '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
@@ -636,15 +681,14 @@
     function guardarNuevaPropiedad(btn) {
         const tds = btn.closest('tr').querySelectorAll('td');
         const propiedad = {
-            codigo:         tds[0].querySelector('input').value || null,
-            direccion:      tds[1].querySelector('input').value,
-            barrio:         tds[2].querySelector('input').value || null,
-            tipo:           tds[3].querySelector('select').value,
-            operacion:      tds[4].querySelector('select').value,
-            estado:         tds[5].querySelector('select').value,
-            rango_min:      parseFloat(tds[6].querySelector('input').value) || null,
-            es_usd:         true,
-            ambientes:      parseInt(tds[7].querySelector('input').value) || null
+            codigo:    tds[0].querySelector('input').value || null,
+            direccion: tds[1].querySelector('input').value,
+            tipo:      tds[2].querySelector('select').value,
+            operacion: tds[3].querySelector('select').value,
+            estado:    tds[4].querySelector('select').value,
+            rango_min: parseFloat(tds[5].querySelector('input').value) || null,
+            es_usd:    true,
+            ambientes: parseInt(tds[6].querySelector('input').value) || null
         };
         if (!propiedad.direccion) { toast('Ingresá la dirección.', 'error'); return; }
         fetch('/api/propiedades', {
@@ -823,15 +867,168 @@
         });
     }
 
+    // ── MODAL PROPIETARIOS (click en celda Propietario de tabla propiedades) ──
+    var modalPropId = null;
+
+    function abrirPropietariosModal(propId) {
+        modalPropId = propId;
+        var p = propiedades.find(function(x) { return x.id === propId; });
+        document.getElementById('modal-prop-titulo').textContent = 'Propietarios — ' + (p ? p.direccion : '');
+        document.getElementById('modal-propietarios-buscar').value = '';
+        document.getElementById('modal-propietarios-resultados').innerHTML = '';
+        renderListaPropietarios(p);
+        document.getElementById('modal-propietarios-inline').classList.add('active');
+    }
+
+    function renderListaPropietarios(p) {
+        var lista = document.getElementById('modal-propietarios-lista');
+        var props = p ? (p.propietarios || []) : [];
+        if (props.length === 0) {
+            lista.innerHTML = '<p style="color:var(--muted);font-size:13px;margin:0 0 8px">Sin propietarios asignados.</p>';
+            return;
+        }
+        lista.innerHTML = props.map(function(c) {
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+                '<a href="/cliente/' + c.id + '" style="flex:1">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a>' +
+                '<button class="btn-action btn-cancel" onclick="quitarPropietarioInline(' + modalPropId + ',' + c.id + ')">&#x2715;</button>' +
+                '</div>';
+        }).join('');
+    }
+
+    function buscarClienteParaPropietario() {
+        var q = document.getElementById('modal-propietarios-buscar').value.toLowerCase();
+        if (!q) { document.getElementById('modal-propietarios-resultados').innerHTML = ''; return; }
+        var p = propiedades.find(function(x) { return x.id === modalPropId; });
+        var asignados = p ? (p.propietarios_ids || []) : [];
+        var resultados = clientes.filter(function(c) {
+            return (c.nombre + ' ' + c.apellido).toLowerCase().includes(q) && !asignados.includes(c.id);
+        }).slice(0, 6);
+        document.getElementById('modal-propietarios-resultados').innerHTML = resultados.length === 0
+            ? '<p style="color:var(--muted);font-size:12px;margin:6px 0 0">Sin resultados.</p>'
+            : resultados.map(function(c) {
+                return '<div class="palette-item" onclick="agregarPropietarioInline(' + modalPropId + ',' + c.id + ')">' +
+                    '<div class="palette-label">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</div>' +
+                    '<div class="palette-sub">' + esc(c.telefono || '') + '</div></div>';
+            }).join('');
+    }
+
+    function agregarPropietarioInline(propId, cliId) {
+        document.getElementById('modal-propietarios-buscar').value = '';
+        document.getElementById('modal-propietarios-resultados').innerHTML = '';
+        fetch('/api/propiedades/' + propId + '/propietarios/' + cliId, { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var idx = propiedades.findIndex(function(x) { return x.id === propId; });
+                if (idx >= 0) propiedades[idx] = data;
+                renderListaPropietarios(data);
+                filtrarPropiedades();
+                toast('Propietario asignado', 'success');
+            });
+    }
+
+    function quitarPropietarioInline(propId, cliId) {
+        fetch('/api/propiedades/' + propId + '/propietarios/' + cliId, { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var idx = propiedades.findIndex(function(x) { return x.id === propId; });
+                if (idx >= 0) propiedades[idx] = data;
+                renderListaPropietarios(data);
+                filtrarPropiedades();
+                toast('Propietario quitado', 'success');
+            });
+    }
+
+    // ── MODAL PROPIEDADES (click en celda Propiedad de tabla clientes) ─────────
+    var modalClienteId = null;
+
+    function abrirPropiedadesModal(cliId) {
+        modalClienteId = cliId;
+        var c = clientes.find(function(x) { return x.id === cliId; });
+        document.getElementById('modal-cliprop-titulo').textContent = 'Propiedades — ' + (c ? c.nombre + ' ' + c.apellido : '');
+        document.getElementById('modal-cliprop-buscar').value = '';
+        document.getElementById('modal-cliprop-resultados').innerHTML = '';
+        renderListaPropiedadesCliente(c);
+        document.getElementById('modal-cliprop').classList.add('active');
+        if (propiedades.length === 0) cargarPropiedades();
+    }
+
+    function renderListaPropiedadesCliente(c) {
+        var lista = document.getElementById('modal-cliprop-lista');
+        var propProp = (c && c.propiedades_propietario || []).map(function(p) { return Object.assign({}, p, { rol: 'propietario' }); });
+        var propInt  = (c && c.propiedades_interesado  || []).map(function(p) { return Object.assign({}, p, { rol: 'interesado'  }); });
+        var all = propProp.concat(propInt);
+        if (all.length === 0) {
+            lista.innerHTML = '<p style="color:var(--muted);font-size:13px;margin:0 0 8px">Sin propiedades vinculadas.</p>';
+            return;
+        }
+        lista.innerHTML = all.map(function(p) {
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+                '<span class="badge badge-' + p.rol + '" style="min-width:76px;text-align:center">' + p.rol + '</span>' +
+                '<a href="/admin/propiedad/' + p.id + '" style="flex:1">' +
+                    esc(p.codigo || ('#' + p.id)) + (p.direccion ? ' — ' + esc(p.direccion) : '') +
+                '</a>' +
+                '<button class="btn-action btn-cancel" onclick="quitarPropiedadCliente(' + (c ? c.id : 0) + ',' + p.id + ',\'' + p.rol + '\')">&#x2715;</button>' +
+                '</div>';
+        }).join('');
+    }
+
+    function buscarPropParaCliente() {
+        var q = document.getElementById('modal-cliprop-buscar').value.toLowerCase();
+        if (!q) { document.getElementById('modal-cliprop-resultados').innerHTML = ''; return; }
+        var c = clientes.find(function(x) { return x.id === modalClienteId; });
+        var vinculadas = []
+            .concat(c ? (c.propiedades_propietario || []) : [])
+            .concat(c ? (c.propiedades_interesado  || []) : [])
+            .map(function(p) { return p.id; });
+        var resultados = propiedades.filter(function(p) {
+            return ((p.direccion || '').toLowerCase().includes(q) || (p.codigo || '').toLowerCase().includes(q))
+                && !vinculadas.includes(p.id);
+        }).slice(0, 6);
+        document.getElementById('modal-cliprop-resultados').innerHTML = resultados.length === 0
+            ? '<p style="color:var(--muted);font-size:12px;margin:6px 0 0">Sin resultados.</p>'
+            : resultados.map(function(p) {
+                return '<div class="palette-item" onclick="agregarPropiedadCliente(' + modalClienteId + ',' + p.id + ')">' +
+                    '<div class="palette-label">' + esc(p.codigo || ('#' + p.id)) + ' — ' + esc(p.direccion) + '</div>' +
+                    '<div class="palette-sub">' + esc(p.estado || '') + (p.tipo ? ' · ' + p.tipo : '') + '</div></div>';
+            }).join('');
+    }
+
+    function agregarPropiedadCliente(cliId, propId) {
+        var c = clientes.find(function(x) { return x.id === cliId; });
+        var rol = c && c.tipo === 'propietario' ? 'propietarios' : 'interesados';
+        document.getElementById('modal-cliprop-buscar').value = '';
+        document.getElementById('modal-cliprop-resultados').innerHTML = '';
+        fetch('/api/propiedades/' + propId + '/' + rol + '/' + cliId, { method: 'POST' })
+            .then(function() { return fetch('/api/clientes/' + cliId); })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var idx = clientes.findIndex(function(x) { return x.id === cliId; });
+                if (idx >= 0) clientes[idx] = data;
+                renderListaPropiedadesCliente(data);
+                filtrarClientes();
+                toast('Propiedad asignada', 'success');
+            });
+    }
+
+    function quitarPropiedadCliente(cliId, propId, rol) {
+        var endpoint = rol === 'propietario' ? 'propietarios' : 'interesados';
+        fetch('/api/propiedades/' + propId + '/' + endpoint + '/' + cliId, { method: 'DELETE' })
+            .then(function() { return fetch('/api/clientes/' + cliId); })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var idx = clientes.findIndex(function(x) { return x.id === cliId; });
+                if (idx >= 0) clientes[idx] = data;
+                renderListaPropiedadesCliente(data);
+                filtrarClientes();
+                toast('Propiedad quitada', 'success');
+            });
+    }
+
     // ── INIT ──────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
         leerFiltrosDeURL();
-        const tabActivo = document.querySelector('.tab-btn.active');
-        if (tabActivo && tabActivo.textContent.trim() === 'Propiedades') {
-            cargarPropiedades();
-        } else {
-            cargarClientes();
-        }
+        cargarClientes();
+        cargarPropiedades();
         cargarBadgeConsultas();
         cargarStats();
     });

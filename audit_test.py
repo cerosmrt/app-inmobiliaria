@@ -688,6 +688,111 @@ else:
     fail("Cliente vista propiedades", f"no se pudo crear datos (pid={clv_pid} cid={clv_cid})")
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 19: UI ASIGNACIÓN — ESTRUCTURA Y ROUND-TRIP ===")
+
+# ── Setup: create fresh property + 2 clients ─────────────────────────────────
+r19p = session.post(f"{BASE}/api/propiedades",
+                    json={"codigo": "F19-TEST", "direccion": "Calle Fase 19 #100",
+                          "tipo": "casa", "estado": "disponible"},
+                    headers={"X-CSRFToken": real_csrf})
+pid19 = r19p.json().get("id") if r19p.ok else None
+
+r19cp = session.post(f"{BASE}/api/clientes",
+                     json={"nombre": "Prop", "apellido": "Test19", "telefono": "190001",
+                           "tipo": "propietario"},
+                     headers={"X-CSRFToken": real_csrf})
+cid19p = r19cp.json().get("id") if r19cp.ok else None
+
+r19ci = session.post(f"{BASE}/api/clientes",
+                     json={"nombre": "Inter", "apellido": "Test19", "telefono": "190002",
+                           "tipo": "interesado"},
+                     headers={"X-CSRFToken": real_csrf})
+cid19i = r19ci.json().get("id") if r19ci.ok else None
+
+if not (pid19 and cid19p and cid19i):
+    fail("Fase 19 setup", f"pid={pid19} cid_prop={cid19p} cid_int={cid19i}")
+else:
+    # ── 1. propiedad.html HTML structure ─────────────────────────────────────
+    rph = session.get(f"{BASE}/admin/propiedad/{pid19}")
+    check("propiedad.html carga 200", rph.status_code == 200, str(rph.status_code))
+    check("propiedad.html tiene #buscar-propietario",
+          'id="buscar-propietario"' in rph.text, "input no encontrado")
+    check("propiedad.html tiene #buscar-prop-resultados",
+          'id="buscar-prop-resultados"' in rph.text, "div no encontrado")
+    check("propiedad.html CSS dropdown propietarios (display:none compartido)",
+          '#buscar-prop-resultados' in rph.text, "CSS no encontrado")
+    check("propiedad.html tiene #buscar-interesado",
+          'id="buscar-interesado"' in rph.text, "input no encontrado")
+
+    # ── 2. perfil.html HTML structure (nuevo UI) ──────────────────────────────
+    rpf_prop = session.get(f"{BASE}/cliente/{cid19p}")
+    check("perfil.html (propietario) carga 200", rpf_prop.status_code == 200, str(rpf_prop.status_code))
+    check("perfil.html tiene #buscar-propiedad-cli",
+          'id="buscar-propiedad-cli"' in rpf_prop.text, "input de búsqueda no encontrado")
+    check("perfil.html tiene #buscar-prop-cli-resultados",
+          'id="buscar-prop-cli-resultados"' in rpf_prop.text, "div resultados no encontrado")
+    check("perfil.html NO usa query legacy ?propietario=",
+          '?propietario=' not in rpf_prop.text, "sigue usando query por nombre")
+    check("perfil.html llama desasignarPropiedad",
+          'desasignarPropiedad' in rpf_prop.text, "función de desasignación no encontrada")
+
+    rpf_int = session.get(f"{BASE}/cliente/{cid19i}")
+    check("perfil.html (interesado) carga 200", rpf_int.status_code == 200, str(rpf_int.status_code))
+    check("perfil.html interesado tiene búsqueda",
+          'id="buscar-propiedad-cli"' in rpf_int.text, "input no encontrado para interesado")
+
+    # ── 3. Round-trip: asignar propietario ────────────────────────────────────
+    r_asgn = session.post(f"{BASE}/api/propiedades/{pid19}/propietarios/{cid19p}",
+                          headers={"X-CSRFToken": real_csrf})
+    check("POST asignar propietario 200", r_asgn.status_code == 200, str(r_asgn.status_code))
+    r_cli = session.get(f"{BASE}/api/clientes/{cid19p}")
+    pp = r_cli.json().get("propiedades_propietario", [])
+    check("cliente ve propiedad asignada (propietario)",
+          any(p["id"] == pid19 for p in pp), str(pp))
+    check("propiedad tiene codigo en lista del cliente",
+          any(p.get("codigo") == "F19-TEST" for p in pp), str(pp))
+
+    # ── 4. Round-trip: asignar interesado ─────────────────────────────────────
+    r_asgn_i = session.post(f"{BASE}/api/propiedades/{pid19}/interesados/{cid19i}",
+                            headers={"X-CSRFToken": real_csrf})
+    check("POST asignar interesado 200", r_asgn_i.status_code == 200, str(r_asgn_i.status_code))
+    r_cli_i = session.get(f"{BASE}/api/clientes/{cid19i}")
+    pi = r_cli_i.json().get("propiedades_interesado", [])
+    check("cliente ve propiedad asignada (interesado)",
+          any(p["id"] == pid19 for p in pi), str(pi))
+
+    # ── 5. Persistencia: propiedad ve ambos clientes ──────────────────────────
+    r_prop = session.get(f"{BASE}/api/propiedades/{pid19}")
+    propietarios_ids = r_prop.json().get("propietarios_ids", [])
+    interesados_ids  = r_prop.json().get("interesados_ids", [])
+    check("propiedad ve al propietario asignado", cid19p in propietarios_ids, str(propietarios_ids))
+    check("propiedad ve al interesado asignado", cid19i in interesados_ids, str(interesados_ids))
+
+    # ── 6. Desasignar propietario ─────────────────────────────────────────────
+    session.delete(f"{BASE}/api/propiedades/{pid19}/propietarios/{cid19p}",
+                   headers={"X-CSRFToken": real_csrf})
+    r_after = session.get(f"{BASE}/api/clientes/{cid19p}")
+    pp_after = r_after.json().get("propiedades_propietario", [])
+    check("propietario desasignado — ya no en lista",
+          not any(p["id"] == pid19 for p in pp_after), str(pp_after))
+
+    # ── 7. Desasignar interesado ──────────────────────────────────────────────
+    session.delete(f"{BASE}/api/propiedades/{pid19}/interesados/{cid19i}",
+                   headers={"X-CSRFToken": real_csrf})
+    r_after_i = session.get(f"{BASE}/api/clientes/{cid19i}")
+    pi_after = r_after_i.json().get("propiedades_interesado", [])
+    check("interesado desasignado — ya no en lista",
+          not any(p["id"] == pid19 for p in pi_after), str(pi_after))
+
+    # ── Cleanup ───────────────────────────────────────────────────────────────
+    session.delete(f"{BASE}/api/propiedades/{pid19}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/clientes/{cid19p}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/clientes/{cid19i}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)

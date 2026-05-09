@@ -58,6 +58,9 @@ body {
 }
 .btn:hover  { opacity: 0.88; transform: translateY(-1px); }
 .btn:active { transform: translateY(0); }
+.btn:focus:not(:focus-visible),
+.btn-action:focus:not(:focus-visible),
+button:focus:not(:focus-visible) { outline: none; }
 .btn-green  { background: #16a34a; color: white; }
 .btn-blue   { background: #2563eb; color: white; }
 .btn-print  { background: #0369a1; color: white; }
