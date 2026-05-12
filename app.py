@@ -408,6 +408,27 @@ def add_propiedad():
     db.session.commit()
     return jsonify(nueva.as_dict()), 201
 
+@app.route('/api/propiedades/bulk-estado', methods=['PATCH'])
+@api_login_required
+def bulk_estado_propiedades():
+    data   = request.get_json()
+    ids    = data.get('ids', [])
+    estado = data.get('estado', '')
+    if not ids or not estado:
+        return jsonify({'error': 'ids y estado requeridos'}), 400
+    if estado not in {'disponible', 'reservada', 'vendida', 'rentada', 'cerrada'}:
+        return jsonify({'error': 'estado inválido'}), 400
+    now   = datetime.utcnow()
+    props = Propiedad.query.filter(
+        Propiedad.id.in_(ids), Propiedad.deleted_at.is_(None)
+    ).all()
+    for p in props:
+        if p.estado != estado:
+            p.estado       = estado
+            p.fecha_estado = now
+    db.session.commit()
+    return jsonify({'updated': len(props)})
+
 @app.route('/api/propiedades/archivados', methods=['GET'])
 @api_login_required
 def get_propiedades_archivadas():
@@ -743,6 +764,39 @@ def marcar_leida(id):
     c.leida = True
     db.session.commit()
     return jsonify({"message": "Marcada como leída"})
+
+@app.route('/api/consultas/<int:id>/responder', methods=['POST'])
+@api_login_required
+def responder_consulta(id):
+    c = db.session.get(Consulta, id)
+    if not c:
+        return jsonify({'error': 'Consulta no encontrada'}), 404
+    if not c.email:
+        return jsonify({'error': 'Esta consulta no tiene email'}), 400
+    data   = request.get_json()
+    asunto = (data.get('asunto') or '').strip()
+    cuerpo = (data.get('cuerpo') or '').strip()
+    if not asunto or not cuerpo:
+        return jsonify({'error': 'Asunto y mensaje requeridos'}), 400
+    smtp_host = app.config.get('MAIL_SMTP', '')
+    smtp_port = app.config.get('MAIL_PORT', 587)
+    smtp_user = app.config.get('MAIL_USER', '')
+    smtp_pass = app.config.get('MAIL_PASS', '')
+    if not all([smtp_host, smtp_user, smtp_pass]):
+        return jsonify({'error': 'Email no configurado en el servidor'}), 503
+    msg            = MIMEText(cuerpo, 'plain', 'utf-8')
+    msg['Subject'] = asunto
+    msg['From']    = smtp_user
+    msg['To']      = c.email
+    try:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP(smtp_host, smtp_port) as srv:
+            srv.starttls(context=ctx)
+            srv.login(smtp_user, smtp_pass)
+            srv.send_message(msg)
+        return jsonify({'message': 'Respuesta enviada'})
+    except Exception as e:
+        return jsonify({'error': f'Error al enviar: {e}'}), 500
 
 @app.route('/api/consultas/<int:id>', methods=['DELETE'])
 @api_login_required

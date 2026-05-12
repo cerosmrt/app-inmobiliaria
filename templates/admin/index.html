@@ -44,6 +44,25 @@
     .stat-muted { border-top-color: #94a3b8; }
     .stat-muted .stat-val { color: #94a3b8; }
 
+    /* ── Bulk action toolbar ── */
+    .bulk-toolbar {
+        display: none; position: fixed; bottom: 0; left: var(--sb-width); right: 0; z-index: 60;
+        background: var(--dark); color: white; padding: 11px 24px;
+        align-items: center; gap: 12px; box-shadow: 0 -4px 24px rgba(0,0,0,0.28);
+        border-top: 2px solid var(--red);
+    }
+    .bulk-toolbar select {
+        font-size: 13px; padding: 5px 10px; border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+        color: white; font-family: inherit;
+    }
+    .bulk-toolbar select option { background: #1e293b; color: white; }
+    #bulk-count { font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+    /* ── Checkbox column ── */
+    #tablaPropiedades th:first-child,
+    #tablaPropiedades td:first-child { width: 36px; text-align: center; padding: 0 8px; }
+
     /* ── Inline assignment list ── */
     .disp-list { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: white; }
     .disp-list::-webkit-scrollbar { width: 5px; }
@@ -152,6 +171,7 @@
         <div class="table-wrap">
             <table id="tablaPropiedades">
                 <thead><tr>
+                    <th><input type="checkbox" id="chk-all-props" onchange="toggleSelectAll(this.checked)" title="Seleccionar todos"></th>
                     <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">Código <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Ubicación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="tipo"         onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
@@ -182,6 +202,21 @@
             <p style="color:var(--muted);padding:8px 0">Seleccioná qué querés ver arriba.</p>
         </div>
     </div>
+</div>
+
+<!-- Bulk action toolbar -->
+<div id="bulk-toolbar" class="bulk-toolbar">
+    <span id="bulk-count">0 seleccionadas</span>
+    <select id="bulk-estado">
+        <option value="">Cambiar estado a…</option>
+        <option value="disponible">Disponible</option>
+        <option value="reservada">Reservada</option>
+        <option value="vendida">Vendida</option>
+        <option value="rentada">Rentada</option>
+        <option value="cerrada">Cerrada</option>
+    </select>
+    <button class="btn btn-green" style="padding:5px 16px;font-size:13px" onclick="aplicarBulkEstado()">Aplicar</button>
+    <button class="btn btn-gray"  style="padding:5px 14px;font-size:13px;margin-left:auto" onclick="deseleccionarTodo()">✕ Deseleccionar</button>
 </div>
 
 <!-- Modal: compradores compatibles -->
@@ -256,6 +291,50 @@
     let sortClientes    = { field: null, dir: 1 };
     let sortPropiedades = { field: null, dir: 1 };
     let notasPropiedadId = null;
+    const selectedPropIds = new Set();
+
+    // ── BULK SELECTION ────────────────────────────────────────────────────────
+    function toggleSelectProp(id, checked) {
+        checked ? selectedPropIds.add(id) : selectedPropIds.delete(id);
+        actualizarBulkToolbar();
+    }
+    function toggleSelectAll(checked) {
+        document.querySelectorAll('#tablaPropiedades .chk-prop').forEach(function(chk) {
+            chk.checked = checked;
+            checked ? selectedPropIds.add(parseInt(chk.value)) : selectedPropIds.delete(parseInt(chk.value));
+        });
+        actualizarBulkToolbar();
+    }
+    function actualizarBulkToolbar() {
+        const bar = document.getElementById('bulk-toolbar');
+        const n = selectedPropIds.size;
+        bar.style.display = n > 0 ? 'flex' : 'none';
+        document.getElementById('bulk-count').textContent = n + ' seleccionada' + (n !== 1 ? 's' : '');
+    }
+    function deseleccionarTodo() {
+        selectedPropIds.clear();
+        document.querySelectorAll('#tablaPropiedades .chk-prop').forEach(function(c) { c.checked = false; });
+        var chkAll = document.getElementById('chk-all-props');
+        if (chkAll) chkAll.checked = false;
+        actualizarBulkToolbar();
+    }
+    function aplicarBulkEstado() {
+        var estado = document.getElementById('bulk-estado').value;
+        if (!estado) { toast('Seleccioná un estado', 'error'); return; }
+        var ids = Array.from(selectedPropIds);
+        fetch('/api/propiedades/bulk-estado', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: ids, estado: estado })
+        }).then(function(r) { return r.json(); })
+          .then(function(d) {
+              toast(d.updated + ' propiedad' + (d.updated !== 1 ? 'es' : '') + ' actualizadas', 'success');
+              deseleccionarTodo();
+              document.getElementById('bulk-estado').value = '';
+              cargarPropiedades();
+              cargarStats();
+          }).catch(function() { toast('Error al actualizar', 'error'); });
+    }
 
     // ── URL filter persistence ─────────────────────────────────────────────────
     function guardarFiltrosEnURL() {
@@ -610,6 +689,12 @@
 
         const tbody = document.querySelector('#tablaPropiedades tbody');
         tbody.innerHTML = '';
+        // Reset selection state when re-rendering
+        selectedPropIds.clear();
+        actualizarBulkToolbar();
+        var chkAll = document.getElementById('chk-all-props');
+        if (chkAll) chkAll.checked = false;
+
         filtradas.forEach(function(p) {
             const row = document.createElement('tr');
             const hasNotes = p.descripcion && p.descripcion.trim().length > 0;
@@ -619,6 +704,7 @@
                 return '<a href="/cliente/' + c.id + '">' + esc(c.nombre + ' ' + c.apellido) + '</a>';
             }).join(', ') || (p.propietario_id ? '<a href="/cliente/' + p.propietario_id + '">' + esc(p.propietario || '') + '</a>' : '—');
             row.innerHTML =
+                '<td><input type="checkbox" class="chk-prop" value="' + p.id + '" onclick="event.stopPropagation()" onchange="toggleSelectProp(' + p.id + ', this.checked)"></td>' +
                 '<td class="editable-text" data-field="codigo" data-id="' + p.id + '" style="font-size:11px;color:var(--muted);font-weight:700">' + esc(p.codigo || '') + '</td>' +
                 '<td>' +
                     '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + '</a>' +

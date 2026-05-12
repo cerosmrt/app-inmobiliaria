@@ -29,6 +29,17 @@
     .empty { text-align: center; padding: 40px; color: var(--muted); }
     .modal-box { max-width: 560px; }
     .modal-meta span { margin-right: 16px; }
+    .reply-group { margin-bottom: 13px; }
+    .reply-group label { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 5px; }
+    .reply-group input, .reply-group textarea {
+        width: 100%; padding: 8px 11px; border: 1.5px solid var(--border);
+        border-radius: 7px; font-size: 13.5px; font-family: inherit; color: var(--text);
+        outline: none; transition: border-color var(--tx); background: white;
+    }
+    .reply-group input:focus, .reply-group textarea:focus { border-color: var(--red); }
+    .reply-group textarea { resize: vertical; min-height: 130px; }
+    .btn-responder { font-size: 12px; padding: 4px 10px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; font-family: inherit; }
+    .btn-responder:hover { background: #1d4ed8; }
 </style>
 {% endblock %}
 
@@ -60,6 +71,32 @@
                 <tr><td colspan="6" class="empty">Cargando...</td></tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal responder -->
+<div id="modal-reply" class="modal-overlay">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-header">
+            <h3>Responder consulta</h3>
+            <button class="modal-close" onclick="document.getElementById('modal-reply').classList.remove('active')">&#x2715;</button>
+        </div>
+        <div style="margin-bottom:14px;font-size:13px;color:var(--muted)">
+            Para: <strong id="reply-email-label"></strong>
+        </div>
+        <div class="reply-group">
+            <label>Asunto</label>
+            <input type="text" id="reply-asunto">
+        </div>
+        <div class="reply-group">
+            <label>Mensaje</label>
+            <textarea id="reply-cuerpo"></textarea>
+        </div>
+        <div id="reply-error" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none"></div>
+        <div class="modal-footer">
+            <button class="btn btn-gray" onclick="document.getElementById('modal-reply').classList.remove('active')">Cancelar</button>
+            <button class="btn btn-green" id="btn-enviar-reply" onclick="enviarRespuesta()">Enviar respuesta</button>
+        </div>
     </div>
 </div>
 
@@ -139,6 +176,7 @@
                 '<td style="font-size:12px;white-space:nowrap">' + esc(c.fecha) + '</td>' +
                 '<td>' +
                     '<button class="btn-action btn-expand" onclick="verMensaje(' + c.id + ')">Ver</button>' +
+                    (c.email ? '<button class="btn-responder" onclick="responder(' + c.id + ')">&#x2709; Responder</button> ' : '') +
                     (!c.leida ? '<button class="btn-action btn-leer" onclick="marcarLeida(' + c.id + ')">&#x2713; Le&iacute;da</button>' : '') +
                     '<button class="btn-action btn-delete" onclick="eliminar(' + c.id + ')">&#x2715;</button>' +
                 '</td>' +
@@ -190,6 +228,57 @@
         if (noLeidas > 0) { badge.textContent = noLeidas + ' sin leer'; badge.style.display = 'inline'; }
         else badge.style.display = 'none';
     }
+
+    let _replyId = null;
+
+    function responder(id) {
+        const c = consultas.find(function(x) { return x.id === id; });
+        if (!c || !c.email) return;
+        _replyId = id;
+        document.getElementById('reply-email-label').textContent = c.email;
+        const propRef = c.propiedad_direccion ? ' sobre ' + c.propiedad_direccion : '';
+        document.getElementById('reply-asunto').value = 'Re: su consulta' + propRef;
+        document.getElementById('reply-cuerpo').value =
+            'Hola ' + c.nombre + ',\n\nGracias por contactarnos. ';
+        document.getElementById('reply-error').style.display = 'none';
+        document.getElementById('btn-enviar-reply').disabled = false;
+        document.getElementById('btn-enviar-reply').textContent = 'Enviar respuesta';
+        document.getElementById('modal-reply').classList.add('active');
+        setTimeout(function() { document.getElementById('reply-cuerpo').focus(); }, 80);
+    }
+
+    function enviarRespuesta() {
+        const asunto = document.getElementById('reply-asunto').value.trim();
+        const cuerpo = document.getElementById('reply-cuerpo').value.trim();
+        const errEl  = document.getElementById('reply-error');
+        if (!asunto || !cuerpo) {
+            errEl.textContent = 'Completá asunto y mensaje.';
+            errEl.style.display = 'block';
+            return;
+        }
+        const btn = document.getElementById('btn-enviar-reply');
+        btn.disabled = true;
+        btn.textContent = 'Enviando…';
+        fetch('/api/consultas/' + _replyId + '/responder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ asunto: asunto, cuerpo: cuerpo })
+        }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+          .then(function(res) {
+              if (!res.ok) throw new Error(res.d.error || 'Error al enviar');
+              document.getElementById('modal-reply').classList.remove('active');
+              toast('Respuesta enviada a ' + document.getElementById('reply-email-label').textContent, 'success');
+          }).catch(function(e) {
+              errEl.textContent = e.message;
+              errEl.style.display = 'block';
+              btn.disabled = false;
+              btn.textContent = 'Enviar respuesta';
+          });
+    }
+
+    document.getElementById('modal-reply').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('active');
+    });
 
     document.getElementById('modal-msg').addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('active');
