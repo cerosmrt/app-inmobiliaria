@@ -52,6 +52,11 @@
         display: inline-block; line-height: 1.2;
     }
     .btn-map:hover { background: #bbf7d0; text-decoration: none; }
+
+    .stat-reservada { border-top-color: #a16207; }
+    .stat-reservada .stat-val { color: #a16207; }
+    .stat-muted { border-top-color: #94a3b8; }
+    .stat-muted .stat-val { color: #94a3b8; }
 </style>
 {% endblock %}
 
@@ -167,6 +172,9 @@
         <div class="toolbar no-print">
             <button class="btn btn-gray" onclick="verArchivados('propiedades')">Propiedades archivadas</button>
             <button class="btn btn-gray" onclick="verArchivados('clientes')">Clientes archivados</button>
+        </div>
+        <div id="archivados-filter" style="display:none;margin:8px 0" class="no-print">
+            <input id="archivados-search" type="text" placeholder="Buscar en archivados..." oninput="filtrarArchivados()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:260px;font-size:0.9rem">
         </div>
         <div id="archivados-content">
             <p style="color:var(--muted);padding:8px 0">Seleccioná qué querés ver arriba.</p>
@@ -793,8 +801,10 @@
             .then(function(s) {
                 var defs = [
                     { label: 'Disponibles', val: s.disponibles,         cls: 'green' },
+                    { label: 'Reservadas',  val: s.reservadas,          cls: 'reservada' },
                     { label: 'Vendidas',    val: s.vendidas,            cls: 'red' },
                     { label: 'Rentadas',    val: s.rentadas,            cls: 'orange' },
+                    { label: 'Cerradas',    val: s.cerradas,            cls: 'muted' },
                     { label: 'Publicadas',  val: s.publicadas,          cls: 'blue' },
                     { label: 'Clientes',    val: s.clientes,            cls: 'navy' },
                     { label: 'Sin leer',    val: s.consultas_no_leidas, cls: 'red' },
@@ -809,13 +819,43 @@
     }
 
     // ── ARCHIVADOS ────────────────────────────────────────────────────────────
+    var _archivadosTipo = null;
+    var _archivadosData = [];
+
     function verArchivados(tipo) {
+        _archivadosTipo = tipo;
+        _archivadosData = [];
         var contenido = document.getElementById('archivados-content');
+        var filtroEl = document.getElementById('archivados-filter');
+        var searchEl = document.getElementById('archivados-search');
         contenido.innerHTML = '<p style="color:var(--muted);padding:8px 0">Cargando...</p>';
+        filtroEl.style.display = 'none';
+        searchEl.value = '';
         fetch('/api/' + tipo + '/archivados')
             .then(function(r) { return r.json(); })
-            .then(function(data) { renderArchivados(tipo, data); })
+            .then(function(data) {
+                _archivadosData = data;
+                filtroEl.style.display = data.length ? '' : 'none';
+                renderArchivados(tipo, data);
+            })
             .catch(function() { contenido.innerHTML = '<p style="color:#dc2626">Error al cargar.</p>'; });
+    }
+
+    function filtrarArchivados() {
+        var q = document.getElementById('archivados-search').value.toLowerCase().trim();
+        if (!q) { renderArchivados(_archivadosTipo, _archivadosData); return; }
+        var filtered = _archivadosData.filter(function(item) {
+            if (_archivadosTipo === 'propiedades') {
+                return (item.direccion || '').toLowerCase().includes(q) ||
+                       (item.tipo || '').toLowerCase().includes(q) ||
+                       (item.estado || '').toLowerCase().includes(q);
+            } else {
+                return ((item.nombre || '') + ' ' + (item.apellido || '')).toLowerCase().includes(q) ||
+                       (item.telefono || '').toLowerCase().includes(q) ||
+                       (item.tipo || '').toLowerCase().includes(q);
+            }
+        });
+        renderArchivados(_archivadosTipo, filtered);
     }
 
     function renderArchivados(tipo, data) {

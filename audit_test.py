@@ -1121,6 +1121,125 @@ else:
                    headers={"X-CSRFToken": real_csrf})
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 23: STATS BAR COMPLETA + ARCHIVADOS FILTER ===")
+
+# ── 1. API /api/stats devuelve todos los 8 campos ────────────────────────────
+r_stats = session.get(f"{BASE}/api/stats")
+check("GET /api/stats 200", r_stats.status_code == 200, str(r_stats.status_code))
+if r_stats.ok:
+    s23 = r_stats.json()
+    for campo in ["disponibles", "reservadas", "vendidas", "rentadas", "cerradas",
+                  "publicadas", "clientes", "consultas_no_leidas"]:
+        check(f"api/stats incluye campo '{campo}'", campo in s23,
+              f"campos presentes: {list(s23.keys())}")
+    check("api/stats reservadas es int >= 0",
+          isinstance(s23.get("reservadas"), int) and s23.get("reservadas", -1) >= 0,
+          str(s23.get("reservadas")))
+    check("api/stats cerradas es int >= 0",
+          isinstance(s23.get("cerradas"), int) and s23.get("cerradas", -1) >= 0,
+          str(s23.get("cerradas")))
+
+# ── 2. HTML admin: stats bar incluye reservadas y cerradas ──────────────────
+r_admin23 = session.get(f"{BASE}/admin")
+check("admin index carga 200", r_admin23.status_code == 200, str(r_admin23.status_code))
+if r_admin23.ok:
+    check("admin HTML tiene s.reservadas en cargarStats",
+          "s.reservadas" in r_admin23.text, "s.reservadas no encontrado en JS inline")
+    check("admin HTML tiene s.cerradas en cargarStats",
+          "s.cerradas" in r_admin23.text, "s.cerradas no encontrado en JS inline")
+    check("admin HTML tiene cls stat-reservada",
+          "stat-reservada" in r_admin23.text, "clase stat-reservada no encontrada")
+    check("admin HTML tiene cls stat-muted (cerradas)",
+          "stat-muted" in r_admin23.text or "'muted'" in r_admin23.text,
+          "clase stat-muted no encontrada")
+    check("admin HTML tiene label Reservadas en stats",
+          "'Reservadas'" in r_admin23.text or "\"Reservadas\"" in r_admin23.text,
+          "label Reservadas no encontrado")
+    check("admin HTML tiene label Cerradas en stats",
+          "'Cerradas'" in r_admin23.text or "\"Cerradas\"" in r_admin23.text,
+          "label Cerradas no encontrado")
+
+# ── 3. Stats contadores funcionan con datos reales ───────────────────────────
+r23res = session.post(f"{BASE}/api/propiedades",
+                      json={"codigo": "F23-RES", "direccion": "Fase23 Reservada",
+                            "tipo": "casa", "operacion": "venta", "estado": "reservada"},
+                      headers={"X-CSRFToken": real_csrf})
+pid23res = r23res.json().get("id") if r23res.ok else None
+
+r23cer = session.post(f"{BASE}/api/propiedades",
+                      json={"codigo": "F23-CER", "direccion": "Fase23 Cerrada",
+                            "tipo": "casa", "operacion": "venta", "estado": "cerrada"},
+                      headers={"X-CSRFToken": real_csrf})
+pid23cer = r23cer.json().get("id") if r23cer.ok else None
+
+if pid23res and pid23cer:
+    r_s23b = session.get(f"{BASE}/api/stats")
+    s23b = r_s23b.json()
+    check("stats.reservadas >= 1 con propiedad reservada creada",
+          s23b.get("reservadas", 0) >= 1, str(s23b.get("reservadas")))
+    check("stats.cerradas >= 1 con propiedad cerrada creada",
+          s23b.get("cerradas", 0) >= 1, str(s23b.get("cerradas")))
+    session.delete(f"{BASE}/api/propiedades/{pid23res}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+    session.delete(f"{BASE}/api/propiedades/{pid23cer}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+else:
+    fail("FASE 23 stats contadores setup", f"pid_res={pid23res} pid_cer={pid23cer}")
+
+# ── 4. Archivados tab tiene filtro de búsqueda en HTML ───────────────────────
+if r_admin23.ok:
+    check("tab-archivados tiene #archivados-search input",
+          'id="archivados-search"' in r_admin23.text, "input no encontrado")
+    check("tab-archivados tiene #archivados-filter div",
+          'id="archivados-filter"' in r_admin23.text, "div filter no encontrado")
+    check("admin HTML tiene función filtrarArchivados",
+          "filtrarArchivados" in r_admin23.text, "función no encontrada")
+    check("admin HTML tiene _archivadosData variable (cache local)",
+          "_archivadosData" in r_admin23.text, "_archivadosData no encontrado")
+    check("archivados-filter oculto por defecto (display:none)",
+          'id="archivados-filter" style="display:none"' in r_admin23.text or
+          "archivados-filter\" style=\"display:none" in r_admin23.text,
+          "filter no inicia oculto")
+
+# ── 5. Round-trip: archivar propiedad y verificar que aparece en archivados ──
+r23arc = session.post(f"{BASE}/api/propiedades",
+                      json={"codigo": "F23-ARC", "direccion": "Fase23 Archivar",
+                            "tipo": "departamento", "operacion": "alquiler", "estado": "disponible"},
+                      headers={"X-CSRFToken": real_csrf})
+pid23arc = r23arc.json().get("id") if r23arc.ok else None
+
+if pid23arc:
+    r_del = session.delete(f"{BASE}/api/propiedades/{pid23arc}",
+                           headers={"X-CSRFToken": real_csrf})
+    check("DELETE (archivar) propiedad 200", r_del.status_code == 200, str(r_del.status_code))
+
+    r_arch = session.get(f"{BASE}/api/propiedades/archivados")
+    check("GET /api/propiedades/archivados 200",
+          r_arch.status_code == 200, str(r_arch.status_code))
+    ids_arch = [p["id"] for p in r_arch.json()]
+    check("Propiedad archivada aparece en /api/propiedades/archivados",
+          pid23arc in ids_arch, str(ids_arch[:5]))
+
+    r_active = session.get(f"{BASE}/api/propiedades")
+    ids_active = [p["id"] for p in r_active.json()]
+    check("Propiedad archivada NO aparece en listado activo",
+          pid23arc not in ids_active, "sigue apareciendo en activos")
+
+    r_rest = session.put(f"{BASE}/api/propiedades/{pid23arc}/restore",
+                         headers={"X-CSRFToken": real_csrf})
+    check("PUT restore 200", r_rest.status_code == 200, str(r_rest.status_code))
+
+    r_active2 = session.get(f"{BASE}/api/propiedades")
+    ids_active2 = [p["id"] for p in r_active2.json()]
+    check("Propiedad restaurada vuelve al listado activo",
+          pid23arc in ids_active2, str(ids_active2[:5]))
+
+    session.delete(f"{BASE}/api/propiedades/{pid23arc}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+else:
+    fail("FASE 23 archivar setup", f"pid={pid23arc}")
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)
