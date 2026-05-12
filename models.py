@@ -29,6 +29,7 @@ class Propiedad(db.Model):
     operacion = db.Column(db.String, nullable=True)  # venta, alquiler
     estado = db.Column(db.String)       # disponible, reservada, vendida, rentada, cerrada
     publicada = db.Column(db.Boolean, default=False)
+    destacada = db.Column(db.Boolean, default=False)
     fotos = db.Column(db.String, nullable=True)
     descripcion = db.Column(db.Text, nullable=True)
     fecha_estado = db.Column(db.DateTime, nullable=True)
@@ -58,6 +59,7 @@ class Propiedad(db.Model):
             'operacion': self.operacion or '',
             'estado': self.estado,
             'publicada': self.publicada,
+            'destacada': self.destacada,
             'fotos': self._fotos_list(),
             'descripcion': self.descripcion or '',
             'fecha_estado': self.fecha_estado.strftime('%d/%m/%Y') if self.fecha_estado else None,

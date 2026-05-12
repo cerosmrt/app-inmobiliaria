@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roberto Moret Inmobiliaria — Propiedades en venta y alquiler</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <meta name="description" content="Encontrá propiedades en venta y alquiler en Buenos Aires. Roberto Moret Inmobiliaria, más de 30 años de experiencia acompañándote en cada paso.">
     <meta property="og:title" content="Roberto Moret Inmobiliaria">
     <meta property="og:description" content="Propiedades en venta y alquiler en Buenos Aires. Más de 30 años de experiencia.">
@@ -298,9 +299,10 @@
             font-size: 10px; font-weight: 800; text-transform: uppercase;
             letter-spacing: 0.6px; padding: 4px 10px; border-radius: 4px;
         }
-        .badge-venta    { background: var(--red); color: white; }
-        .badge-alquiler { background: var(--dark); color: white; }
-        .badge-tipo     { background: rgba(255,255,255,0.92); color: #334155; }
+        .badge-venta      { background: var(--red); color: white; }
+        .badge-alquiler   { background: var(--dark); color: white; }
+        .badge-tipo       { background: rgba(255,255,255,0.92); color: #334155; }
+        .badge-destacada  { background: #f59e0b; color: #1c1917; }
 
         /* Card body */
         .card-body { padding: 18px 18px 12px; flex: 1; display: flex; flex-direction: column; }
@@ -746,6 +748,7 @@
             <div class="card-photo">
                 ${photoHtml}
                 <div class="card-badges">
+                    ${p.destacada  ? `<span class="badge badge-destacada">★ Destacada</span>`         : ''}
                     ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
                     ${p.tipo      ? `<span class="badge badge-tipo">${p.tipo}</span>`                 : ''}
                 </div>

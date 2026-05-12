@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Propiedad — Moret Inmobiliaria</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <meta name="description" content="Consultá esta propiedad en Roberto Moret Inmobiliaria. Más de 30 años de experiencia en el mercado inmobiliario de Buenos Aires.">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="es_AR">
@@ -304,6 +305,27 @@
         }
         .sim-btn:hover { background: var(--red); }
 
+        /* ── PRINT ── */
+        .print-only { display: none; }
+        @media print {
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { position: static; box-shadow: none; border-bottom: 2px solid #C41230; }
+            .header-inner { height: auto; padding: 14px 20px; }
+            #btn-share, #btn-print, .back-btn,
+            .gallery-nav, .gallery-expand, .gallery-thumbs, .gallery-count,
+            .lightbox, #similares-section,
+            .btn-wa, .btn-tel, .divider, form, .form-success, .form-error,
+            .breadcrumb { display: none !important; }
+            .container { padding: 16px; }
+            .layout { grid-template-columns: 1fr; gap: 16px; }
+            .details { order: -1; }
+            .detail-card { box-shadow: none; border: 1px solid #e2e8f0; break-inside: avoid; }
+            .gallery { break-inside: avoid; }
+            .gallery-main { aspect-ratio: 16/9; }
+            .contact-card h3 { display: none; }
+            .print-only { display: block; font-size: 12px; color: #475569; margin-top: 8px; }
+        }
+
         @media (max-width: 900px) {
             .layout { grid-template-columns: 1fr; }
             .details { order: -1; }
@@ -329,6 +351,10 @@
             </div>
         </a>
         <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn-share" id="btn-print" onclick="window.print()" style="display:none">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4"/></svg>
+                Imprimir
+            </button>
             <button class="btn-share" onclick="compartir()" id="btn-share" style="display:none">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                 Compartir
@@ -430,8 +456,9 @@
         const backHref = refTab ? `/?tab=${refTab}` : '/';
         document.getElementById('back-btn').href = backHref;
 
-        // Show share button
+        // Show header action buttons
         document.getElementById('btn-share').style.display = 'flex';
+        document.getElementById('btn-print').style.display = 'flex';
 
         const gal = renderGallery();
         const msgDefecto = `Hola, me interesa la propiedad en ${p.direccion}${p.barrio ? ' (' + p.barrio + ')' : ''}.`;
@@ -473,6 +500,7 @@
                         📞 ${TELEFONO}
                     </a>
                 </div>
+                <div class="print-only">📞 ${TELEFONO} &nbsp;·&nbsp; Roberto Moret Inmobiliaria</div>
                 <div class="divider">o enviá un mensaje</div>
                 <form id="form-consulta" onsubmit="enviarConsulta(event, ${p.id})">
                     <div class="form-error" id="form-error"></div>

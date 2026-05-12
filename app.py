@@ -259,16 +259,17 @@ def api_public_propiedades():
     if precio_max:
         try:
             pmax = float(precio_max)
-            query = query.filter(
-                db.or_(
-                    Propiedad.precio_a_consultar == True,
-                    Propiedad.rango_min <= pmax
-                )
-            )
+            query = query.filter(db.or_(
+                Propiedad.precio_a_consultar == True,
+                Propiedad.es_usd == False,
+                Propiedad.rango_min <= pmax
+            ))
         except ValueError:
             pass
 
-    return jsonify([p.as_dict() for p in query.order_by(Propiedad.id.desc()).all()])
+    return jsonify([p.as_dict() for p in query.order_by(
+        Propiedad.destacada.desc(), Propiedad.id.desc()
+    ).all()])
 
 @app.route('/api/public/propiedades/<int:id>')
 def api_public_propiedad(id):
@@ -396,6 +397,7 @@ def add_propiedad():
         operacion=data.get('operacion'),
         estado=data['estado'],
         publicada=data.get('publicada', False),
+        destacada=data.get('destacada', False),
         propietario_id=data.get('propietario_id')
     )
     if 'interesados_ids' in data:
@@ -438,6 +440,7 @@ def update_propiedad(id):
     p.tipo             = data.get('tipo', p.tipo)
     p.operacion        = data.get('operacion', p.operacion)
     p.publicada        = data.get('publicada', p.publicada)
+    p.destacada        = data.get('destacada', p.destacada)
     p.descripcion      = data.get('descripcion', p.descripcion)
     nuevo_estado = data.get('estado', p.estado)
     if nuevo_estado != p.estado:
