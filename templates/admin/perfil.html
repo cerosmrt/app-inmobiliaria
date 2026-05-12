@@ -2,12 +2,14 @@
 
 {% block title %}Perfil de Cliente{% endblock %}
 
-{% block header %}
-<header class="app-header" style="background:var(--navy);padding:12px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.25)">
-    <span style="font-size:24px">&#x1F3E0;</span>
-    <h1 id="header-nombre" style="margin:0;font-size:18px;font-weight:700;flex:1">Perfil de Cliente</h1>
-    <a href="/admin" class="back-link">&#x2190; Volver al panel</a>
-</header>
+{% block page_topbar %}
+<div class="page-topbar">
+    <span class="page-topbar-title">
+        <a href="/admin?tab=clientes" class="topbar-back">Clientes</a>
+        <span class="topbar-sep">›</span>
+        <span id="topbar-cliente-nombre">Perfil</span>
+    </span>
+</div>
 {% endblock %}
 
 {% block head %}
@@ -118,7 +120,9 @@
             })
             .then(function(data) {
                 _clienteData = data;
-                document.getElementById('header-nombre').textContent = data.nombre + ' ' + data.apellido;
+                var nombreCompleto = data.nombre + ' ' + data.apellido;
+                var tb = document.getElementById('topbar-cliente-nombre');
+                if (tb) tb.textContent = nombreCompleto;
                 var initials = ((data.nombre[0] || '') + (data.apellido[0] || '')).toUpperCase();
                 document.getElementById('cliente-info').innerHTML =
                     '<div class="avatar">' + esc(initials) + '</div>' +

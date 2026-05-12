@@ -2,14 +2,14 @@
 
 {% block title %}Propiedad{% endblock %}
 
-{% block header %}
-<header class="app-header">
-    <div class="header-brand">
-        <span class="moret">Moret</span>
-        <span class="sub">PANEL ADMIN</span>
-    </div>
-    <a href="/admin?tab=propiedades" class="back-link">&#x2190; Propiedades</a>
-</header>
+{% block page_topbar %}
+<div class="page-topbar">
+    <span class="page-topbar-title">
+        <a href="/admin?tab=propiedades" class="topbar-back">Propiedades</a>
+        <span class="topbar-sep">›</span>
+        <span id="topbar-prop-titulo">Propiedad</span>
+    </span>
+</div>
 {% endblock %}
 
 {% block head %}
@@ -233,7 +233,10 @@
 
     // ── Datos editables ───────────────────────────────────────────────────────
     function renderDatos() {
-        document.getElementById('prop-titulo').textContent = propData.direccion || '(Sin dirección)';
+        var titulo = propData.direccion || '(Sin dirección)';
+        document.getElementById('prop-titulo').textContent = titulo;
+        var tb = document.getElementById('topbar-prop-titulo');
+        if (tb) tb.textContent = titulo;
         document.getElementById('campos-grid').innerHTML = _CAMPOS.map(buildCampo).join('');
         attachCampoEvents();
     }

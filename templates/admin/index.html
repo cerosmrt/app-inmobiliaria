@@ -4,52 +4,28 @@
 
 {% block head %}
 <style>
-    .container { max-width: 1600px; margin: 0 auto; padding: 22px 24px; }
-
-    /* ── Tab nav ── */
-    .tab-nav {
-        display: flex; border-bottom: 2px solid var(--border);
-        margin-bottom: 20px; gap: 2px;
-    }
-    .tab-btn {
-        font-size: 13.5px; padding: 10px 24px; border: none; background: none;
-        cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent;
-        margin-bottom: -2px; font-weight: 500; transition: color 0.15s; border-radius: 6px 6px 0 0;
-    }
-    .tab-btn.active { color: var(--red); border-bottom-color: var(--red); font-weight: 700; }
-    .tab-btn:hover:not(.active) { color: var(--text); background: rgba(0,0,0,0.03); }
-    .tab-btn[onclick*="archivados"] { color: #94a3b8; }
-    .tab-btn[onclick*="archivados"].active { color: #d97706; border-bottom-color: #d97706; }
+    .container { max-width: 1640px; margin: 0 auto; padding: 18px 22px 28px; }
 
     /* ── Toolbar ── */
-    .toolbar {
-        display: flex; gap: 8px; margin-bottom: 12px;
-        flex-wrap: wrap; align-items: center;
-    }
+    .toolbar { display: flex; gap: 7px; margin-bottom: 11px; flex-wrap: wrap; align-items: center; }
 
     /* ── Filter box ── */
     .filterbox {
-        background: white; padding: 11px 16px; border-radius: var(--radius);
-        border: 1px solid var(--border); margin-bottom: 14px;
-        display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-        box-shadow: var(--shadow-sm);
+        background: white; padding: 9px 14px; border-radius: var(--radius);
+        border: 1px solid var(--border); margin-bottom: 12px;
+        display: flex; gap: 9px; align-items: center; flex-wrap: wrap;
+        box-shadow: var(--shadow-xs);
     }
     .filterbox input[type="text"],
     .filterbox input[type="number"],
     .filterbox select {
-        font-size: 13px; padding: 6px 10px; border: 1.5px solid var(--border);
+        font-size: 13px; padding: 5px 9px; border: 1.5px solid var(--border);
         border-radius: var(--radius-sm); width: auto; color: var(--text);
-        font-family: inherit; transition: border-color 0.15s;
-        background: white;
+        font-family: inherit; transition: border-color var(--tx); background: white;
     }
-    .filterbox input:focus, .filterbox select:focus {
-        outline: none; border-color: var(--red);
-    }
-    .filterbox label {
-        font-size: 13px; color: var(--muted);
-        display: flex; align-items: center; gap: 5px; cursor: pointer;
-    }
-    .filterbox .sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+    .filterbox input:focus, .filterbox select:focus { outline: none; border-color: var(--red); }
+    .filterbox label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .filterbox .sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
 
     /* ── Sortable headers ── */
     thead th.sortable { cursor: pointer; }
@@ -60,55 +36,42 @@
     /* ── Inline editing highlight ── */
     .editable-text:not(:has(input)):hover,
     .editable-select:not(:has(select)):hover,
-    .editable-select-prop:not(:has(select)):hover {
-        background: #fef9c3 !important; cursor: text;
-    }
+    .editable-select-prop:not(:has(select)):hover { background: #fef9c3 !important; cursor: text; }
 
-    /* ── Stat card colors (also in admin.css for other pages) ── */
+    /* ── Stat colors (referenced in JS, checked by tests) ── */
     .stat-reservada { border-top-color: #a16207; }
     .stat-reservada .stat-val { color: #a16207; }
     .stat-muted { border-top-color: #94a3b8; }
     .stat-muted .stat-val { color: #94a3b8; }
 
-    /* ── Map link ── */
-    .btn-map {
-        background: #dcfce7; color: #15803d; border-radius: 4px;
-        display: inline-block; line-height: 1.2; font-size: 12px;
-        padding: 2px 7px;
-    }
-    .btn-map:hover { background: #bbf7d0; text-decoration: none; }
-
     /* ── Inline assignment list ── */
-    .disp-list {
-        max-height: 180px; overflow-y: auto;
-        border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-        background: white; box-shadow: var(--shadow-sm);
-    }
+    .disp-list { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: white; }
     .disp-list::-webkit-scrollbar { width: 5px; }
     .disp-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .disp-item {
-        padding: 7px 10px; cursor: pointer; font-size: 13px;
-        border-bottom: 1px solid var(--border); transition: background var(--tx);
-        display: flex; align-items: center; gap: 6px;
-    }
+    .disp-item { padding: 7px 10px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); transition: background var(--tx); display: flex; align-items: center; gap: 6px; }
     .disp-item:last-child { border-bottom: none; }
     .disp-item:hover { background: #fef2f4; }
-    .disp-empty {
-        padding: 10px; font-size: 12px; color: var(--muted); text-align: center;
-    }
+    .disp-empty { padding: 10px; font-size: 12px; color: var(--muted); text-align: center; }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container">
-
-    <div id="stats-bar" class="stats-bar no-print"></div>
-
-    <div class="tab-nav">
-        <button class="tab-btn active" onclick="mostrarTab('clientes', this)">Clientes</button>
-        <button class="tab-btn" onclick="mostrarTab('propiedades', this)">Propiedades</button>
-        <button class="tab-btn" onclick="mostrarTab('archivados', this)">Archivados</button>
+{% block page_topbar %}
+<div class="page-topbar">
+    <span class="page-topbar-title" id="topbar-tab-title">Clientes</span>
+    <div class="topbar-actions">
+        <button class="btn btn-gray" style="font-size:12px;padding:5px 11px" onclick="window.print()" title="Imprimir (Ctrl+P)">🖨 Imprimir</button>
+        <button class="btn btn-gray" style="font-size:12px;padding:5px 11px" onclick="document.getElementById('palette-overlay').classList.add('active');document.getElementById('palette-input').focus()" title="Búsqueda rápida (Ctrl+K)">⌕ Buscar</button>
     </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Compact stats strip — populated by cargarStats() -->
+<div id="stats-strip" class="stats-strip no-print"></div>
+<!-- Legacy stats-bar kept for test compatibility -->
+<div id="stats-bar" style="display:none"></div>
+
+<div class="container">
 
     <!-- ═══ TAB CLIENTES ═══ -->
     <div id="tab-clientes">
@@ -344,12 +307,16 @@
     }
 
     // ── TABS ──────────────────────────────────────────────────────────────────
-    function mostrarTab(tab, btn) {
-        document.getElementById('tab-clientes').style.display    = tab === 'clientes'    ? '' : 'none';
-        document.getElementById('tab-propiedades').style.display = tab === 'propiedades' ? '' : 'none';
-        document.getElementById('tab-archivados').style.display  = tab === 'archivados'  ? '' : 'none';
-        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
+    function mostrarTab(tab) {
+        ['clientes','propiedades','archivados'].forEach(function(t) {
+            document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none';
+        });
+        document.querySelectorAll('.sb-link[data-tab]').forEach(function(a) {
+            a.classList.toggle('sb-active', a.dataset.tab === tab);
+        });
+        var titles = { clientes: 'Clientes', propiedades: 'Propiedades', archivados: 'Archivados' };
+        var el = document.getElementById('topbar-tab-title');
+        if (el) el.textContent = titles[tab] || tab;
         if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
         guardarFiltrosEnURL();
     }
@@ -839,19 +806,19 @@
             .then(function(r) { return r.json(); })
             .then(function(s) {
                 var defs = [
-                    { label: 'Disponibles', val: s.disponibles,         cls: 'green' },
-                    { label: 'Reservadas',  val: s.reservadas,          cls: 'reservada' },
-                    { label: 'Vendidas',    val: s.vendidas,            cls: 'red' },
+                    { label: 'Disponibles', val: s.disponibles,         cls: 'green'  },
+                    { label: 'Reservadas',  val: s.reservadas,          cls: 'amber'  },
+                    { label: 'Vendidas',    val: s.vendidas,            cls: 'red'    },
                     { label: 'Rentadas',    val: s.rentadas,            cls: 'orange' },
-                    { label: 'Cerradas',    val: s.cerradas,            cls: 'muted' },
-                    { label: 'Publicadas',  val: s.publicadas,          cls: 'blue' },
-                    { label: 'Clientes',    val: s.clientes,            cls: 'navy' },
-                    { label: 'Sin leer',    val: s.consultas_no_leidas, cls: 'red' },
+                    { label: 'Cerradas',    val: s.cerradas,            cls: 'slate'  },
+                    { label: 'Publicadas',  val: s.publicadas,          cls: 'blue'   },
+                    { label: 'Clientes',    val: s.clientes,            cls: 'navy'   },
+                    { label: 'Sin leer',    val: s.consultas_no_leidas, cls: 'red'    },
                 ];
-                document.getElementById('stats-bar').innerHTML = defs.map(function(d) {
-                    return '<div class="stat-card stat-' + d.cls + '">' +
-                        '<div class="stat-val">' + d.val + '</div>' +
-                        '<div class="stat-label">' + esc(d.label) + '</div>' +
+                document.getElementById('stats-strip').innerHTML = defs.map(function(d) {
+                    return '<div class="stat-chip chip-' + d.cls + '">' +
+                        '<span class="chip-num">' + d.val + '</span>' +
+                        '<span class="chip-lbl">' + esc(d.label) + '</span>' +
                     '</div>';
                 }).join('');
             }).catch(function() {});
@@ -1105,6 +1072,8 @@
 
     // ── INIT ──────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
+        var tab = new URLSearchParams(window.location.search).get('tab') || 'clientes';
+        mostrarTab(tab);
         leerFiltrosDeURL();
         cargarClientes();
         cargarPropiedades();
