@@ -241,11 +241,17 @@ def api_public_propiedades():
         query = query.filter(Propiedad.operacion == operacion)
     if ambientes:
         try:
-            query = query.filter(Propiedad.ambientes == int(ambientes))
+            if ambientes.endswith('+'):
+                query = query.filter(Propiedad.ambientes >= int(ambientes[:-1]))
+            else:
+                query = query.filter(Propiedad.ambientes == int(ambientes))
         except ValueError:
             pass
     if barrio:
-        query = query.filter(Propiedad.barrio.ilike(f'%{barrio}%'))
+        query = query.filter(db.or_(
+            Propiedad.barrio.ilike(f'%{barrio}%'),
+            Propiedad.direccion.ilike(f'%{barrio}%')
+        ))
     if precio_max:
         try:
             pmax = float(precio_max)

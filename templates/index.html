@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roberto Moret Inmobiliaria — Propiedades en venta y alquiler</title>
+    <meta name="description" content="Encontrá propiedades en venta y alquiler en Buenos Aires. Roberto Moret Inmobiliaria, más de 30 años de experiencia acompañándote en cada paso.">
+    <meta property="og:title" content="Roberto Moret Inmobiliaria">
+    <meta property="og:description" content="Propiedades en venta y alquiler en Buenos Aires. Más de 30 años de experiencia.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_AR">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -172,6 +177,19 @@
             padding: 9px 16px; cursor: pointer; transition: all var(--tx); white-space: nowrap;
         }
         .btn-limpiar:hover { border-color: #94a3b8; color: var(--text); }
+        /* Scroll-to-top */
+        .scroll-top {
+            position: fixed; bottom: 28px; right: 24px; z-index: 80;
+            width: 42px; height: 42px; border-radius: 50%;
+            background: var(--dark); color: white; border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+            opacity: 0; transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s, background var(--tx);
+            pointer-events: none;
+        }
+        .scroll-top.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+        .scroll-top:hover { background: var(--red); }
         .results-count {
             font-size: 12px; color: var(--muted); margin-left: auto;
             white-space: nowrap; font-weight: 500;
@@ -450,12 +468,12 @@
                 <div class="hero-stat-lbl">Años de experiencia</div>
             </div>
             <div class="hero-stat">
-                <div class="hero-stat-num">100%</div>
-                <div class="hero-stat-lbl">Comprometidos</div>
+                <div class="hero-stat-num" id="hero-stat-disponibles">—</div>
+                <div class="hero-stat-lbl">Propiedades disponibles</div>
             </div>
             <div class="hero-stat">
-                <div class="hero-stat-num">BsAs</div>
-                <div class="hero-stat-lbl">Zona de operación</div>
+                <div class="hero-stat-num" id="hero-stat-clientes">—</div>
+                <div class="hero-stat-lbl">Clientes atendidos</div>
             </div>
         </div>
     </div>
@@ -482,7 +500,14 @@
             <option value="1">1 ambiente</option>
             <option value="2">2 ambientes</option>
             <option value="3">3 ambientes</option>
-            <option value="4">4+ ambientes</option>
+            <option value="4+">4+ ambientes</option>
+        </select>
+        <select id="f-precio" onchange="buscar()">
+            <option value="">Precio máx.</option>
+            <option value="100000">hasta USD 100.000</option>
+            <option value="200000">hasta USD 200.000</option>
+            <option value="300000">hasta USD 300.000</option>
+            <option value="500000">hasta USD 500.000</option>
         </select>
         <input type="text" id="f-barrio" placeholder="Barrio o dirección..." onkeyup="buscarDebounce()">
         <button class="btn-buscar" onclick="buscar()">Buscar</button>
@@ -526,6 +551,10 @@
     </div>
 </section>
 
+<button class="scroll-top" id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+</button>
+
 <!-- ── FOOTER ── -->
 <footer>
     <div class="footer-brand">Moret</div>
@@ -565,11 +594,13 @@
     function buscar() {
         const tipo      = document.getElementById('f-tipo').value;
         const ambientes = document.getElementById('f-ambientes').value;
+        const precio    = document.getElementById('f-precio').value;
         const barrio    = document.getElementById('f-barrio').value.trim();
         const params    = new URLSearchParams();
         if (_activeTab !== 'todas') params.set('operacion', _activeTab);
         if (tipo)      params.set('tipo', tipo);
         if (ambientes) params.set('ambientes', ambientes);
+        if (precio)    params.set('precio_max', precio);
         if (barrio)    params.set('barrio', barrio);
         fetch('/api/public/propiedades?' + params.toString())
             .then(r => r.json())
@@ -578,9 +609,9 @@
     }
 
     function limpiar() {
-        ['f-tipo', 'f-ambientes'].forEach(id => document.getElementById(id).value = '');
+        ['f-tipo', 'f-ambientes', 'f-precio'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('f-barrio').value = '';
-        buscar();
+        setTab('todas');
     }
 
     /* ── Carousel ── */
@@ -626,9 +657,22 @@
 
         grid.innerHTML = lista.map(p => renderCard(p)).join('');
 
-        // Img transition style
         grid.querySelectorAll('.photo-main').forEach(img => {
             img.style.transition = 'opacity 0.12s ease, transform 0.4s ease';
+        });
+
+        // Mobile swipe on card carousels
+        lista.forEach(p => {
+            if (!p.fotos || p.fotos.length <= 1) return;
+            const card = document.getElementById('card-' + p.id);
+            if (!card) return;
+            const photo = card.querySelector('.card-photo');
+            let sx = 0;
+            photo.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+            photo.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - sx;
+                if (Math.abs(dx) > 40) carouselNav(p.id, dx < 0 ? 1 : -1, null);
+            });
         });
     }
 
@@ -704,6 +748,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         const params = new URLSearchParams(window.location.search);
         setTab(params.get('tab'));
+
+        // Live hero stats
+        fetch('/api/stats')
+            .then(r => r.json())
+            .then(s => {
+                const d = document.getElementById('hero-stat-disponibles');
+                const c = document.getElementById('hero-stat-clientes');
+                if (d) d.textContent = s.disponibles;
+                if (c) c.textContent = s.clientes;
+            }).catch(() => {});
+
+        // Scroll-to-top visibility
+        const scrollBtn = document.getElementById('scroll-top');
+        window.addEventListener('scroll', () => {
+            scrollBtn.classList.toggle('visible', window.scrollY > 400);
+        }, { passive: true });
     });
 </script>
 </body>

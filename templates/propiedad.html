@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Propiedad — Moret Inmobiliaria</title>
+    <meta name="description" content="Consultá esta propiedad en Roberto Moret Inmobiliaria. Más de 30 años de experiencia en el mercado inmobiliario de Buenos Aires.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_AR">
+    <meta id="og-title" property="og:title" content="Propiedad — Moret Inmobiliaria">
+    <meta id="og-description" property="og:description" content="Consultá esta propiedad en Roberto Moret Inmobiliaria.">
+    <meta id="og-image" property="og:image" content="">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -248,6 +254,18 @@
             transition: background var(--tx);
         }
         .lb-btn:hover { background: rgba(255,255,255,0.25); }
+        .lb-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 600;
+            background: rgba(0,0,0,0.35); padding: 4px 14px; border-radius: 20px;
+        }
+        .btn-share {
+            display: flex; align-items: center; gap: 7px;
+            background: var(--bg); color: var(--muted); font-weight: 600; font-size: 13px;
+            padding: 9px 16px; border-radius: 8px; border: 1.5px solid var(--border);
+            cursor: pointer; transition: all var(--tx); font-family: inherit;
+        }
+        .btn-share:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
 
         @media (max-width: 900px) {
             .layout { grid-template-columns: 1fr; }
@@ -273,10 +291,16 @@
                 <div class="inmobiliaria">Inmobiliaria</div>
             </div>
         </a>
-        <a href="/" class="back-btn">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-            Volver
-        </a>
+        <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn-share" onclick="compartir()" id="btn-share" style="display:none">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                Compartir
+            </button>
+            <a id="back-btn" href="/" class="back-btn">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                Volver
+            </a>
+        </div>
     </div>
 </header>
 
@@ -305,6 +329,7 @@
         <button class="lb-btn" onclick="lbNav(1)">❯</button>
     </div>
     <img id="lb-img" class="lb-img" src="" alt="">
+    <div id="lb-counter" class="lb-counter"></div>
 </div>
 
 <script>
@@ -352,8 +377,23 @@
         fotos = p.fotos || [];
         fotoActual = 0;
 
-        document.title = `${p.direccion} — Moret Inmobiliaria`;
+        const titulo = `${p.direccion} — Moret Inmobiliaria`;
+        document.title = titulo;
         document.getElementById('bc-dir').textContent = p.direccion;
+
+        // OG tags
+        document.getElementById('og-title').content = titulo;
+        const desc = `${p.tipo ? capitalizar(p.tipo) + ' en ' : ''}${capitalizar(p.operacion || '')} — ${p.direccion}${p.barrio ? ', ' + p.barrio : ''}`;
+        document.getElementById('og-description').content = desc;
+        if (fotos.length > 0) document.getElementById('og-image').content = '/' + fotos[0];
+
+        // Back button: preserve the tab the user came from
+        const refTab = new URLSearchParams(document.referrer.split('?')[1] || '').get('tab');
+        const backHref = refTab ? `/?tab=${refTab}` : '/';
+        document.getElementById('back-btn').href = backHref;
+
+        // Show share button
+        document.getElementById('btn-share').style.display = 'flex';
 
         const gal = renderGallery();
         const msgDefecto = `Hola, me interesa la propiedad en ${p.direccion}${p.barrio ? ' (' + p.barrio + ')' : ''}.`;
@@ -388,7 +428,7 @@
             <div class="detail-card contact-card">
                 <h3>¿Te interesa esta propiedad?</h3>
                 <div class="contact-btns">
-                    <a href="https://wa.me/${WA_NUM}?text=${encodeURIComponent(msgDefecto)}" target="_blank" class="btn-wa">
+                    <a href="${waLink(WA_NUM)}?text=${encodeURIComponent(msgDefecto)}" target="_blank" class="btn-wa">
                         💬 Consultar por WhatsApp
                     </a>
                     <a href="tel:${TELEFONO.replace(/\s/g,'')}" class="btn-tel">
@@ -479,10 +519,17 @@
         if (cnt) cnt.textContent = `📷 ${fotoActual + 1} / ${fotos.length}`;
     }
 
+    function lbUpdateCounter() {
+        const el = document.getElementById('lb-counter');
+        if (el && fotos.length > 1) el.textContent = `${fotoActual + 1} / ${fotos.length}`;
+        else if (el) el.textContent = '';
+    }
+
     function openLightbox(idx) {
         fotoActual = idx;
         document.getElementById('lb-img').src = '/' + fotos[fotoActual];
         document.getElementById('lightbox').classList.add('active');
+        lbUpdateCounter();
     }
 
     function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
@@ -491,6 +538,22 @@
         fotoActual = ((fotoActual + dir + fotos.length) % fotos.length);
         document.getElementById('lb-img').src = '/' + fotos[fotoActual];
         setFoto(fotoActual);
+        lbUpdateCounter();
+    }
+
+    function compartir() {
+        const url = window.location.href;
+        const title = document.title;
+        if (navigator.share) {
+            navigator.share({ title, url }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.getElementById('btn-share');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✓ Link copiado';
+                setTimeout(() => { btn.innerHTML = orig; }, 2000);
+            }).catch(() => {});
+        }
     }
 
     document.getElementById('lightbox').addEventListener('click', function(e) {
