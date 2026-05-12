@@ -10,6 +10,10 @@ import hmac
 import secrets
 import time
 import uuid
+import threading
+import smtplib
+import ssl
+from email.mime.text import MIMEText
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -273,6 +277,45 @@ def api_public_propiedad(id):
         return jsonify({"error": "Propiedad no encontrada"}), 404
     return jsonify(p.as_dict())
 
+def _send_consulta_email(data, prop_info, host_url):
+    smtp_host = app.config.get('MAIL_SMTP', '')
+    smtp_port = app.config.get('MAIL_PORT', 587)
+    smtp_user = app.config.get('MAIL_USER', '')
+    smtp_pass = app.config.get('MAIL_PASS', '')
+    mail_to   = app.config.get('MAIL_TO', '')
+    if not all([smtp_host, smtp_user, smtp_pass, mail_to]):
+        return
+    prop_line = ''
+    if prop_info:
+        prop_line = (
+            f"\nPropiedad: {prop_info['direccion']}"
+            + (f", {prop_info['barrio']}" if prop_info.get('barrio') else '')
+            + f"\nVer propiedad: {host_url}propiedad/{prop_info['id']}"
+        )
+    body = (
+        f"Nueva consulta recibida en Moret Inmobiliaria\n"
+        f"{'─'*44}\n\n"
+        f"Nombre:    {data['nombre']}\n"
+        f"Teléfono:  {data.get('telefono') or '—'}\n"
+        f"Email:     {data.get('email') or '—'}"
+        f"{prop_line}\n\n"
+        f"Mensaje:\n{data['mensaje']}\n\n"
+        f"{'─'*44}\n"
+        f"Ver todas las consultas: {host_url}admin/consultas\n"
+    )
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = f"Nueva consulta de {data['nombre']}"
+    msg['From']    = smtp_user
+    msg['To']      = mail_to
+    try:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP(smtp_host, smtp_port) as srv:
+            srv.starttls(context=ctx)
+            srv.login(smtp_user, smtp_pass)
+            srv.send_message(msg)
+    except Exception:
+        pass
+
 @app.route('/api/public/consultas', methods=['POST'])
 def api_public_consultas():
     data = request.get_json()
@@ -287,6 +330,19 @@ def api_public_consultas():
     )
     db.session.add(consulta)
     db.session.commit()
+
+    prop_info = None
+    if data.get('propiedad_id'):
+        prop = Propiedad.query.get(data['propiedad_id'])
+        if prop:
+            prop_info = {'id': prop.id, 'direccion': prop.direccion, 'barrio': prop.barrio}
+    host_url = request.host_url
+    threading.Thread(
+        target=_send_consulta_email,
+        args=(data, prop_info, host_url),
+        daemon=True
+    ).start()
+
     return jsonify({"message": "Consulta enviada correctamente"}), 201
 
 # ── Admin API: Propiedades ────────────────────────────────────────────────────

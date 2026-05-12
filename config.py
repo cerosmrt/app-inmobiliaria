@@ -13,6 +13,12 @@ class Config:
     CONTACTO_WA       = os.environ.get('CONTACTO_WA', '')
     CONTACTO_EMAIL    = os.environ.get('CONTACTO_EMAIL', '')
 
+    MAIL_SMTP = os.environ.get('MAIL_SMTP', '')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USER = os.environ.get('MAIL_USER', '')
+    MAIL_PASS = os.environ.get('MAIL_PASS', '')
+    MAIL_TO   = os.environ.get('MAIL_TO', '')
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

@@ -194,6 +194,15 @@
             font-size: 12px; color: var(--muted); margin-left: auto;
             white-space: nowrap; font-weight: 500;
         }
+        .sort-select {
+            font-family: inherit; font-size: 12.5px; color: var(--muted);
+            border: none; background: none; cursor: pointer; outline: none;
+            padding: 2px 4px; border-radius: 4px;
+        }
+        .sort-select:hover { color: var(--text); }
+        .sort-bar {
+            display: flex; align-items: center; gap: 6px; margin-left: auto;
+        }
 
         /* ── LISTINGS ───────────────────────────────────────────────────────── */
         .listings { max-width: 1280px; margin: 0 auto; padding: 36px 28px 80px; }
@@ -512,7 +521,14 @@
         <input type="text" id="f-barrio" placeholder="Barrio o dirección..." onkeyup="buscarDebounce()">
         <button class="btn-buscar" onclick="buscar()">Buscar</button>
         <button class="btn-limpiar" onclick="limpiar()">Limpiar</button>
-        <span class="results-count" id="results-count"></span>
+        <div class="sort-bar">
+            <span class="results-count" id="results-count"></span>
+            <select class="sort-select" id="f-orden" onchange="aplicarOrden()" title="Ordenar por">
+                <option value="reciente">Más reciente</option>
+                <option value="precio_asc">Precio ↑</option>
+                <option value="precio_desc">Precio ↓</option>
+            </select>
+        </div>
     </div>
 </section>
 
@@ -572,6 +588,23 @@
     let buscarTimer = null;
     let _activeTab  = 'todas';
     const carouselIdx = {};
+
+    function aplicarOrden() {
+        renderGrid(propiedades);
+    }
+
+    function sortedPropiedades(lista) {
+        const orden = document.getElementById('f-orden')?.value || 'reciente';
+        if (orden === 'reciente') return lista;
+        return lista.slice().sort((a, b) => {
+            const va = a.precio_a_consultar ? null : (a.rango_min || null);
+            const vb = b.precio_a_consultar ? null : (b.rango_min || null);
+            if (va === null && vb === null) return 0;
+            if (va === null) return 1;
+            if (vb === null) return -1;
+            return orden === 'precio_asc' ? va - vb : vb - va;
+        });
+    }
 
     /* ── Tab navigation ── */
     function setTab(tab) {
@@ -637,6 +670,7 @@
 
     /* ── Grid rendering ── */
     function renderGrid(lista) {
+        const sorted = sortedPropiedades(lista);
         const grid  = document.getElementById('grid-propiedades');
         const count = document.getElementById('results-count');
         count.textContent = lista.length > 0
@@ -655,14 +689,14 @@
             return;
         }
 
-        grid.innerHTML = lista.map(p => renderCard(p)).join('');
+        grid.innerHTML = sorted.map(p => renderCard(p)).join('');
 
         grid.querySelectorAll('.photo-main').forEach(img => {
             img.style.transition = 'opacity 0.12s ease, transform 0.4s ease';
         });
 
         // Mobile swipe on card carousels
-        lista.forEach(p => {
+        sorted.forEach(p => {
             if (!p.fotos || p.fotos.length <= 1) return;
             const card = document.getElementById('card-' + p.id);
             if (!card) return;
