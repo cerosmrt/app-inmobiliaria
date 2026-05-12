@@ -4,59 +4,98 @@
 
 {% block head %}
 <style>
-    .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+    .container { max-width: 1600px; margin: 0 auto; padding: 22px 24px; }
 
-    .tab-nav { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 18px; }
+    /* ── Tab nav ── */
+    .tab-nav {
+        display: flex; border-bottom: 2px solid var(--border);
+        margin-bottom: 20px; gap: 2px;
+    }
     .tab-btn {
-        font-size: 14px; padding: 10px 28px; border: none; background: none;
+        font-size: 13.5px; padding: 10px 24px; border: none; background: none;
         cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent;
-        margin-bottom: -2px; font-weight: 500; transition: color 0.15s;
+        margin-bottom: -2px; font-weight: 500; transition: color 0.15s; border-radius: 6px 6px 0 0;
     }
     .tab-btn.active { color: var(--red); border-bottom-color: var(--red); font-weight: 700; }
-    .tab-btn:hover:not(.active) { color: var(--text); }
+    .tab-btn:hover:not(.active) { color: var(--text); background: rgba(0,0,0,0.03); }
+    .tab-btn[onclick*="archivados"] { color: #94a3b8; }
+    .tab-btn[onclick*="archivados"].active { color: #d97706; border-bottom-color: #d97706; }
 
-    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+    /* ── Toolbar ── */
+    .toolbar {
+        display: flex; gap: 8px; margin-bottom: 12px;
+        flex-wrap: wrap; align-items: center;
+    }
 
+    /* ── Filter box ── */
     .filterbox {
-        background: white; padding: 10px 16px; border-radius: 8px;
+        background: white; padding: 11px 16px; border-radius: var(--radius);
         border: 1px solid var(--border); margin-bottom: 14px;
-        display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        box-shadow: var(--shadow-sm);
     }
     .filterbox input[type="text"],
     .filterbox input[type="number"],
     .filterbox select {
-        font-size: 13px; padding: 5px 9px; border: 1px solid var(--border);
-        border-radius: 5px; width: auto; color: var(--text);
+        font-size: 13px; padding: 6px 10px; border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm); width: auto; color: var(--text);
+        font-family: inherit; transition: border-color 0.15s;
+        background: white;
     }
-    .filterbox input:focus, .filterbox select:focus { outline: 2px solid var(--red); }
-    .filterbox label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; cursor: pointer; }
-    .filterbox .sep { width: 1px; height: 22px; background: var(--border); }
+    .filterbox input:focus, .filterbox select:focus {
+        outline: none; border-color: var(--red);
+    }
+    .filterbox label {
+        font-size: 13px; color: var(--muted);
+        display: flex; align-items: center; gap: 5px; cursor: pointer;
+    }
+    .filterbox .sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
 
+    /* ── Sortable headers ── */
     thead th.sortable { cursor: pointer; }
-    thead th.sortable:hover { background: #333; }
+    thead th.sortable:hover { background: #2d3e52; }
     thead th.sorted { background: var(--red); }
     .sort-icon { font-size: 10px; margin-left: 2px; opacity: 0.9; }
 
+    /* ── Inline editing highlight ── */
     .editable-text:not(:has(input)):hover,
     .editable-select:not(:has(select)):hover,
     .editable-select-prop:not(:has(select)):hover {
         background: #fef9c3 !important; cursor: text;
     }
 
-    .tab-btn[onclick*="archivados"] { color: #94a3b8; }
-    .tab-btn[onclick*="archivados"].active { color: #d97706; border-bottom-color: #d97706; }
-
-    .btn-map {
-        background: #dcfce7; color: #15803d; border-radius: 4px;
-        display: inline-block; line-height: 1.2;
-    }
-    .btn-map:hover { background: #bbf7d0; text-decoration: none; }
-
+    /* ── Stat card colors (also in admin.css for other pages) ── */
     .stat-reservada { border-top-color: #a16207; }
     .stat-reservada .stat-val { color: #a16207; }
     .stat-muted { border-top-color: #94a3b8; }
     .stat-muted .stat-val { color: #94a3b8; }
+
+    /* ── Map link ── */
+    .btn-map {
+        background: #dcfce7; color: #15803d; border-radius: 4px;
+        display: inline-block; line-height: 1.2; font-size: 12px;
+        padding: 2px 7px;
+    }
+    .btn-map:hover { background: #bbf7d0; text-decoration: none; }
+
+    /* ── Inline assignment list ── */
+    .disp-list {
+        max-height: 180px; overflow-y: auto;
+        border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+        background: white; box-shadow: var(--shadow-sm);
+    }
+    .disp-list::-webkit-scrollbar { width: 5px; }
+    .disp-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .disp-item {
+        padding: 7px 10px; cursor: pointer; font-size: 13px;
+        border-bottom: 1px solid var(--border); transition: background var(--tx);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .disp-item:last-child { border-bottom: none; }
+    .disp-item:hover { background: #fef2f4; }
+    .disp-empty {
+        padding: 10px; font-size: 12px; color: var(--muted); text-align: center;
+    }
 </style>
 {% endblock %}
 

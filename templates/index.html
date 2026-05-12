@@ -4,257 +4,408 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roberto Moret Inmobiliaria — Propiedades en venta y alquiler</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --red: #C41230;
             --red-dark: #9e0d24;
-            --dark: #1a1a1a;
-            --gray: #f5f5f5;
-            --border: #e5e5e5;
-            --text: #1a1a1a;
-            --muted: #666;
+            --red-light: #fef2f4;
+            --dark: #0f172a;
+            --dark-2: #1e293b;
+            --gray: #f8fafc;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --muted: #64748b;
+            --tx: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.07);
+            --shadow-lg: 0 16px 48px rgba(0,0,0,0.14);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); background: white; }
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            color: var(--text); background: white;
+            -webkit-font-smoothing: antialiased;
+        }
         a { text-decoration: none; color: inherit; }
 
-        /* ── HEADER ── */
+        /* ── HEADER ─────────────────────────────────────────────────────────── */
         .header {
             position: sticky; top: 0; z-index: 100;
-            background: white; border-bottom: 2px solid var(--red);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 12px rgba(0,0,0,0.07);
         }
         .header-inner {
-            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            max-width: 1280px; margin: 0 auto; padding: 0 28px;
             display: flex; align-items: center; justify-content: space-between;
-            height: 68px;
+            height: 70px;
         }
         .logo { display: flex; align-items: center; gap: 12px; }
-        .logo img { height: 46px; width: auto; object-fit: contain; }
+        .logo img { height: 44px; width: auto; object-fit: contain; }
         .logo-text { line-height: 1; }
-        .logo-roberto { display: block; font-size: 9px; letter-spacing: 3px; color: #888; text-transform: uppercase; }
-        .logo-moret { display: block; font-size: 26px; font-weight: 900; color: var(--red); letter-spacing: -1px; }
-        .logo-inmobiliaria { display: block; font-size: 9px; letter-spacing: 3px; color: #555; text-transform: uppercase; margin-top: 1px; }
-        .header-nav { display: flex; align-items: center; gap: 6px; }
+        .logo-roberto { display: block; font-size: 8.5px; letter-spacing: 3px; color: #94a3b8; text-transform: uppercase; font-weight: 500; }
+        .logo-moret { display: block; font-size: 26px; font-weight: 900; color: var(--red); letter-spacing: -1.5px; }
+        .logo-inmobiliaria { display: block; font-size: 8.5px; letter-spacing: 3px; color: #64748b; text-transform: uppercase; margin-top: 1px; font-weight: 500; }
+        .header-nav { display: flex; align-items: center; gap: 4px; }
         .header-nav a {
-            font-size: 13px; font-weight: 600; padding: 7px 14px;
-            border-radius: 5px; color: #444; transition: color 0.15s, background 0.15s;
+            font-size: 13.5px; font-weight: 500; padding: 7px 14px;
+            border-radius: 7px; color: #475569; transition: all var(--tx);
         }
-        .header-nav a:hover { color: var(--red); background: #fff0f2; }
+        .header-nav a:hover { color: var(--red); background: var(--red-light); }
         .btn-contacto {
             background: var(--red); color: white !important;
-            border-radius: 5px; padding: 8px 18px !important; font-size: 13px !important;
-            font-weight: 700 !important; transition: background 0.2s !important;
+            border-radius: 7px; padding: 8px 18px !important;
+            font-weight: 700 !important; transition: background var(--tx) !important;
+            box-shadow: 0 2px 8px rgba(196,18,48,0.25);
         }
         .btn-contacto:hover { background: var(--red-dark) !important; }
 
-        /* ── HERO ── */
+        /* ── HERO ───────────────────────────────────────────────────────────── */
         .hero {
+            position: relative; overflow: hidden;
+            padding: 90px 28px 80px; text-align: center;
             background: var(--dark);
-            padding: 70px 24px 60px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
         }
-        .hero::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, #2a0a12 0%, #1a1a1a 60%, #0d0d0d 100%);
+        .hero-bg {
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 40%, rgba(196,18,48,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 70% 50% at 80% 60%, rgba(30,58,95,0.25) 0%, transparent 60%),
+                linear-gradient(160deg, #0f172a 0%, #1a1a2e 50%, #0f172a 100%);
         }
-        .hero-content { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
-        .hero-badge {
-            display: inline-block; background: var(--red); color: white;
-            font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-            padding: 5px 16px; border-radius: 3px; margin-bottom: 20px;
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
         }
+        .hero-content { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; }
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: rgba(196,18,48,0.15); border: 1px solid rgba(196,18,48,0.3);
+            color: #fca5a5; font-size: 11px; font-weight: 600; letter-spacing: 2px;
+            text-transform: uppercase; padding: 5px 14px; border-radius: 20px;
+            margin-bottom: 24px;
+        }
+        .hero-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
         .hero h1 {
-            font-size: clamp(28px, 5vw, 46px); font-weight: 900;
-            color: white; line-height: 1.1; margin-bottom: 14px;
+            font-size: clamp(32px, 5.5vw, 54px); font-weight: 900;
+            color: white; line-height: 1.08; margin-bottom: 18px;
+            letter-spacing: -1.5px;
         }
-        .hero h1 span { color: var(--red); }
-        .hero p { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 32px; line-height: 1.5; }
+        .hero h1 em { color: var(--red); font-style: normal; }
+        .hero p {
+            font-size: 17px; color: rgba(255,255,255,0.55);
+            margin-bottom: 36px; line-height: 1.65; font-weight: 400;
+        }
+        .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
         .hero-cta {
             display: inline-flex; align-items: center; gap: 8px;
             background: var(--red); color: white; font-weight: 700; font-size: 15px;
-            padding: 13px 28px; border-radius: 6px; transition: background 0.2s;
+            padding: 14px 28px; border-radius: 8px; transition: all var(--tx);
+            box-shadow: 0 4px 20px rgba(196,18,48,0.35);
         }
-        .hero-cta:hover { background: var(--red-dark); }
+        .hero-cta:hover { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(196,18,48,0.45); }
+        .hero-secondary {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8);
+            font-weight: 600; font-size: 15px; padding: 14px 28px;
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+            transition: all var(--tx);
+        }
+        .hero-secondary:hover { background: rgba(255,255,255,0.14); color: white; }
+        .hero-stats {
+            display: flex; gap: 40px; justify-content: center;
+            margin-top: 52px; padding-top: 36px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .hero-stat { text-align: center; }
+        .hero-stat-num { font-size: 28px; font-weight: 900; color: white; letter-spacing: -1px; }
+        .hero-stat-lbl { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
 
-        /* ── SEARCH BAR ── */
+        /* ── SEARCH BAR ─────────────────────────────────────────────────────── */
         .search-section {
             background: white; border-bottom: 1px solid var(--border);
-            position: sticky; top: 68px; z-index: 90;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            position: sticky; top: 70px; z-index: 90;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
         }
-        .search-inner {
-            max-width: 1200px; margin: 0 auto; padding: 14px 24px;
-            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-        }
-        .search-inner select,
-        .search-inner input {
-            font-size: 13px; padding: 8px 12px; border: 1.5px solid var(--border);
-            border-radius: 6px; color: var(--text); outline: none;
-            background: white; transition: border-color 0.15s;
-        }
-        .search-inner select:focus,
-        .search-inner input:focus { border-color: var(--red); }
-        .search-inner input[type="text"] { min-width: 180px; }
-        .btn-buscar {
-            background: var(--red); color: white; border: none; border-radius: 6px;
-            font-size: 13px; font-weight: 700; padding: 8px 20px;
-            cursor: pointer; transition: background 0.2s; white-space: nowrap;
-        }
-        .btn-buscar:hover { background: var(--red-dark); }
-        .btn-limpiar {
-            background: none; border: 1.5px solid var(--border); color: var(--muted);
-            border-radius: 6px; font-size: 13px; padding: 8px 14px; cursor: pointer;
-            transition: border-color 0.15s; white-space: nowrap;
-        }
-        .btn-limpiar:hover { border-color: #999; color: var(--text); }
-        .results-count { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
-
-        /* ── TABS ── */
         .tabs-bar {
-            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            max-width: 1280px; margin: 0 auto; padding: 0 28px;
             display: flex; gap: 0; border-bottom: 1px solid var(--border);
         }
         .tab-btn {
             background: none; border: none; border-bottom: 3px solid transparent;
-            font-size: 14px; font-weight: 600; color: var(--muted);
+            font-size: 13.5px; font-weight: 600; color: var(--muted);
             padding: 14px 22px; cursor: pointer;
-            transition: color 0.15s, border-color 0.15s;
+            transition: color var(--tx), border-color var(--tx);
             margin-bottom: -1px; white-space: nowrap;
         }
         .tab-btn:hover { color: var(--text); border-bottom-color: #ddd; }
         .tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
+        .search-inner {
+            max-width: 1280px; margin: 0 auto; padding: 14px 28px;
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .search-inner select,
+        .search-inner input {
+            font-family: inherit; font-size: 13.5px; padding: 9px 13px;
+            border: 1.5px solid var(--border); border-radius: 7px; color: var(--text);
+            outline: none; background: white; transition: border-color var(--tx);
+        }
+        .search-inner select:focus,
+        .search-inner input:focus { border-color: var(--red); }
+        .search-inner input[type="text"] { min-width: 180px; flex: 1; max-width: 260px; }
+        .btn-buscar {
+            background: var(--red); color: white; border: none; border-radius: 7px;
+            font-family: inherit; font-size: 13.5px; font-weight: 700; padding: 9px 22px;
+            cursor: pointer; transition: all var(--tx); white-space: nowrap;
+        }
+        .btn-buscar:hover { background: var(--red-dark); transform: translateY(-1px); }
+        .btn-limpiar {
+            background: none; border: 1.5px solid var(--border); color: var(--muted);
+            border-radius: 7px; font-family: inherit; font-size: 13.5px;
+            padding: 9px 16px; cursor: pointer; transition: all var(--tx); white-space: nowrap;
+        }
+        .btn-limpiar:hover { border-color: #94a3b8; color: var(--text); }
+        .results-count {
+            font-size: 12px; color: var(--muted); margin-left: auto;
+            white-space: nowrap; font-weight: 500;
+        }
 
-        /* ── LISTINGS ── */
-        .listings { max-width: 1200px; margin: 0 auto; padding: 32px 24px 60px; }
+        /* ── LISTINGS ───────────────────────────────────────────────────────── */
+        .listings { max-width: 1280px; margin: 0 auto; padding: 36px 28px 80px; }
         .listings-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 28px;
         }
+
+        /* ── PROPERTY CARD ──────────────────────────────────────────────────── */
         .prop-card {
-            background: white; border-radius: 10px; overflow: hidden;
+            background: white; border-radius: 14px; overflow: hidden;
             border: 1px solid var(--border);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: var(--shadow-sm);
+            transition: transform var(--tx), box-shadow var(--tx);
             display: flex; flex-direction: column;
+            animation: cardIn 0.35s ease both;
         }
-        .prop-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .prop-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        .prop-card:nth-child(2) { animation-delay: 0.05s; }
+        .prop-card:nth-child(3) { animation-delay: 0.1s; }
+        .prop-card:nth-child(4) { animation-delay: 0.15s; }
+        .prop-card:nth-child(n+5) { animation-delay: 0.2s; }
+
+        /* ── Card photo / carousel ── */
         .card-photo {
-            position: relative; aspect-ratio: 4/3; background: #f0f0f0;
-            overflow: hidden;
+            position: relative; aspect-ratio: 16/11; background: #f0f0f0;
+            overflow: hidden; cursor: pointer; flex-shrink: 0;
         }
-        .card-photo img {
+        .card-photo img.photo-main {
             width: 100%; height: 100%; object-fit: cover;
-            transition: transform 0.4s;
+            transition: transform 0.4s ease;
+            display: block;
         }
-        .prop-card:hover .card-photo img { transform: scale(1.04); }
-        .card-photo .no-photo {
+        .prop-card:hover .photo-main { transform: scale(1.04); }
+        .no-photo {
             width: 100%; height: 100%; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 8px;
-            color: #bbb; font-size: 13px;
+            align-items: center; justify-content: center; gap: 10px;
+            color: #c0c0c0; font-size: 13px; background: #f8f8f8;
         }
-        .card-photo .no-photo span { font-size: 36px; }
+        .no-photo-icon { font-size: 40px; }
+
+        /* Carousel arrows */
+        .carousel-arrows {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 100%; display: flex; justify-content: space-between; padding: 0 8px;
+            pointer-events: none; opacity: 0; transition: opacity var(--tx);
+        }
+        .prop-card:hover .carousel-arrows { opacity: 1; }
+        .c-arrow {
+            pointer-events: all;
+            background: rgba(255,255,255,0.92); color: var(--dark);
+            border: none; width: 30px; height: 30px; border-radius: 50%;
+            font-size: 13px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            transition: all 0.15s; font-weight: 700;
+        }
+        .c-arrow:hover { background: white; transform: scale(1.08); }
+
+        /* Carousel dots */
+        .carousel-dots {
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 5px;
+        }
+        .c-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255,255,255,0.55); cursor: pointer;
+            transition: all 0.2s; border: none;
+        }
+        .c-dot.active { background: white; transform: scale(1.2); }
+
+        /* Photo count badge */
+        .photo-count {
+            position: absolute; bottom: 10px; right: 10px;
+            background: rgba(0,0,0,0.55); color: white;
+            font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+            display: flex; align-items: center; gap: 4px;
+        }
+
         .card-badges {
             position: absolute; top: 10px; left: 10px;
             display: flex; gap: 5px; flex-wrap: wrap;
         }
         .badge {
             font-size: 10px; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 0.5px; padding: 3px 10px; border-radius: 3px;
+            letter-spacing: 0.6px; padding: 4px 10px; border-radius: 4px;
         }
         .badge-venta    { background: var(--red); color: white; }
-        .badge-alquiler { background: #1a1a1a; color: white; }
-        .badge-tipo     { background: rgba(255,255,255,0.9); color: #333; }
-        .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .badge-alquiler { background: var(--dark); color: white; }
+        .badge-tipo     { background: rgba(255,255,255,0.92); color: #334155; }
+
+        /* Card body */
+        .card-body { padding: 18px 18px 12px; flex: 1; display: flex; flex-direction: column; }
         .card-price {
-            font-size: 22px; font-weight: 900; color: var(--red); margin-bottom: 4px;
+            font-size: 22px; font-weight: 900; color: var(--red);
+            margin-bottom: 5px; letter-spacing: -0.5px; line-height: 1;
         }
-        .card-price .currency { font-size: 14px; font-weight: 600; color: #888; margin-right: 3px; }
-        .card-price .consultar { font-size: 16px; font-weight: 700; color: #555; }
+        .card-price .currency { font-size: 14px; font-weight: 600; color: #94a3b8; margin-right: 2px; }
+        .card-price .consultar { font-size: 17px; font-weight: 700; color: #64748b; }
         .card-address {
-            font-size: 14px; font-weight: 600; color: var(--dark);
+            font-size: 14.5px; font-weight: 700; color: var(--dark);
             margin-bottom: 4px; line-height: 1.3;
         }
-        .card-barrio { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-        .card-details {
-            display: flex; gap: 14px; font-size: 12px; color: #555;
-            padding: 10px 0; border-top: 1px solid var(--border);
-            margin-top: auto;
+        .card-barrio { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+        .card-specs {
+            display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 12px;
+            border-top: 1px solid var(--border);
         }
-        .card-detail { display: flex; align-items: center; gap: 4px; }
-        .card-detail .icon { font-size: 14px; }
-        .card-footer { padding: 0 16px 16px; }
+        .card-spec {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: #64748b; font-weight: 500;
+            background: #f8fafc; padding: 4px 9px; border-radius: 5px;
+            border: 1px solid var(--border);
+        }
+
+        /* Card footer */
+        .card-footer { padding: 0 18px 18px; }
         .btn-ver {
-            display: block; text-align: center; width: 100%;
-            background: var(--dark); color: white; font-weight: 700; font-size: 13px;
-            padding: 10px; border-radius: 6px; transition: background 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            width: 100%; background: var(--dark); color: white; font-weight: 700;
+            font-size: 13.5px; padding: 11px; border-radius: 8px;
+            transition: all var(--tx); font-family: inherit;
         }
         .btn-ver:hover { background: var(--red); }
+        .btn-ver svg { transition: transform var(--tx); }
+        .prop-card:hover .btn-ver svg { transform: translateX(3px); }
 
-        /* ── EMPTY STATE ── */
+        /* ── EMPTY STATE ─────────────────────────────────────────────────────── */
         .empty-state {
-            text-align: center; padding: 60px 20px; color: var(--muted);
+            text-align: center; padding: 72px 20px; color: var(--muted);
             grid-column: 1 / -1;
         }
-        .empty-state .icon { font-size: 48px; margin-bottom: 12px; display: block; }
-        .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
-
-        /* ── CONTACT SECTION ── */
-        .contact-section {
-            background: var(--dark); color: white;
-            padding: 60px 24px;
+        .empty-icon {
+            width: 72px; height: 72px; background: #f1f5f9; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; margin: 0 auto 20px;
         }
-        .contact-inner { max-width: 800px; margin: 0 auto; text-align: center; }
-        .contact-inner .label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
-        .contact-inner h2 { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
-        .contact-inner h2 span { color: var(--red); }
-        .contact-inner p { font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 36px; }
+        .empty-state h3 { font-size: 19px; color: var(--text); margin-bottom: 8px; font-weight: 700; }
+        .empty-state p { font-size: 15px; line-height: 1.6; }
+
+        /* ── SKELETON ────────────────────────────────────────────────────────── */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f2f5 25%, #e4e7eb 50%, #f0f2f5 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+        .skel-card { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: white; }
+
+        /* ── CONTACT SECTION ─────────────────────────────────────────────────── */
+        .contact-section {
+            background: var(--dark); color: white; padding: 80px 28px;
+            position: relative; overflow: hidden;
+        }
+        .contact-section::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(196,18,48,0.12) 0%, transparent 70%);
+        }
+        .contact-inner {
+            max-width: 860px; margin: 0 auto; text-align: center; position: relative;
+        }
+        .contact-label {
+            font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+            color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 600;
+        }
+        .contact-inner h2 {
+            font-size: clamp(26px, 4vw, 38px); font-weight: 900; margin-bottom: 12px;
+            letter-spacing: -1px; line-height: 1.1;
+        }
+        .contact-inner h2 em { color: var(--red); font-style: normal; }
+        .contact-inner p {
+            font-size: 16px; color: rgba(255,255,255,0.55);
+            margin-bottom: 44px; line-height: 1.6;
+        }
         .contact-cards {
             display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
         }
         .contact-card {
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 10px; padding: 20px 28px; min-width: 180px;
-            transition: background 0.2s, border-color 0.2s;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 22px 28px; min-width: 180px;
+            transition: all var(--tx);
         }
-        .contact-card:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); }
-        .contact-card .c-icon { font-size: 26px; margin-bottom: 8px; }
-        .contact-card .c-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.45); margin-bottom: 6px; }
-        .contact-card .c-value { font-size: 15px; font-weight: 600; color: white; }
-        .contact-card.wa { border-color: rgba(37,211,102,0.3); background: rgba(37,211,102,0.07); }
-        .contact-card.wa:hover { background: rgba(37,211,102,0.15); }
+        .contact-card:hover {
+            background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.22);
+            transform: translateY(-2px);
+        }
+        .contact-card .c-icon { font-size: 28px; margin-bottom: 10px; }
+        .contact-card .c-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.4); margin-bottom: 7px; font-weight: 600; }
+        .contact-card .c-value { font-size: 15px; font-weight: 700; color: white; }
+        .contact-card.wa { border-color: rgba(37,211,102,0.25); background: rgba(37,211,102,0.06); }
+        .contact-card.wa:hover { background: rgba(37,211,102,0.12); border-color: rgba(37,211,102,0.35); }
         .contact-card.wa .c-value { color: #4ade80; }
 
-        /* ── FOOTER ── */
+        /* ── FOOTER ──────────────────────────────────────────────────────────── */
         footer {
-            background: #111; color: rgba(255,255,255,0.45);
-            padding: 24px; text-align: center; font-size: 12px;
+            background: #080d14; color: rgba(255,255,255,0.35);
+            padding: 28px; text-align: center; font-size: 12.5px;
         }
-        footer .footer-brand { font-size: 18px; font-weight: 800; color: var(--red); margin-bottom: 6px; }
+        .footer-brand { font-size: 20px; font-weight: 900; color: var(--red); margin-bottom: 6px; letter-spacing: -0.5px; }
 
-        /* ── LOADING ── */
-        .skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.4s infinite;
-            border-radius: 4px;
-        }
-        @keyframes shimmer { to { background-position: -200% 0; } }
-
-        @media (max-width: 640px) {
-            .tabs-bar { padding: 0 12px; }
-            .tab-btn { padding: 12px 14px; font-size: 13px; }
-            .search-inner { gap: 8px; }
-            .search-inner select,
-            .search-inner input { font-size: 14px; width: 100%; }
-            .results-count { margin-left: 0; }
-            .hero { padding: 48px 20px 40px; }
+        /* ── MEDIA QUERIES ───────────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .header-inner { padding: 0 16px; height: 60px; }
+            .logo-moret { font-size: 22px; }
+            .hero { padding: 64px 20px 56px; }
+            .hero-stats { gap: 24px; margin-top: 36px; }
+            .tabs-bar { padding: 0 14px; }
+            .tab-btn { padding: 12px 16px; font-size: 13px; }
+            .search-inner { padding: 12px 16px; gap: 8px; }
+            .search-inner select, .search-inner input { font-size: 14px; }
+            .search-inner input[type="text"] { max-width: none; }
+            .results-count { margin-left: 0; width: 100%; }
+            .listings { padding: 24px 16px 60px; }
+            .listings-grid { gap: 20px; grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+            .contact-section { padding: 60px 20px; }
             .contact-cards { flex-direction: column; align-items: center; }
-            .contact-card { width: 100%; max-width: 280px; }
+            .contact-card { width: 100%; max-width: 300px; }
+            .hero-actions { flex-direction: column; align-items: center; }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .listings-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -280,11 +431,33 @@
 
 <!-- ── HERO ── -->
 <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
     <div class="hero-content">
-        <div class="hero-badge">Inmobiliaria de confianza</div>
-        <h1>Tu próxima propiedad<br>te está <span>esperando</span></h1>
-        <p>Encontrá propiedades en venta y alquiler. Más de 30 años de experiencia en el mercado inmobiliario.</p>
-        <a href="#propiedades" class="hero-cta">Ver propiedades →</a>
+        <div class="hero-eyebrow">Más de 30 años de experiencia</div>
+        <h1>Tu próxima propiedad<br>te está <em>esperando</em></h1>
+        <p>Encontrá propiedades en venta y alquiler en Buenos Aires.<br>Te acompañamos en cada paso del proceso.</p>
+        <div class="hero-actions">
+            <a href="#propiedades" class="hero-cta">
+                Ver propiedades
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </a>
+            <a href="#contacto" class="hero-secondary">Contactar ahora</a>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-num">30+</div>
+                <div class="hero-stat-lbl">Años de experiencia</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">100%</div>
+                <div class="hero-stat-lbl">Comprometidos</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">BsAs</div>
+                <div class="hero-stat-lbl">Zona de operación</div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -311,7 +484,7 @@
             <option value="3">3 ambientes</option>
             <option value="4">4+ ambientes</option>
         </select>
-        <input type="text" id="f-barrio" placeholder="Barrio o zona" onkeyup="buscarDebounce()">
+        <input type="text" id="f-barrio" placeholder="Barrio o dirección..." onkeyup="buscarDebounce()">
         <button class="btn-buscar" onclick="buscar()">Buscar</button>
         <button class="btn-limpiar" onclick="limpiar()">Limpiar</button>
         <span class="results-count" id="results-count"></span>
@@ -321,41 +494,31 @@
 <!-- ── LISTINGS ── -->
 <section class="listings">
     <div class="listings-grid" id="grid-propiedades">
-        <!-- skeletons -->
-        <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5e5">
-            <div class="skeleton" style="aspect-ratio:4/3"></div>
-            <div style="padding:16px"><div class="skeleton" style="height:22px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:80%"></div></div>
-        </div>
-        <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5e5">
-            <div class="skeleton" style="aspect-ratio:4/3"></div>
-            <div style="padding:16px"><div class="skeleton" style="height:22px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:80%"></div></div>
-        </div>
-        <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5e5">
-            <div class="skeleton" style="aspect-ratio:4/3"></div>
-            <div style="padding:16px"><div class="skeleton" style="height:22px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:80%"></div></div>
-        </div>
+        <div class="skel-card"><div class="skeleton" style="aspect-ratio:16/11"></div><div style="padding:18px"><div class="skeleton" style="height:20px;width:55%;margin-bottom:10px"></div><div class="skeleton" style="height:15px;width:75%;margin-bottom:6px"></div><div class="skeleton" style="height:13px;width:45%"></div></div></div>
+        <div class="skel-card"><div class="skeleton" style="aspect-ratio:16/11"></div><div style="padding:18px"><div class="skeleton" style="height:20px;width:60%;margin-bottom:10px"></div><div class="skeleton" style="height:15px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:13px;width:50%"></div></div></div>
+        <div class="skel-card"><div class="skeleton" style="aspect-ratio:16/11"></div><div style="padding:18px"><div class="skeleton" style="height:20px;width:50%;margin-bottom:10px"></div><div class="skeleton" style="height:15px;width:70%;margin-bottom:6px"></div><div class="skeleton" style="height:13px;width:40%"></div></div></div>
     </div>
 </section>
 
 <!-- ── CONTACTO ── -->
 <section class="contact-section" id="contacto">
     <div class="contact-inner">
-        <div class="label">Estamos para ayudarte</div>
-        <h2>¿Tenés alguna <span>consulta</span>?</h2>
+        <div class="contact-label">Estamos para ayudarte</div>
+        <h2>¿Tenés alguna <em>consulta</em>?</h2>
         <p>Contactanos por el medio que prefieras. Respondemos a la brevedad.</p>
         <div class="contact-cards">
             <a href="https://wa.me/{{ contacto_wa }}" target="_blank" class="contact-card wa">
-                <div class="c-icon">&#x1F4AC;</div>
+                <div class="c-icon">💬</div>
                 <div class="c-label">WhatsApp</div>
                 <div class="c-value">{{ contacto_telefono }}</div>
             </a>
             <a href="tel:{{ contacto_telefono }}" class="contact-card">
-                <div class="c-icon">&#x1F4DE;</div>
+                <div class="c-icon">📞</div>
                 <div class="c-label">Teléfono</div>
                 <div class="c-value">{{ contacto_telefono }}</div>
             </a>
             <a href="mailto:{{ contacto_email }}" class="contact-card">
-                <div class="c-icon">&#x2709;&#xFE0F;</div>
+                <div class="c-icon">✉️</div>
                 <div class="c-label">Email</div>
                 <div class="c-value">{{ contacto_email }}</div>
             </a>
@@ -368,7 +531,9 @@
     <div class="footer-brand">Moret</div>
     <div>Roberto Moret Inmobiliaria — Buenos Aires, Argentina</div>
     <div style="margin-top:6px">© <span id="footer-year"></span> Todos los derechos reservados</div>
-    <div style="margin-top:14px"><a href="/admin" style="color:rgba(255,255,255,0.2);font-size:11px">Acceso administrativo</a></div>
+    <div style="margin-top:16px">
+        <a href="/admin" style="color:rgba(255,255,255,0.15);font-size:11px">Acceso administrativo</a>
+    </div>
 </footer>
 
 <script>
@@ -377,7 +542,9 @@
     let propiedades = [];
     let buscarTimer = null;
     let _activeTab  = 'todas';
+    const carouselIdx = {};
 
+    /* ── Tab navigation ── */
     function setTab(tab) {
         _activeTab = (tab === 'venta' || tab === 'alquiler') ? tab : 'todas';
         ['todas', 'venta', 'alquiler'].forEach(t => {
@@ -392,26 +559,21 @@
 
     function buscarDebounce() {
         clearTimeout(buscarTimer);
-        buscarTimer = setTimeout(buscar, 400);
+        buscarTimer = setTimeout(buscar, 380);
     }
 
     function buscar() {
         const tipo      = document.getElementById('f-tipo').value;
         const ambientes = document.getElementById('f-ambientes').value;
         const barrio    = document.getElementById('f-barrio').value.trim();
-
-        const params = new URLSearchParams();
+        const params    = new URLSearchParams();
         if (_activeTab !== 'todas') params.set('operacion', _activeTab);
         if (tipo)      params.set('tipo', tipo);
         if (ambientes) params.set('ambientes', ambientes);
         if (barrio)    params.set('barrio', barrio);
-
         fetch('/api/public/propiedades?' + params.toString())
             .then(r => r.json())
-            .then(data => {
-                propiedades = data;
-                renderGrid(data);
-            })
+            .then(data => { propiedades = data; renderGrid(data); })
             .catch(() => renderError());
     }
 
@@ -421,60 +583,119 @@
         buscar();
     }
 
+    /* ── Carousel ── */
+    function carouselGo(propId, idx, event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const fotos = propiedades.find(p => p.id === propId)?.fotos || [];
+        if (!fotos.length) return;
+        idx = ((idx % fotos.length) + fotos.length) % fotos.length;
+        carouselIdx[propId] = idx;
+        const card = document.getElementById('card-' + propId);
+        if (!card) return;
+        const img = card.querySelector('.photo-main');
+        if (img) { img.style.opacity = '0'; setTimeout(() => { img.src = '/' + fotos[idx]; img.style.opacity = '1'; }, 120); }
+        card.querySelectorAll('.c-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+    }
+
+    function carouselNav(propId, dir, event) {
+        const fotos = propiedades.find(p => p.id === propId)?.fotos || [];
+        if (!fotos.length) return;
+        const cur = carouselIdx[propId] || 0;
+        carouselGo(propId, cur + dir, event);
+    }
+
+    /* ── Grid rendering ── */
     function renderGrid(lista) {
-        const grid = document.getElementById('grid-propiedades');
+        const grid  = document.getElementById('grid-propiedades');
         const count = document.getElementById('results-count');
-        count.textContent = lista.length > 0 ? `${lista.length} propiedad${lista.length !== 1 ? 'es' : ''}` : '';
+        count.textContent = lista.length > 0
+            ? `${lista.length} propiedad${lista.length !== 1 ? 'es' : ''}`
+            : '';
 
         if (lista.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state">
-                    <span class="icon">🔍</span>
+                    <div class="empty-icon">🔍</div>
                     <h3>No encontramos propiedades</h3>
-                    <p>Intentá con otros filtros o <a href="#contacto" style="color:var(--red);font-weight:600">contactanos directamente</a>.</p>
+                    <p>Intentá con otros filtros o
+                        <a href="#contacto" style="color:var(--red);font-weight:600">contactanos directamente</a>.
+                    </p>
                 </div>`;
             return;
         }
 
-        grid.innerHTML = lista.map(p => {
-            const foto = p.fotos && p.fotos.length > 0 ? p.fotos[0] : null;
-            const moneda = p.es_usd ? 'USD' : '$';
-            const precio = p.precio_a_consultar || !p.rango_min
-                ? `<span class="consultar">$ consultar</span>`
-                : `<span class="currency">${moneda}</span>${p.rango_min.toLocaleString('es-AR')}`;
+        grid.innerHTML = lista.map(p => renderCard(p)).join('');
 
-            return `
-            <article class="prop-card" onclick="window.location.href='/propiedad/${p.id}'" style="cursor:pointer">
-                <div class="card-photo">
-                    ${foto
-                        ? `<img src="/${foto}" alt="${p.direccion}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-photo><span>🏠</span><span>Sin fotos</span></div>'">`
-                        : `<div class="no-photo"><span>🏠</span><span>Sin fotos</span></div>`}
-                    <div class="card-badges">
-                        ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
-                        ${p.tipo ? `<span class="badge badge-tipo">${p.tipo}</span>` : ''}
-                    </div>
+        // Img transition style
+        grid.querySelectorAll('.photo-main').forEach(img => {
+            img.style.transition = 'opacity 0.12s ease, transform 0.4s ease';
+        });
+    }
+
+    function renderCard(p) {
+        const fotos  = p.fotos && p.fotos.length > 0 ? p.fotos : null;
+        const moneda = p.es_usd ? 'USD' : '$';
+        const precio = p.precio_a_consultar || !p.rango_min
+            ? `<span class="consultar">Consultar precio</span>`
+            : `<span class="currency">${moneda}</span>${Number(p.rango_min).toLocaleString('es-AR')}`;
+
+        const multiPhoto = fotos && fotos.length > 1;
+        carouselIdx[p.id] = 0;
+
+        const photoHtml = fotos
+            ? `<img src="/${fotos[0]}" alt="${escAttr(p.direccion)}" loading="lazy" class="photo-main"
+                   onerror="this.parentElement.innerHTML='<div class=no-photo><div class=no-photo-icon>🏠</div><span>Sin fotos</span></div>'">`
+            : `<div class="no-photo"><div class="no-photo-icon">🏠</div><span>Sin fotos</span></div>`;
+
+        const carouselHtml = multiPhoto ? `
+            <div class="carousel-arrows">
+                <button class="c-arrow" onclick="carouselNav(${p.id}, -1, event)">‹</button>
+                <button class="c-arrow" onclick="carouselNav(${p.id}, 1, event)">›</button>
+            </div>
+            <div class="carousel-dots">
+                ${fotos.slice(0, 5).map((_, i) =>
+                    `<button class="c-dot${i===0?' active':''}" onclick="carouselGo(${p.id}, ${i}, event)"></button>`
+                ).join('')}
+            </div>` : (fotos && fotos.length > 0 ? `<div class="photo-count">📷 ${fotos.length}</div>` : '');
+
+        const ambHtml    = p.ambientes ? `<span class="card-spec">🛏 ${p.ambientes} amb.</span>` : '';
+        const tipoHtml   = p.tipo      ? `<span class="card-spec">🏠 ${p.tipo}</span>`             : '';
+        const estadoHtml = p.estado && p.estado !== 'disponible'
+            ? `<span class="card-spec" style="margin-left:auto">${p.estado}</span>` : '';
+
+        return `
+        <article class="prop-card" id="card-${p.id}" onclick="window.location.href='/propiedad/${p.id}'" style="cursor:pointer">
+            <div class="card-photo">
+                ${photoHtml}
+                <div class="card-badges">
+                    ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
+                    ${p.tipo      ? `<span class="badge badge-tipo">${p.tipo}</span>`                 : ''}
                 </div>
-                <div class="card-body">
-                    <div class="card-price">${precio}</div>
-                    <div class="card-address">${p.direccion}</div>
-                    ${p.barrio ? `<div class="card-barrio">📍 ${p.barrio}</div>` : ''}
-                    <div class="card-details">
-                        ${p.ambientes ? `<span class="card-detail"><span class="icon">🛏</span> ${p.ambientes} amb.</span>` : ''}
-                        ${p.tipo ? `<span class="card-detail"><span class="icon">🏠</span> ${p.tipo}</span>` : ''}
-                        ${p.estado ? `<span class="card-detail" style="margin-left:auto;font-size:11px;color:${p.estado==='disponible'?'#15803d':'#666'}">${p.estado}</span>` : ''}
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <a href="/propiedad/${p.id}" class="btn-ver" onclick="event.stopPropagation()">Ver detalles →</a>
-                </div>
-            </article>`;
-        }).join('');
+                ${carouselHtml}
+            </div>
+            <div class="card-body">
+                <div class="card-price">${precio}</div>
+                <div class="card-address">${p.direccion}</div>
+                ${p.barrio ? `<div class="card-barrio">📍 ${p.barrio}</div>` : ''}
+                <div class="card-specs">${ambHtml}${tipoHtml}${estadoHtml}</div>
+            </div>
+            <div class="card-footer">
+                <a href="/propiedad/${p.id}" class="btn-ver" onclick="event.stopPropagation()">
+                    Ver detalles
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </article>`;
+    }
+
+    function escAttr(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     }
 
     function renderError() {
         document.getElementById('grid-propiedades').innerHTML = `
             <div class="empty-state">
-                <span class="icon">⚠️</span>
+                <div class="empty-icon">⚠️</div>
                 <h3>Error al cargar propiedades</h3>
                 <p>Por favor recargá la página o intentá más tarde.</p>
             </div>`;

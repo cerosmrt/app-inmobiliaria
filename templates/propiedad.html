@@ -4,212 +4,260 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Propiedad — Moret Inmobiliaria</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --red: #C41230;
             --red-dark: #9e0d24;
-            --dark: #1a1a1a;
-            --border: #e5e5e5;
-            --text: #1a1a1a;
-            --muted: #666;
-            --bg: #f8f8f8;
+            --red-light: #fef2f4;
+            --dark: #0f172a;
+            --dark-2: #1e293b;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --muted: #64748b;
+            --bg: #f8fafc;
+            --tx: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); background: var(--bg); }
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            color: var(--text); background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
         a { text-decoration: none; color: inherit; }
 
         /* ── HEADER ── */
         .header {
-            background: white; border-bottom: 2px solid var(--red);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: rgba(255,255,255,0.97); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 10px rgba(0,0,0,0.07);
+            position: sticky; top: 0; z-index: 100;
         }
         .header-inner {
-            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            max-width: 1280px; margin: 0 auto; padding: 0 28px;
             display: flex; align-items: center; justify-content: space-between;
-            height: 64px;
+            height: 68px;
         }
-        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo { display: flex; align-items: center; gap: 11px; }
         .logo img { height: 42px; width: auto; object-fit: contain; }
-        .logo-text .roberto { font-size: 9px; letter-spacing: 3px; color: #888; text-transform: uppercase; }
+        .logo-text { line-height: 1; }
+        .logo-text .roberto { font-size: 8.5px; letter-spacing: 3px; color: #94a3b8; text-transform: uppercase; font-weight: 500; }
         .logo-text .moret { font-size: 24px; font-weight: 900; color: var(--red); letter-spacing: -1px; line-height: 1; }
-        .logo-text .inmobiliaria { font-size: 9px; letter-spacing: 3px; color: #555; text-transform: uppercase; }
+        .logo-text .inmobiliaria { font-size: 8.5px; letter-spacing: 3px; color: #64748b; text-transform: uppercase; font-weight: 500; }
         .back-btn {
-            display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
-            color: #555; background: var(--bg); padding: 7px 14px; border-radius: 6px;
-            border: 1px solid var(--border); transition: all 0.15s;
+            display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600;
+            color: #475569; background: white; padding: 8px 16px; border-radius: 8px;
+            border: 1.5px solid var(--border); transition: all var(--tx);
         }
-        .back-btn:hover { background: white; color: var(--red); border-color: var(--red); }
+        .back-btn:hover { background: var(--red-light); color: var(--red); border-color: rgba(196,18,48,0.25); }
 
-        .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+        /* ── CONTAINER ── */
+        .container { max-width: 1200px; margin: 0 auto; padding: 32px 28px 72px; }
 
         /* ── BREADCRUMB ── */
-        .breadcrumb { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
-        .breadcrumb a { color: var(--red); }
+        .breadcrumb {
+            font-size: 12.5px; color: var(--muted); margin-bottom: 24px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .breadcrumb a { color: var(--red); font-weight: 500; }
         .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb-sep { color: #cbd5e1; }
 
         /* ── LAYOUT ── */
-        .layout { display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-items: start; }
+        .layout { display: grid; grid-template-columns: 1fr 400px; gap: 32px; align-items: start; }
 
         /* ── GALLERY ── */
-        .gallery { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .gallery {
+            background: white; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.09); border: 1px solid var(--border);
+        }
         .gallery-main {
-            position: relative; aspect-ratio: 16/9; background: #f0f0f0;
+            position: relative; aspect-ratio: 16/10; background: #f0f2f5;
             cursor: pointer; overflow: hidden;
         }
         .gallery-main img {
             width: 100%; height: 100%; object-fit: cover;
-            transition: transform 0.3s;
+            transition: transform 0.35s ease, opacity 0.15s;
+            display: block;
         }
-        .gallery-main:hover img { transform: scale(1.02); }
+        .gallery-main:hover img { transform: scale(1.025); }
         .gallery-main .no-photo {
             width: 100%; height: 100%; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 10px; color: #bbb;
+            align-items: center; justify-content: center; gap: 12px;
+            color: #c0c0c0; background: #f8f8f8;
         }
-        .gallery-main .no-photo span:first-child { font-size: 52px; }
+        .gallery-main .no-photo span:first-child { font-size: 56px; }
         .gallery-nav {
             position: absolute; top: 50%; transform: translateY(-50%);
-            width: 100%; display: flex; justify-content: space-between; padding: 0 10px;
-            pointer-events: none;
+            width: 100%; display: flex; justify-content: space-between; padding: 0 12px;
+            pointer-events: none; opacity: 0; transition: opacity var(--tx);
         }
+        .gallery-main:hover .gallery-nav { opacity: 1; }
         .nav-btn {
-            pointer-events: all; background: rgba(0,0,0,0.5); color: white;
-            border: none; width: 36px; height: 36px; border-radius: 50%;
-            font-size: 16px; cursor: pointer; display: flex; align-items: center;
-            justify-content: center; transition: background 0.15s;
+            pointer-events: all; background: rgba(255,255,255,0.92); color: var(--dark);
+            border: none; width: 38px; height: 38px; border-radius: 50%;
+            font-size: 15px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: all var(--tx); font-weight: 700;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.14);
         }
-        .nav-btn:hover { background: rgba(0,0,0,0.8); }
+        .nav-btn:hover { background: white; transform: scale(1.06); }
         .gallery-count {
-            position: absolute; bottom: 10px; right: 10px;
-            background: rgba(0,0,0,0.6); color: white;
-            font-size: 11px; padding: 3px 10px; border-radius: 20px;
+            position: absolute; bottom: 12px; right: 12px;
+            background: rgba(0,0,0,0.55); color: white;
+            font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
+            display: flex; align-items: center; gap: 5px;
         }
+        .gallery-expand {
+            position: absolute; bottom: 12px; left: 12px;
+            background: rgba(0,0,0,0.45); color: white; border: none;
+            font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 5px;
+            cursor: pointer; transition: background var(--tx);
+        }
+        .gallery-expand:hover { background: rgba(0,0,0,0.7); }
         .gallery-thumbs {
-            display: flex; gap: 6px; padding: 10px;
-            overflow-x: auto; background: #fafafa; border-top: 1px solid var(--border);
+            display: flex; gap: 8px; padding: 12px;
+            overflow-x: auto; background: white; border-top: 1px solid var(--border);
         }
         .gallery-thumbs::-webkit-scrollbar { height: 4px; }
-        .gallery-thumbs::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+        .gallery-thumbs::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
         .thumb {
-            flex-shrink: 0; width: 72px; height: 54px; border-radius: 5px;
-            overflow: hidden; cursor: pointer; border: 2px solid transparent;
-            transition: border-color 0.15s;
+            flex-shrink: 0; width: 82px; height: 62px; border-radius: 7px;
+            overflow: hidden; cursor: pointer; border: 2.5px solid transparent;
+            transition: all var(--tx); opacity: 0.75;
         }
-        .thumb.active { border-color: var(--red); }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb.active { border-color: var(--red); opacity: 1; }
+        .thumb:hover { opacity: 1; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         /* ── DETAILS PANEL ── */
         .details { display: flex; flex-direction: column; gap: 20px; }
         .detail-card {
-            background: white; border-radius: 12px; padding: 22px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            background: white; border-radius: 14px; padding: 24px;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.07); border: 1px solid var(--border);
         }
 
-        .prop-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .prop-badges { display: flex; gap: 7px; margin-bottom: 14px; flex-wrap: wrap; }
         .badge {
-            font-size: 11px; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 0.5px; padding: 4px 12px; border-radius: 4px;
+            font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.6px; padding: 4px 12px; border-radius: 5px;
         }
-        .badge-venta    { background: var(--red); color: white; }
-        .badge-alquiler { background: var(--dark); color: white; }
+        .badge-venta      { background: var(--red); color: white; }
+        .badge-alquiler   { background: var(--dark); color: white; }
         .badge-disponible { background: #dcfce7; color: #15803d; }
         .badge-vendida    { background: #fee2e2; color: #b91c1c; }
         .badge-rentada    { background: #fff7ed; color: #c2410c; }
+        .badge-cerrada    { background: #f1f5f9; color: #64748b; }
         .badge-tipo       { background: #f1f5f9; color: #475569; }
 
-        .prop-price { font-size: 32px; font-weight: 900; color: var(--red); margin-bottom: 6px; line-height: 1; }
-        .prop-price .currency { font-size: 18px; font-weight: 600; color: #999; margin-right: 4px; }
-        .prop-price .consultar { font-size: 22px; color: #555; }
-        .prop-address { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--dark); }
-        .prop-barrio { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
-
-        .prop-specs {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+        .prop-price {
+            font-size: 34px; font-weight: 900; color: var(--red);
+            margin-bottom: 8px; line-height: 1; letter-spacing: -1px;
         }
+        .prop-price .currency { font-size: 18px; font-weight: 600; color: #94a3b8; margin-right: 3px; }
+        .prop-price .consultar { font-size: 22px; color: #64748b; font-weight: 700; letter-spacing: -0.5px; }
+        .prop-address { font-size: 19px; font-weight: 700; margin-bottom: 5px; color: var(--dark); line-height: 1.25; }
+        .prop-barrio { font-size: 14px; color: var(--muted); margin-bottom: 20px; font-weight: 500; }
+
+        .prop-specs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .spec-item {
-            background: var(--bg); border-radius: 8px; padding: 12px 14px;
+            background: var(--bg); border-radius: 9px; padding: 13px 15px;
+            border: 1px solid var(--border);
         }
-        .spec-item .spec-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
-        .spec-item .spec-value { font-size: 16px; font-weight: 700; color: var(--dark); }
+        .spec-item .spec-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+        .spec-item .spec-value { font-size: 15.5px; font-weight: 700; color: var(--dark); }
 
-        .prop-desc { font-size: 14px; line-height: 1.7; color: #444; white-space: pre-wrap; }
+        .prop-desc { font-size: 14px; line-height: 1.75; color: #475569; white-space: pre-wrap; }
 
         /* ── CONTACT CARD ── */
-        .contact-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: var(--dark); }
-        .contact-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .contact-card h3 { font-size: 15.5px; font-weight: 700; margin-bottom: 16px; color: var(--dark); }
+        .contact-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
         .btn-wa {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            background: #25d366; color: white; font-weight: 700; font-size: 14px;
-            padding: 12px; border-radius: 8px; transition: background 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 9px;
+            background: #22c55e; color: white; font-weight: 700; font-size: 14.5px;
+            padding: 13px; border-radius: 9px; transition: all var(--tx);
+            box-shadow: 0 2px 10px rgba(34,197,94,0.25);
         }
-        .btn-wa:hover { background: #1da851; }
+        .btn-wa:hover { background: #16a34a; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,197,94,0.3); }
         .btn-tel {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            background: #f1f5f9; color: var(--dark); font-weight: 700; font-size: 14px;
-            padding: 12px; border-radius: 8px; border: 1px solid var(--border);
-            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 9px;
+            background: var(--bg); color: var(--dark); font-weight: 700; font-size: 14px;
+            padding: 12px; border-radius: 9px; border: 1.5px solid var(--border);
+            transition: all var(--tx);
         }
-        .btn-tel:hover { background: var(--dark); color: white; }
+        .btn-tel:hover { background: var(--dark); color: white; border-color: var(--dark); }
 
-        .divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; color: var(--muted); font-size: 12px; }
+        .divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; color: var(--muted); font-size: 12px; font-weight: 500; }
         .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-        /* ── CONTACT FORM ── */
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
+        /* ── FORM ── */
+        .form-group { margin-bottom: 13px; }
+        .form-group label { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 6px; }
         .form-group input,
         .form-group textarea {
-            width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
-            border-radius: 7px; font-size: 13px; color: var(--text);
-            font-family: inherit; outline: none; transition: border-color 0.15s;
+            width: 100%; padding: 10px 13px; border: 1.5px solid var(--border);
+            border-radius: 8px; font-size: 13.5px; color: var(--text);
+            font-family: inherit; outline: none; transition: border-color var(--tx);
             background: white;
         }
         .form-group input:focus,
         .form-group textarea:focus { border-color: var(--red); }
         .form-group textarea { resize: vertical; min-height: 90px; }
         .btn-enviar {
-            width: 100%; padding: 12px; background: var(--red); color: white;
-            border: none; border-radius: 7px; font-size: 14px; font-weight: 700;
-            cursor: pointer; transition: background 0.2s;
+            width: 100%; padding: 13px; background: var(--red); color: white;
+            border: none; border-radius: 9px; font-size: 14.5px; font-weight: 700;
+            cursor: pointer; transition: all var(--tx); font-family: inherit;
         }
-        .btn-enviar:hover { background: var(--red-dark); }
-        .btn-enviar:disabled { background: #aaa; cursor: not-allowed; }
+        .btn-enviar:hover { background: var(--red-dark); transform: translateY(-1px); }
+        .btn-enviar:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
         .form-success {
-            background: #dcfce7; color: #15803d; border-radius: 7px;
-            padding: 12px 14px; font-size: 13px; font-weight: 600;
+            background: #dcfce7; color: #15803d; border-radius: 9px;
+            padding: 13px 16px; font-size: 13.5px; font-weight: 600;
             text-align: center; display: none;
         }
         .form-error {
-            background: #fee2e2; color: #b91c1c; border-radius: 7px;
-            padding: 10px 14px; font-size: 12px; margin-bottom: 10px; display: none;
+            background: #fee2e2; color: #b91c1c; border-radius: 8px;
+            padding: 10px 14px; font-size: 12.5px; margin-bottom: 12px; display: none;
         }
 
         /* ── LIGHTBOX ── */
         .lightbox {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.94);
             z-index: 200; align-items: center; justify-content: center;
         }
         .lightbox.active { display: flex; }
-        .lb-img { max-width: 90vw; max-height: 88vh; border-radius: 4px; display: block; }
+        .lb-img { max-width: 92vw; max-height: 90vh; border-radius: 6px; display: block; box-shadow: 0 0 60px rgba(0,0,0,0.5); }
         .lb-close {
-            position: absolute; top: 16px; right: 20px; background: none; border: none;
-            color: white; font-size: 28px; cursor: pointer; line-height: 1;
+            position: absolute; top: 16px; right: 20px;
+            background: rgba(255,255,255,0.12); border: none;
+            color: white; font-size: 20px; cursor: pointer;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: background var(--tx);
         }
+        .lb-close:hover { background: rgba(255,255,255,0.22); }
         .lb-nav {
             position: absolute; top: 50%; transform: translateY(-50%);
-            width: 100%; display: flex; justify-content: space-between; padding: 0 14px;
+            width: 100%; display: flex; justify-content: space-between; padding: 0 16px;
         }
         .lb-btn {
-            background: rgba(255,255,255,0.15); color: white; border: none;
-            width: 44px; height: 44px; border-radius: 50%; font-size: 18px;
+            background: rgba(255,255,255,0.12); color: white; border: none;
+            width: 48px; height: 48px; border-radius: 50%; font-size: 20px; font-weight: 700;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: background 0.15s;
+            transition: background var(--tx);
         }
-        .lb-btn:hover { background: rgba(255,255,255,0.3); }
+        .lb-btn:hover { background: rgba(255,255,255,0.25); }
 
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .layout { grid-template-columns: 1fr; }
             .details { order: -1; }
+        }
+        @media (max-width: 640px) {
+            .header-inner { padding: 0 16px; height: 60px; }
+            .container { padding: 20px 16px 56px; }
             .prop-specs { grid-template-columns: repeat(2, 1fr); }
+            .gallery-main { aspect-ratio: 4/3; }
         }
     </style>
 </head>
@@ -225,17 +273,27 @@
                 <div class="inmobiliaria">Inmobiliaria</div>
             </div>
         </a>
-        <a href="/" class="back-btn">← Volver a propiedades</a>
+        <a href="/" class="back-btn">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            Volver
+        </a>
     </div>
 </header>
 
 <div class="container">
     <div class="breadcrumb">
-        <a href="/">Inicio</a> / <a href="/">Propiedades</a> / <span id="bc-dir">Cargando...</span>
+        <a href="/">Inicio</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="/">Propiedades</a>
+        <span class="breadcrumb-sep">/</span>
+        <span id="bc-dir">Cargando...</span>
     </div>
 
     <div class="layout" id="layout">
-        <div style="text-align:center;padding:60px;color:#aaa">Cargando propiedad...</div>
+        <div style="text-align:center;padding:72px;color:#94a3b8">
+            <div style="font-size:36px;margin-bottom:12px">🏠</div>
+            <div style="font-size:14px">Cargando propiedad...</div>
+        </div>
     </div>
 </div>
 
@@ -370,24 +428,28 @@
     function renderGallery() {
         if (fotos.length === 0) {
             return `<div class="gallery">
-                <div class="gallery-main"><div class="no-photo"><span>🏠</span><span style="font-size:14px;color:#bbb">Sin fotos disponibles</span></div></div>
+                <div class="gallery-main">
+                    <div class="no-photo"><span>🏠</span><span style="font-size:14px;color:#bbb">Sin fotos disponibles</span></div>
+                </div>
             </div>`;
         }
         const mainImg = `<img id="main-img" src="/${fotos[0]}" alt="Foto principal" onclick="openLightbox(0)"
             onerror="this.parentElement.innerHTML='<div class=no-photo><span>🏠</span></div>'">`;
         const thumbs = fotos.map((f, i) =>
             `<div class="thumb ${i === 0 ? 'active' : ''}" data-idx="${i}" onclick="setFoto(${i})">
-                <img src="/${f}" alt="Foto ${i+1}" onerror="this.parentElement.style.display='none'">
+                <img src="/${f}" alt="Foto ${i+1}" loading="lazy"
+                     onerror="this.parentElement.style.display='none'">
             </div>`).join('');
         return `
         <div class="gallery">
             <div class="gallery-main">
                 ${mainImg}
                 ${fotos.length > 1 ? `<div class="gallery-nav">
-                    <button class="nav-btn" onclick="setFoto(fotoActual - 1)">❮</button>
-                    <button class="nav-btn" onclick="setFoto(fotoActual + 1)">❯</button>
+                    <button class="nav-btn" onclick="setFoto(fotoActual - 1)" title="Anterior">‹</button>
+                    <button class="nav-btn" onclick="setFoto(fotoActual + 1)" title="Siguiente">›</button>
                 </div>` : ''}
-                <div class="gallery-count" id="gallery-count">1 / ${fotos.length}</div>
+                <div class="gallery-count" id="gallery-count">📷 1 / ${fotos.length}</div>
+                <button class="gallery-expand" onclick="openLightbox(fotoActual)" title="Ver en pantalla completa">⤢ Ampliar</button>
             </div>
             ${fotos.length > 1 ? `<div class="gallery-thumbs">${thumbs}</div>` : ''}
         </div>`;
@@ -414,7 +476,7 @@
         if (img) img.src = '/' + fotos[fotoActual];
         document.querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('active', i === fotoActual));
         const cnt = document.getElementById('gallery-count');
-        if (cnt) cnt.textContent = `${fotoActual + 1} / ${fotos.length}`;
+        if (cnt) cnt.textContent = `📷 ${fotoActual + 1} / ${fotos.length}`;
     }
 
     function openLightbox(idx) {
