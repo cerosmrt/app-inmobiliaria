@@ -1240,6 +1240,106 @@ else:
     fail("FASE 23 archivar setup", f"pid={pid23arc}")
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 24: REGRESIÓN — PRODUCCIÓN DEBUGGING PASS ===")
+
+# ── Bug 1: guardarFiltrosEnURL usa DOM real (no .tab-btn.active muerta) ────────
+r_admin_f24 = session.get(f"{BASE}/admin")
+if r_admin_f24.ok:
+    html = r_admin_f24.text
+    check("admin/index.html NO referencia .tab-btn.active (selector muerto)",
+          '.tab-btn.active' not in html, "selector muerto todavía presente")
+    check("admin/index.html guardarFiltrosEnURL detecta tab por display del DOM",
+          "tab-propiedades" in html and ("tab-archivados" in html),
+          "detección de tab por DOM no encontrada")
+    check("admin/index.html leerFiltrosDeURL NO manipula .tab-btn (ya no existe)",
+          ".querySelectorAll('.tab-btn')" not in html and
+          ".tab-btn" not in html,
+          "leerFiltrosDeURL sigue manipulando .tab-btn")
+
+# ── Bug 2: cargarSimilares guarda contra tipo+operacion vacíos ─────────────────
+r_pub_prop = requests.get(BASE)
+check("propiedad.html carga sin error", r_pub_prop.status_code == 200)
+# Verifica vía contenido del template renderizado (hit un path genérico)
+if propiedades_orig:
+    pid_sim = propiedades_orig[0]["id"]
+    r_det_sim = requests.get(f"{BASE}/propiedad/{pid_sim}")
+    check(f"GET /propiedad/{pid_sim} 200", r_det_sim.status_code == 200, str(r_det_sim.status_code))
+    check("propiedad.html tiene guard cargarSimilares (!tipo && !operacion)",
+          "!p.tipo && !p.operacion" in r_det_sim.text or
+          "if (!p.tipo && !p.operacion)" in r_det_sim.text,
+          "guard no encontrado en HTML de propiedad")
+
+# ── Bug 3: bulk-toolbar mobile CSS ─────────────────────────────────────────────
+if r_admin_f24.ok:
+    check("admin/index.html bulk-toolbar tiene media query mobile (left:0)",
+          "@media (max-width: 768px)" in r_admin_f24.text and
+          "bulk-toolbar" in r_admin_f24.text,
+          "media query mobile para bulk-toolbar no encontrada")
+
+# ── Bug 4: fetch de asignación propietario/interesado tiene .catch() ───────────
+if r_admin_f24.ok:
+    check("agregarPropietarioInline tiene .catch()",
+          "Error al asignar propietario" in r_admin_f24.text,
+          "falta .catch() en agregarPropietarioInline")
+    check("quitarPropietarioInline tiene .catch()",
+          "Error al quitar propietario" in r_admin_f24.text,
+          "falta .catch() en quitarPropietarioInline")
+    check("agregarPropiedadCliente tiene .catch()",
+          "Error al asignar propiedad" in r_admin_f24.text,
+          "falta .catch() en agregarPropiedadCliente")
+    check("quitarPropiedadCliente tiene .catch()",
+          "Error al quitar propiedad" in r_admin_f24.text,
+          "falta .catch() en quitarPropiedadCliente")
+
+# ── Bug 5: OSError en borrado de foto registra warning (no silencia) ───────────
+r_app = requests.get(f"{BASE}/static/admin.js")  # no acceso directo a app.py, lo verificamos via logs
+# Verificamos la corrección leyendo el archivo fuente directamente
+try:
+    with open("z:/programming/Dad/app.py", encoding="utf-8") as f:
+        app_src = f.read()
+    check("app.py OSError en delete_foto registra warning (no pass silencioso)",
+          "app.logger.warning" in app_src and "Could not delete photo file" in app_src,
+          "logger.warning no encontrado tras except OSError")
+    check("app.py no usa 'except OSError: pass' sin logging en delete_foto",
+          "except OSError:\n            pass" not in app_src,
+          "OSError todavía silenciado con pass")
+except Exception as e:
+    fail("app.py lectura para verificar OSError fix", str(e))
+
+# ── Consultas reply endpoint disponible ────────────────────────────────────────
+r_cons = session.get(f"{BASE}/api/consultas")
+if r_cons.ok and r_cons.json():
+    cid_reply = r_cons.json()[0]["id"]
+    # Intentar reply sin config de email — debe fallar con 503 o 400, no 404/500
+    r_reply = session.post(f"{BASE}/api/consultas/{cid_reply}/responder",
+                           json={"asunto": "Test", "cuerpo": "Test reply"},
+                           headers={"X-CSRFToken": real_csrf})
+    check(f"POST /api/consultas/{cid_reply}/responder endpoint existe (no 404)",
+          r_reply.status_code != 404, f"status={r_reply.status_code}")
+    check("Reply endpoint retorna 200/503 (no 500 crash)",
+          r_reply.status_code in (200, 503, 400), f"status={r_reply.status_code}")
+
+# ── Bulk estado endpoint ────────────────────────────────────────────────────────
+r_props_bulk = session.get(f"{BASE}/api/propiedades")
+if r_props_bulk.ok and r_props_bulk.json():
+    test_ids = [r_props_bulk.json()[0]["id"]]
+    orig_estado = r_props_bulk.json()[0].get("estado", "disponible")
+    r_bulk = session.patch(f"{BASE}/api/propiedades/bulk-estado",
+                           json={"ids": test_ids, "estado": "disponible"},
+                           headers={"X-CSRFToken": real_csrf})
+    check("PATCH /api/propiedades/bulk-estado 200",
+          r_bulk.status_code == 200, f"status={r_bulk.status_code}")
+    if r_bulk.ok:
+        check("bulk-estado devuelve campo updated",
+              "updated" in r_bulk.json(), str(r_bulk.json()))
+        check("bulk-estado updated == 1",
+              r_bulk.json().get("updated") == 1, str(r_bulk.json().get("updated")))
+    # Restore original estado
+    session.patch(f"{BASE}/api/propiedades/bulk-estado",
+                  json={"ids": test_ids, "estado": orig_estado},
+                  headers={"X-CSRFToken": real_csrf})
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)

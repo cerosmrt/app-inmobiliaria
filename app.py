@@ -541,8 +541,8 @@ def delete_foto_propiedad(id, filename):
             if os.path.exists(candidate):
                 os.remove(candidate)
                 break
-        except OSError:
-            pass
+        except OSError as e:
+            app.logger.warning('Could not delete photo file %s: %s', candidate, e)
     return jsonify(p.as_dict())
 
 @app.route('/api/propiedades/<int:id>/fotos/orden', methods=['PUT'])

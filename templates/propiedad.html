@@ -533,6 +533,7 @@
     }
 
     function cargarSimilares(p) {
+        if (!p.tipo && !p.operacion) return;
         const params = new URLSearchParams();
         if (p.tipo)      params.set('tipo', p.tipo);
         if (p.operacion) params.set('operacion', p.operacion);

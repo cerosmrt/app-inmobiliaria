@@ -59,6 +59,8 @@
     .bulk-toolbar select option { background: #1e293b; color: white; }
     #bulk-count { font-size: 13px; font-weight: 600; white-space: nowrap; }
 
+    @media (max-width: 768px) { .bulk-toolbar { left: 0; } }
+
     /* ── Checkbox column ── */
     #tablaPropiedades th:first-child,
     #tablaPropiedades td:first-child { width: 36px; text-align: center; padding: 0 8px; }
@@ -339,8 +341,12 @@
     // ── URL filter persistence ─────────────────────────────────────────────────
     function guardarFiltrosEnURL() {
         const p = new URLSearchParams();
-        const tabActivo = document.querySelector('.tab-btn.active');
-        if (tabActivo && tabActivo.textContent.trim() === 'Propiedades') p.set('tab', 'propiedades');
+        const tabProp = document.getElementById('tab-propiedades');
+        const tabArch = document.getElementById('tab-archivados');
+        const currentTab = tabArch && tabArch.style.display !== 'none' ? 'archivados'
+                         : tabProp && tabProp.style.display !== 'none' ? 'propiedades'
+                         : 'clientes';
+        p.set('tab', currentTab);
         const texto     = document.getElementById('filtroTexto').value;
         const operacion = document.getElementById('filtroOperacion').value;
         const ambientes = document.getElementById('filtroAmbientes').value;
@@ -366,12 +372,6 @@
 
     function leerFiltrosDeURL() {
         const p = new URLSearchParams(window.location.search);
-        if (p.get('tab') === 'propiedades') {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-btn')[1].classList.add('active');
-            document.getElementById('tab-clientes').style.display = 'none';
-            document.getElementById('tab-propiedades').style.display = '';
-        }
         if (p.get('texto'))     document.getElementById('filtroTexto').value = p.get('texto');
         if (p.get('operacion')) document.getElementById('filtroOperacion').value = p.get('operacion');
         if (p.get('ambientes')) document.getElementById('filtroAmbientes').value = p.get('ambientes');
@@ -1055,7 +1055,7 @@
                 renderListaPropietarios(data);
                 filtrarPropiedades();
                 toast('Propietario asignado', 'success');
-            });
+            }).catch(function() { toast('Error al asignar propietario', 'error'); });
     }
 
     function quitarPropietarioInline(propId, cliId) {
@@ -1067,7 +1067,7 @@
                 renderListaPropietarios(data);
                 filtrarPropiedades();
                 toast('Propietario quitado', 'success');
-            });
+            }).catch(function() { toast('Error al quitar propietario', 'error'); });
     }
 
     // ── MODAL PROPIEDADES (click en celda Propiedad de tabla clientes) ─────────
@@ -1139,7 +1139,7 @@
                 renderListaPropiedadesCliente(data);
                 filtrarClientes();
                 toast('Propiedad asignada', 'success');
-            });
+            }).catch(function() { toast('Error al asignar propiedad', 'error'); });
     }
 
     function quitarPropiedadCliente(cliId, propId, rol) {
@@ -1153,7 +1153,7 @@
                 renderListaPropiedadesCliente(data);
                 filtrarClientes();
                 toast('Propiedad quitada', 'success');
-            });
+            }).catch(function() { toast('Error al quitar propiedad', 'error'); });
     }
 
     // ── INIT ──────────────────────────────────────────────────────────────────
