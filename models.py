@@ -217,6 +217,102 @@ class CaptacionActividad(db.Model):
         }
 
 
+class ParcelaCatastral(db.Model):
+    __tablename__ = 'parcelas_catastrales'
+    id                 = db.Column(db.Integer, primary_key=True)
+    parcel_id          = db.Column(db.String, nullable=True, index=True)
+    geojson_geometry   = db.Column(db.Text, nullable=True)
+    surface_area       = db.Column(db.Float, nullable=True)
+    zone               = db.Column(db.String, nullable=True)
+    municipality       = db.Column(db.String, nullable=True)
+    province           = db.Column(db.String, nullable=True)
+    coordinates_center = db.Column(db.String, nullable=True)   # "lat,lng"
+    land_use           = db.Column(db.String, nullable=True)
+    notes              = db.Column(db.Text, nullable=True)
+    created_at         = db.Column(db.DateTime, default=datetime.utcnow)
+    deleted_at         = db.Column(db.DateTime, nullable=True)
+
+    oportunidad     = db.relationship('OportunidadTerreno', backref='parcela', uselist=False, cascade='all, delete-orphan')
+    investigaciones = db.relationship('InvestigacionPropietario', backref='parcela', cascade='all, delete-orphan',
+                                      order_by='InvestigacionPropietario.fecha.desc()')
+
+    def as_dict(self):
+        coords = None
+        if self.coordinates_center:
+            try:
+                parts = self.coordinates_center.split(',')
+                coords = {'lat': float(parts[0]), 'lng': float(parts[1])}
+            except Exception:
+                pass
+        return {
+            'id': self.id,
+            'parcel_id': self.parcel_id or '',
+            'geojson_geometry': self.geojson_geometry,
+            'surface_area': self.surface_area,
+            'zone': self.zone or '',
+            'municipality': self.municipality or '',
+            'province': self.province or '',
+            'coordinates_center': coords,
+            'land_use': self.land_use or '',
+            'notes': self.notes or '',
+            'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
+            'oportunidad': self.oportunidad.as_dict() if self.oportunidad else None,
+            'investigaciones': [i.as_dict() for i in self.investigaciones],
+        }
+
+
+class OportunidadTerreno(db.Model):
+    __tablename__ = 'oportunidades_terreno'
+    id                  = db.Column(db.Integer, primary_key=True)
+    parcela_id          = db.Column(db.Integer, db.ForeignKey('parcelas_catastrales.id'), nullable=False)
+    estado              = db.Column(db.String, default='sin_evaluar')
+    prioridad           = db.Column(db.String, default='media')
+    potencial           = db.Column(db.Integer, default=3)
+    descripcion         = db.Column(db.Text, nullable=True)
+    observaciones       = db.Column(db.Text, nullable=True)
+    ultima_interaccion  = db.Column(db.DateTime, nullable=True)
+    proximo_seguimiento = db.Column(db.DateTime, nullable=True)
+    created_by          = db.Column(db.String, nullable=True)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'parcela_id': self.parcela_id,
+            'estado': self.estado,
+            'prioridad': self.prioridad or 'media',
+            'potencial': self.potencial or 3,
+            'descripcion': self.descripcion or '',
+            'observaciones': self.observaciones or '',
+            'ultima_interaccion': self.ultima_interaccion.strftime('%d/%m/%Y') if self.ultima_interaccion else None,
+            'proximo_seguimiento': self.proximo_seguimiento.strftime('%Y-%m-%d') if self.proximo_seguimiento else None,
+            'created_by': self.created_by or '',
+        }
+
+
+class InvestigacionPropietario(db.Model):
+    __tablename__ = 'investigaciones_propietario'
+    id                 = db.Column(db.Integer, primary_key=True)
+    parcela_id         = db.Column(db.Integer, db.ForeignKey('parcelas_catastrales.id'), nullable=False)
+    nombre             = db.Column(db.String, nullable=True)
+    telefono           = db.Column(db.String, nullable=True)
+    email              = db.Column(db.String, nullable=True)
+    fuente_informacion = db.Column(db.String, nullable=True)
+    notas              = db.Column(db.Text, nullable=True)
+    fecha              = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'parcela_id': self.parcela_id,
+            'nombre': self.nombre or '',
+            'telefono': self.telefono or '',
+            'email': self.email or '',
+            'fuente_informacion': self.fuente_informacion or '',
+            'notas': self.notas or '',
+            'fecha': self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else '',
+        }
+
+
 class Consulta(db.Model):
     __tablename__ = 'consultas'
     id = db.Column(db.Integer, primary_key=True)

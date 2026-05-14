@@ -1,0 +1,1182 @@
+{% extends "admin/base.html" %}
+{% block title %}Catastro{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
+/* ── Override body/shell for dark map aesthetic ───────────────────────────── */
+body { background: #0a0f1a; }
+.main-area { background: #0a0f1a; }
+
+/* ── Topbar ───────────────────────────────────────────────────────────────── */
+.cat-topbar {
+    background: rgba(10,15,26,0.97);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding: 0 16px; height: 46px;
+    display: flex; align-items: center; gap: 10px;
+    position: sticky; top: 0; z-index: 500;
+    backdrop-filter: blur(12px);
+}
+.cat-title {
+    font-size: 13px; font-weight: 800; color: white;
+    letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap;
+    display: flex; align-items: center; gap: 8px;
+}
+.cat-title-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #3b82f6; box-shadow: 0 0 8px #3b82f6;
+}
+.cat-views {
+    display: flex; gap: 2px;
+    background: rgba(255,255,255,0.06);
+    padding: 3px; border-radius: 6px;
+}
+.cat-view-btn {
+    font-size: 11.5px; font-weight: 600; padding: 4px 12px;
+    border-radius: 4px; border: none; background: none;
+    color: rgba(255,255,255,0.4); cursor: pointer;
+    transition: all 0.15s; font-family: inherit;
+}
+.cat-view-btn.active {
+    background: rgba(255,255,255,0.1); color: white;
+}
+.cat-search {
+    height: 30px; padding: 0 10px; flex: 1; max-width: 240px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; color: white; font-size: 12.5px; font-family: inherit;
+    transition: border-color 0.15s;
+}
+.cat-search::placeholder { color: rgba(255,255,255,0.3); }
+.cat-search:focus { outline: none; border-color: rgba(59,130,246,0.6); background: rgba(255,255,255,0.1); }
+.cat-ml { margin-left: auto; display: flex; gap: 6px; }
+.btn-cat {
+    height: 30px; padding: 0 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7);
+    font-size: 11.5px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.btn-cat:hover { background: rgba(255,255,255,0.12); color: white; }
+.btn-cat-blue {
+    background: rgba(59,130,246,0.2); color: #93c5fd;
+    border-color: rgba(59,130,246,0.35);
+}
+.btn-cat-blue:hover { background: rgba(59,130,246,0.35); color: white; }
+.btn-cat-add {
+    background: #C41230; color: white; border-color: #C41230;
+}
+.btn-cat-add:hover { background: #a50e28; }
+.add-mode-hint {
+    display: none; position: absolute; top: 56px; left: 50%;
+    transform: translateX(-50%); z-index: 600;
+    background: rgba(59,130,246,0.92); color: white;
+    padding: 8px 18px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
+    backdrop-filter: blur(8px); pointer-events: none;
+    animation: pulse-hint 1.5s ease-in-out infinite;
+}
+@keyframes pulse-hint { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+/* ── Map wrapper ──────────────────────────────────────────────────────────── */
+.cat-shell {
+    position: relative;
+    height: calc(100vh - 46px);
+    overflow: hidden;
+}
+#cat-map {
+    position: absolute; inset: 0;
+    background: #0a0f1a;
+}
+
+/* ── Layer panel ──────────────────────────────────────────────────────────── */
+.layer-panel {
+    position: absolute; bottom: 24px; left: 16px; z-index: 400;
+    background: rgba(10,15,26,0.88); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 12px 14px; min-width: 140px;
+}
+.layer-title {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; color: rgba(255,255,255,0.3); margin-bottom: 8px;
+}
+.layer-item {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer;
+}
+.layer-item:last-child { margin-bottom: 0; }
+.layer-item input[type=radio] { display: none; }
+.layer-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0; transition: all 0.15s;
+}
+.layer-item.active .layer-dot { border-color: #3b82f6; background: #3b82f6; }
+.layer-label { font-size: 12px; color: rgba(255,255,255,0.55); transition: color 0.15s; }
+.layer-item.active .layer-label { color: white; }
+
+/* ── Legend ───────────────────────────────────────────────────────────────── */
+.cat-legend {
+    position: absolute; bottom: 24px; right: 16px; z-index: 400;
+    background: rgba(10,15,26,0.88); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 10px 12px;
+}
+.legend-title {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; color: rgba(255,255,255,0.3); margin-bottom: 7px;
+}
+.legend-item {
+    display: flex; align-items: center; gap: 7px; margin-bottom: 4px; font-size: 11px;
+    color: rgba(255,255,255,0.5);
+}
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Detail panel ─────────────────────────────────────────────────────────── */
+.cat-detail {
+    position: absolute; top: 0; right: 0; height: 100%; z-index: 400;
+    width: 0; overflow: hidden;
+    transition: width 0.22s cubic-bezier(0.4,0,0.2,1);
+}
+.cat-detail.open { width: 380px; }
+.cat-detail-inner {
+    width: 380px; height: 100%;
+    background: rgba(10,15,26,0.96); backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255,255,255,0.07);
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.cdh {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.cdh-close {
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1); background: none;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.4); transition: all 0.15s;
+    flex-shrink: 0;
+}
+.cdh-close:hover { border-color: #C41230; color: #f87171; background: rgba(196,18,48,0.1); }
+.cdh-title {
+    flex: 1; font-size: 13px; font-weight: 700; color: white;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cdh-actions { display: flex; gap: 5px; }
+.btn-cd {
+    height: 28px; padding: 0 10px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1); background: none;
+    color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.btn-cd:hover { border-color: rgba(255,255,255,0.3); color: white; }
+.btn-cd-blue { background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
+.btn-cd-blue:hover { background: rgba(59,130,246,0.3); color: white; }
+.btn-cd-red { background: rgba(196,18,48,0.15); color: #f87171; border-color: rgba(196,18,48,0.3); }
+.btn-cd-red:hover { background: rgba(196,18,48,0.3); color: white; }
+
+/* ── Detail tabs ──────────────────────────────────────────────────────────── */
+.cd-tabs {
+    display: flex; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+}
+.cd-tab {
+    flex: 1; padding: 9px 0; text-align: center;
+    font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.35);
+    cursor: pointer; transition: all 0.15s; border: none; background: none;
+    font-family: inherit;
+    border-bottom: 2px solid transparent;
+}
+.cd-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+.cd-tab:hover:not(.active) { color: rgba(255,255,255,0.6); }
+.cd-body {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+.cd-body::-webkit-scrollbar { width: 4px; }
+.cd-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ── Dark form fields ─────────────────────────────────────────────────────── */
+.cd-section { display: flex; flex-direction: column; gap: 8px; }
+.cd-section-ttl {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: rgba(255,255,255,0.25);
+    border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 5px;
+}
+.cd-row { display: flex; flex-direction: column; gap: 3px; }
+.cd-label { font-size: 10.5px; color: rgba(255,255,255,0.35); font-weight: 500; }
+.cd-input {
+    width: 100%; padding: 6px 9px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; color: white; font-size: 12.5px; font-family: inherit;
+    transition: border-color 0.15s;
+}
+.cd-input:focus { outline: none; border-color: rgba(59,130,246,0.6); background: rgba(255,255,255,0.09); }
+.cd-input::placeholder { color: rgba(255,255,255,0.2); }
+.cd-select {
+    width: 100%; padding: 6px 9px; height: 32px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; color: white; font-size: 12.5px; font-family: inherit;
+    cursor: pointer; transition: border-color 0.15s;
+}
+.cd-select:focus { outline: none; border-color: rgba(59,130,246,0.6); }
+.cd-select option { background: #1e293b; }
+.cd-textarea {
+    width: 100%; padding: 7px 9px; min-height: 64px; resize: vertical;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; color: white; font-size: 12px; font-family: inherit;
+    transition: border-color 0.15s; line-height: 1.45;
+}
+.cd-textarea:focus { outline: none; border-color: rgba(59,130,246,0.6); }
+.cd-row-h { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.cd-stars { display: flex; gap: 3px; }
+.cd-star { font-size: 20px; cursor: pointer; color: rgba(255,255,255,0.15); transition: color 0.1s; border: none; background: none; padding: 0; }
+.cd-star.on { color: #f59e0b; }
+.cd-save-btn {
+    width: 100%; height: 32px; background: #3b82f6; color: white;
+    border: none; border-radius: 6px; font-size: 12.5px; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: background 0.15s;
+}
+.cd-save-btn:hover { background: #2563eb; }
+.cd-coords {
+    font-size: 11px; color: rgba(255,255,255,0.3); font-family: monospace;
+    padding: 5px 9px; background: rgba(255,255,255,0.04);
+    border-radius: 5px; letter-spacing: 0.5px;
+}
+
+/* ── Investigation entries ────────────────────────────────────────────────── */
+.inv-item {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px; padding: 10px 11px; position: relative;
+}
+.inv-name { font-size: 13px; font-weight: 600; color: white; margin-bottom: 3px; }
+.inv-meta { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+.inv-notes { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
+.inv-del {
+    position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
+    border-radius: 4px; border: none; background: none; cursor: pointer;
+    color: rgba(255,255,255,0.2); font-size: 14px; opacity: 0; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+}
+.inv-item:hover .inv-del { opacity: 1; }
+.inv-del:hover { color: #f87171; background: rgba(196,18,48,0.15); }
+.inv-empty { font-size: 12px; color: rgba(255,255,255,0.25); text-align: center; padding: 20px 0; }
+.inv-form {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 7px;
+}
+.inv-form-ttl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); }
+.inv-add-btn {
+    width: 100%; height: 30px; background: rgba(59,130,246,0.15); color: #93c5fd;
+    border: 1px dashed rgba(59,130,246,0.3); border-radius: 6px; font-size: 12px;
+    font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s;
+}
+.inv-add-btn:hover { background: rgba(59,130,246,0.25); color: white; }
+.btn-inv-save {
+    height: 28px; padding: 0 14px; background: #3b82f6; color: white; border: none;
+    border-radius: 5px; font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.btn-inv-cancel {
+    height: 28px; padding: 0 10px; background: none; color: rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 5px;
+    font-size: 11.5px; font-family: inherit; cursor: pointer;
+}
+
+/* ── List views (Parcelas / Oportunidades) ────────────────────────────────── */
+.cat-list-wrap {
+    flex: 1; overflow: auto; padding: 16px;
+    background: var(--bg); min-height: calc(100vh - 46px);
+}
+.cat-table {
+    width: 100%; border-collapse: collapse; background: white;
+    border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border); font-size: 12.5px;
+}
+.cat-table th {
+    background: #f8fafc; padding: 9px 12px; text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border);
+}
+.cat-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.cat-table tr:last-child td { border-bottom: none; }
+.cat-table tbody tr { cursor: pointer; transition: background 0.12s; }
+.cat-table tbody tr:hover { background: #fafbfc; }
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.cat-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 1000;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.cat-modal-overlay.open { display: flex; }
+.cat-modal {
+    background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; width: 520px; max-width: 94vw;
+    max-height: 88vh; display: flex; flex-direction: column;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+    animation: fadeInModal 0.14s ease;
+}
+.cat-modal-hdr {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.cat-modal-hdr h3 { font-size: 15px; font-weight: 700; color: white; margin: 0; }
+.cat-modal-body {
+    overflow-y: auto; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 10px; flex: 1;
+}
+.cat-modal-body::-webkit-scrollbar { width: 4px; }
+.cat-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.cat-modal-ft {
+    padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+}
+.form-row-d { display: flex; flex-direction: column; gap: 4px; }
+.form-row-d label { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.5); }
+.form-input-d {
+    width: 100%; padding: 7px 10px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px; color: white; font-size: 13px; font-family: inherit;
+    transition: border-color 0.15s;
+}
+.form-input-d:focus { outline: none; border-color: rgba(59,130,246,0.7); }
+.form-input-d::placeholder { color: rgba(255,255,255,0.2); }
+.form-input-d option { background: #1e293b; }
+.form-grid-d { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-section-d {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: rgba(255,255,255,0.25);
+    padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.07); margin-top: 2px;
+}
+.modal-close-d {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1); background: none; cursor: pointer;
+    color: rgba(255,255,255,0.4); font-size: 16px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.modal-close-d:hover { border-color: #C41230; color: #f87171; }
+.btn-d-cancel { height: 34px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.15); background: none; border-radius: 6px; font-size: 13px; font-family: inherit; cursor: pointer; color: rgba(255,255,255,0.5); }
+.btn-d-save { height: 34px; padding: 0 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.btn-d-save:hover { background: #2563eb; }
+
+/* ── Marker styles ────────────────────────────────────────────────────────── */
+.cat-marker {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.3);
+    cursor: pointer; transition: transform 0.15s;
+}
+.cat-marker:hover { transform: scale(1.4); }
+.cat-marker-pulse::after {
+    content: ''; position: absolute;
+    inset: -4px; border-radius: 50%;
+    border: 2px solid currentColor;
+    animation: marker-pulse 2s ease-out infinite; opacity: 0;
+}
+@keyframes marker-pulse { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(2.2);opacity:0} }
+@keyframes fadeInModal { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+
+/* Estado chips (dark) */
+.estado-d {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 10px; white-space: nowrap;
+}
+
+/* Priority stars (list view) */
+.stars-small { display: inline-flex; gap: 1px; }
+.star-s { width: 9px; height: 9px; }
+</style>
+{% endblock %}
+
+{% block page_topbar %}
+<div class="cat-topbar">
+    <div class="cat-title">
+        <span class="cat-title-dot"></span>
+        Catastro
+    </div>
+    <div class="cat-views">
+        <button class="cat-view-btn active" onclick="setView('mapa',this)">Mapa</button>
+        <button class="cat-view-btn" onclick="setView('parcelas',this)">Parcelas</button>
+        <button class="cat-view-btn" onclick="setView('oportunidades',this)">Oportunidades</button>
+    </div>
+    <input class="cat-search" id="cat-q" type="text" placeholder="Municipio, zona, ID..." oninput="filterParcelas()">
+    <div class="cat-ml">
+        <button class="btn-cat" onclick="openImportModal()" title="Importar GeoJSON">↑ GeoJSON</button>
+        <button class="btn-cat btn-cat-blue" id="add-mode-btn" onclick="toggleAddMode()">+ Nueva Parcela</button>
+    </div>
+</div>
+<div class="add-mode-hint" id="add-hint">Hacé clic en el mapa para colocar la parcela</div>
+{% endblock %}
+
+{% block content %}
+<!-- ══ MAP SHELL ══════════════════════════════════════════════════════════════ -->
+<div class="cat-shell" id="mapa-view">
+    <div id="cat-map"></div>
+
+    <!-- Layer toggle -->
+    <div class="layer-panel">
+        <div class="layer-title">Capa base</div>
+        <label class="layer-item active" id="layer-dark" onclick="switchLayer('dark')">
+            <div class="layer-dot"></div>
+            <span class="layer-label">Oscuro</span>
+        </label>
+        <label class="layer-item" id="layer-osm" onclick="switchLayer('osm')">
+            <div class="layer-dot"></div>
+            <span class="layer-label">OpenStreetMap</span>
+        </label>
+        <label class="layer-item" id="layer-sat" onclick="switchLayer('sat')">
+            <div class="layer-dot"></div>
+            <span class="layer-label">Satélite</span>
+        </label>
+    </div>
+
+    <!-- Legend -->
+    <div class="cat-legend">
+        <div class="legend-title">Estado</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Sin evaluar</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Evaluando</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Contactar</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Negociación</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Adquirida</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Descartada</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>Sin oportunidad</div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="cat-detail" id="cat-detail">
+        <div class="cat-detail-inner">
+            <div class="cdh">
+                <button class="cdh-close" onclick="closeDetail()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+                <div class="cdh-title" id="cdh-title">Parcela</div>
+                <div class="cdh-actions">
+                    <button class="btn-cd btn-cd-blue" id="btn-convert-lead" onclick="convertirLead()">→ Lead</button>
+                    <button class="btn-cd btn-cd-red" onclick="deleteParcela()">✕</button>
+                </div>
+            </div>
+            <div class="cd-tabs">
+                <button class="cd-tab active" onclick="switchTab('info',this)">Info</button>
+                <button class="cd-tab" onclick="switchTab('oportunidad',this)">Oportunidad</button>
+                <button class="cd-tab" onclick="switchTab('investigacion',this)">Investigación</button>
+            </div>
+            <div class="cd-body" id="cd-body"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ PARCELAS LIST ══════════════════════════════════════════════════════════ -->
+<div class="cat-list-wrap" id="parcelas-view" style="display:none">
+    <table class="cat-table" id="parcelas-table">
+        <thead>
+            <tr>
+                <th>ID Catastral</th>
+                <th>Municipio / Provincia</th>
+                <th>Zona</th>
+                <th>Superficie</th>
+                <th>Uso del suelo</th>
+                <th>Estado</th>
+                <th>Potencial</th>
+                <th>Creado</th>
+            </tr>
+        </thead>
+        <tbody id="parcelas-tbody"></tbody>
+    </table>
+</div>
+
+<!-- ══ OPORTUNIDADES LIST ═════════════════════════════════════════════════════ -->
+<div class="cat-list-wrap" id="oportunidades-view" style="display:none">
+    <table class="cat-table">
+        <thead>
+            <tr>
+                <th>Parcela</th>
+                <th>Estado</th>
+                <th>Prioridad</th>
+                <th>Potencial</th>
+                <th>Descripción</th>
+                <th>Seguimiento</th>
+                <th>Última actividad</th>
+            </tr>
+        </thead>
+        <tbody id="opor-tbody"></tbody>
+    </table>
+</div>
+
+<!-- ══ NEW PARCELA MODAL ═════════════════════════════════════════════════════ -->
+<div class="cat-modal-overlay" id="parcela-modal">
+    <div class="cat-modal">
+        <div class="cat-modal-hdr">
+            <h3>Nueva Parcela</h3>
+            <button class="modal-close-d" onclick="closeParcelaModal()">✕</button>
+        </div>
+        <div class="cat-modal-body">
+            <div class="form-row-d">
+                <label>Coordenadas (auto desde clic en mapa)</label>
+                <div style="display:flex;gap:8px">
+                    <input class="form-input-d" id="pf-lat" type="number" step="any" placeholder="Latitud" style="flex:1"/>
+                    <input class="form-input-d" id="pf-lng" type="number" step="any" placeholder="Longitud" style="flex:1"/>
+                </div>
+            </div>
+            <div class="form-grid-d">
+                <div class="form-row-d">
+                    <label>ID Catastral</label>
+                    <input class="form-input-d" id="pf-id" type="text" placeholder="Ej: 14-2-0034"/>
+                </div>
+                <div class="form-row-d">
+                    <label>Superficie (ha)</label>
+                    <input class="form-input-d" id="pf-area" type="number" step="any" placeholder="Ej: 150.5"/>
+                </div>
+            </div>
+            <div class="form-grid-d">
+                <div class="form-row-d">
+                    <label>Municipio</label>
+                    <input class="form-input-d" id="pf-muni" type="text" placeholder="Ej: General Villegas"/>
+                </div>
+                <div class="form-row-d">
+                    <label>Provincia</label>
+                    <input class="form-input-d" id="pf-prov" type="text" placeholder="Ej: Buenos Aires"/>
+                </div>
+            </div>
+            <div class="form-grid-d">
+                <div class="form-row-d">
+                    <label>Zona catastral</label>
+                    <input class="form-input-d" id="pf-zone" type="text" placeholder="Ej: Rural zona 3"/>
+                </div>
+                <div class="form-row-d">
+                    <label>Uso del suelo</label>
+                    <select class="form-input-d" id="pf-uso">
+                        <option value="">—</option>
+                        <option>Agrícola</option>
+                        <option>Ganadero</option>
+                        <option>Mixto</option>
+                        <option>Forestal</option>
+                        <option>Urbano</option>
+                        <option>Industrial</option>
+                        <option>Turístico</option>
+                        <option>Otro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row-d">
+                <label>Notas</label>
+                <textarea class="form-input-d" id="pf-notes" rows="2" style="resize:vertical;min-height:44px"></textarea>
+            </div>
+            <div class="form-section-d">Oportunidad de adquisición</div>
+            <div class="form-grid-d">
+                <div class="form-row-d">
+                    <label>Estado inicial</label>
+                    <select class="form-input-d" id="pf-estado">
+                        <option value="sin_evaluar">Sin evaluar</option>
+                        <option value="evaluando">Evaluando</option>
+                        <option value="contactar">Contactar</option>
+                        <option value="en_negociacion">En negociación</option>
+                        <option value="adquirida">Adquirida</option>
+                        <option value="descartada">Descartada</option>
+                    </select>
+                </div>
+                <div class="form-row-d">
+                    <label>Prioridad</label>
+                    <select class="form-input-d" id="pf-pri">
+                        <option value="baja">Baja</option>
+                        <option value="media" selected>Media</option>
+                        <option value="alta">Alta</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row-d">
+                <label>Descripción / notas de adquisición</label>
+                <textarea class="form-input-d" id="pf-desc" rows="2" style="resize:vertical;min-height:44px"></textarea>
+            </div>
+        </div>
+        <div class="cat-modal-ft">
+            <button class="btn-d-cancel" onclick="closeParcelaModal()">Cancelar</button>
+            <button class="btn-d-save" onclick="submitParcelaForm()">Guardar parcela</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ IMPORT GEOJSON MODAL ══════════════════════════════════════════════════ -->
+<div class="cat-modal-overlay" id="import-modal">
+    <div class="cat-modal" style="max-width:480px">
+        <div class="cat-modal-hdr">
+            <h3>Importar GeoJSON</h3>
+            <button class="modal-close-d" onclick="closeImportModal()">✕</button>
+        </div>
+        <div class="cat-modal-body">
+            <div id="import-zone" onclick="document.getElementById('geojson-file').click()"
+                 style="border:2px dashed rgba(255,255,255,0.15);border-radius:8px;padding:28px;text-align:center;color:rgba(255,255,255,0.4);cursor:pointer;font-size:13px;transition:all 0.15s">
+                <div style="font-size:28px;margin-bottom:8px">🗺</div>
+                Hacé clic o arrastrá un archivo .geojson<br>
+                <span style="font-size:11px;color:rgba(255,255,255,0.25)">(FeatureCollection o Feature individual)</span>
+                <input type="file" id="geojson-file" accept=".geojson,.json" style="display:none" onchange="handleGeoFile(this)"/>
+            </div>
+            <div id="geo-fname" style="font-size:11.5px;color:rgba(255,255,255,0.3);text-align:center;margin-top:4px"></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04);border-radius:6px;padding:9px 11px;font-family:monospace;line-height:1.7;margin-top:4px">
+                Propiedades soportadas por feature:<br>
+                id, parcel_id, surface_area, zone, zona,<br>
+                municipality, municipio, province, provincia,<br>
+                land_use, notes, notas
+            </div>
+            <div id="import-result" style="display:none;font-size:12.5px;margin-top:4px"></div>
+        </div>
+        <div class="cat-modal-ft">
+            <button class="btn-d-cancel" onclick="closeImportModal()">Cancelar</button>
+            <button class="btn-d-save" id="geo-import-btn" onclick="submitGeoImport()" disabled>Importar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+var ESTADOS = {
+    sin_evaluar:   {label:'Sin evaluar',   color:'#64748b'},
+    evaluando:     {label:'Evaluando',     color:'#3b82f6'},
+    contactar:     {label:'Contactar',     color:'#f59e0b'},
+    en_negociacion:{label:'Negociación',   color:'#f97316'},
+    adquirida:     {label:'Adquirida',     color:'#22c55e'},
+    descartada:    {label:'Descartada',    color:'#ef4444'},
+};
+var PRI_COLOR = {baja:'#94a3b8', media:'#3b82f6', alta:'#f59e0b', urgente:'#ef4444'};
+var PRI_LBL   = {baja:'Baja', media:'Media', alta:'Alta', urgente:'Urgente'};
+var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+var allParcelas = [];
+var activeParcela = null;
+var activeTab = 'info';
+var addMode = false;
+var geoImportFile = null;
+var currentView = 'mapa';
+var markers = {};
+var polygons = {};
+
+// ── Leaflet init ──────────────────────────────────────────────────────────────
+var tileLayers = {
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution:'©OpenStreetMap ©CartoDB', maxZoom:19, subdomains:'abcd'
+    }),
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'©OpenStreetMap contributors', maxZoom:19
+    }),
+    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution:'©Esri', maxZoom:18
+    }),
+};
+var map = L.map('cat-map', {
+    center: [-34.6, -64.2], zoom: 5,
+    zoomControl: false, attributionControl: false,
+});
+tileLayers.dark.addTo(map);
+L.control.zoom({position:'topright'}).addTo(map);
+L.control.attribution({position:'bottomleft', prefix:''}).addTo(map);
+tileLayers.dark.addTo(map);
+var currentLayer = 'dark';
+
+function switchLayer(name) {
+    if (name === currentLayer) return;
+    map.removeLayer(tileLayers[currentLayer]);
+    tileLayers[name].addTo(map);
+    currentLayer = name;
+    document.querySelectorAll('.layer-item').forEach(function(el){
+        el.classList.toggle('active', el.id === 'layer-'+name);
+    });
+}
+
+// click to add
+map.on('click', function(e) {
+    if (!addMode) return;
+    openParcelaModal(e.latlng.lat, e.latlng.lng);
+    toggleAddMode();
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadParcelas();
+
+function loadParcelas() {
+    fetch('/api/catastro/parcelas', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            allParcelas = data;
+            renderMap();
+            if (currentView === 'parcelas') renderParcelasList();
+            if (currentView === 'oportunidades') renderOporList();
+        });
+}
+
+// ── Map rendering ─────────────────────────────────────────────────────────────
+function renderMap() {
+    // Clear existing
+    Object.values(markers).forEach(function(m){ map.removeLayer(m); });
+    Object.values(polygons).forEach(function(p){ map.removeLayer(p); });
+    markers = {}; polygons = {};
+
+    var filtered = filterData();
+    filtered.forEach(function(p){ addToMap(p); });
+}
+
+function addToMap(p) {
+    var op     = p.oportunidad;
+    var estado = op ? op.estado : null;
+    var color  = estado ? (ESTADOS[estado] ? ESTADOS[estado].color : '#94a3b8') : '#94a3b8';
+
+    // GeoJSON polygon
+    if (p.geojson_geometry) {
+        try {
+            var geom = JSON.parse(p.geojson_geometry);
+            var layer = L.geoJSON(geom, {
+                style: { color: color, weight: 2, opacity: 0.8, fillColor: color, fillOpacity: 0.12 }
+            }).addTo(map);
+            layer.on('click', function(){ openDetail(p.id); });
+            polygons[p.id] = layer;
+        } catch(e) {}
+    }
+
+    // Center marker
+    if (p.coordinates_center) {
+        var marker = L.marker([p.coordinates_center.lat, p.coordinates_center.lng], {
+            icon: L.divIcon({
+                html: '<div class="cat-marker" style="background:'+color+';box-shadow:0 0 8px '+color+'44"></div>',
+                className: '', iconSize: [14,14], iconAnchor: [7,7]
+            })
+        }).addTo(map);
+        marker.on('click', function(){ openDetail(p.id); });
+        marker.bindTooltip(
+            (p.municipality||p.parcel_id||'Parcela #'+p.id) + (p.surface_area?' · '+p.surface_area+'ha':''),
+            {direction:'top', offset:[0,-8], className:'leaflet-tooltip'}
+        );
+        markers[p.id] = marker;
+    }
+}
+
+// ── View switcher ──────────────────────────────────────────────────────────────
+function setView(v, btn) {
+    currentView = v;
+    document.querySelectorAll('.cat-view-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('mapa-view').style.display       = v === 'mapa'          ? 'block' : 'none';
+    document.getElementById('parcelas-view').style.display   = v === 'parcelas'      ? 'block' : 'none';
+    document.getElementById('oportunidades-view').style.display = v === 'oportunidades' ? 'block' : 'none';
+    if (v === 'mapa') { setTimeout(function(){ map.invalidateSize(); }, 10); }
+    if (v === 'parcelas') renderParcelasList();
+    if (v === 'oportunidades') renderOporList();
+}
+
+function filterData() {
+    var q = document.getElementById('cat-q').value.toLowerCase();
+    if (!q) return allParcelas;
+    return allParcelas.filter(function(p){
+        return (p.municipality+' '+p.province+' '+p.zone+' '+p.parcel_id).toLowerCase().includes(q);
+    });
+}
+
+function filterParcelas() {
+    if (currentView === 'mapa') renderMap();
+    if (currentView === 'parcelas') renderParcelasList();
+    if (currentView === 'oportunidades') renderOporList();
+}
+
+// ── Parcelas table ─────────────────────────────────────────────────────────────
+function renderParcelasList() {
+    var tbody = document.getElementById('parcelas-tbody');
+    var list  = filterData();
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Sin parcelas</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(function(p){
+        var op = p.oportunidad;
+        var est = op ? (ESTADOS[op.estado]||{label:op.estado,color:'#888'}) : null;
+        var stars = '';
+        if (op) for(var i=1;i<=5;i++) stars+='<svg class="star-s" viewBox="0 0 20 20" fill="'+(i<=op.potencial?'#f59e0b':'#e2e8f0')+'"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>';
+        return '<tr onclick="openDetail('+p.id+');setView(\'mapa\',document.querySelector(\'.cat-view-btn\'))">' +
+            '<td style="font-family:monospace;font-size:12px">'+(p.parcel_id||'—')+'</td>' +
+            '<td><strong>'+esc(p.municipality||'—')+'</strong>'+(p.province?'<br><span style="font-size:11px;color:var(--muted)">'+esc(p.province)+'</span>':'')+'</td>' +
+            '<td>'+esc(p.zone||'—')+'</td>' +
+            '<td>'+(p.surface_area?p.surface_area+' ha':'—')+'</td>' +
+            '<td>'+esc(p.land_use||'—')+'</td>' +
+            '<td>'+(est?'<span class="estado-d" style="background:'+est.color+'22;color:'+est.color+'"><span style="width:6px;height:6px;border-radius:50%;background:'+est.color+'"></span>'+est.label+'</span>':'<span style="color:var(--muted)">—</span>')+'</td>' +
+            '<td><div class="stars-small">'+stars+'</div></td>' +
+            '<td style="color:var(--muted);font-size:11.5px">'+p.created_at+'</td>' +
+            '</tr>';
+    }).join('');
+}
+
+// ── Oportunidades table ────────────────────────────────────────────────────────
+function renderOporList() {
+    var tbody = document.getElementById('opor-tbody');
+    var list  = filterData().filter(function(p){ return p.oportunidad; });
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Sin oportunidades registradas</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(function(p){
+        var op  = p.oportunidad;
+        var est = ESTADOS[op.estado]||{label:op.estado,color:'#888'};
+        var pc  = PRI_COLOR[op.prioridad]||'#888';
+        var stars=''; for(var i=1;i<=5;i++) stars+='<svg class="star-s" viewBox="0 0 20 20" fill="'+(i<=op.potencial?'#f59e0b':'#e2e8f0')+'"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>';
+        var loc = [p.municipality,p.province].filter(Boolean).join(', ')||p.parcel_id||'#'+p.id;
+        var segStyle = '';
+        if (op.proximo_seguimiento) { var d=new Date(op.proximo_seguimiento); if(d<new Date()) segStyle='color:#ef4444;font-weight:600'; }
+        return '<tr onclick="openDetail('+p.id+');setView(\'mapa\',document.querySelector(\'.cat-view-btn\'))">' +
+            '<td><strong>'+esc(loc)+'</strong>'+(p.surface_area?'<br><span style="font-size:11px;color:var(--muted)">'+p.surface_area+' ha</span>':'')+'</td>' +
+            '<td><span class="estado-d" style="background:'+est.color+'22;color:'+est.color+'"><span style="width:6px;height:6px;border-radius:50%;background:'+est.color+'"></span>'+est.label+'</span></td>' +
+            '<td><span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:'+pc+'22;color:'+pc+'">'+PRI_LBL[op.prioridad]+'</span></td>' +
+            '<td><div class="stars-small">'+stars+'</div></td>' +
+            '<td style="font-size:12px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(op.descripcion||'—')+'</td>' +
+            '<td style="font-size:12px;'+segStyle+'">'+(op.proximo_seguimiento?fmtDate(op.proximo_seguimiento):'—')+'</td>' +
+            '<td style="font-size:11.5px;color:var(--muted)">'+(op.ultima_interaccion||'—')+'</td>' +
+            '</tr>';
+    }).join('');
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+function openDetail(id) {
+    var p = allParcelas.find(function(x){ return x.id===id; });
+    if (!p) return;
+    activeParcela = p;
+    var loc = [p.municipality, p.province].filter(Boolean).join(', ') || p.parcel_id || 'Parcela #'+p.id;
+    document.getElementById('cdh-title').textContent = loc;
+    switchTab(activeTab, document.querySelector('.cd-tab.active'));
+    document.getElementById('cat-detail').classList.add('open');
+    // Fly to marker if on map
+    if (currentView === 'mapa' && p.coordinates_center) {
+        map.flyTo([p.coordinates_center.lat, p.coordinates_center.lng], Math.max(map.getZoom(), 12), {duration:0.8});
+    }
+}
+
+function closeDetail() {
+    document.getElementById('cat-detail').classList.remove('open');
+    activeParcela = null;
+}
+
+function switchTab(tab, btn) {
+    activeTab = tab;
+    document.querySelectorAll('.cd-tab').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    else { var tabs=document.querySelectorAll('.cd-tab'); if(tabs[['info','oportunidad','investigacion'].indexOf(tab)]) tabs[['info','oportunidad','investigacion'].indexOf(tab)].classList.add('active'); }
+    renderTab();
+}
+
+function renderTab() {
+    if (!activeParcela) return;
+    var p = activeParcela;
+    if (activeTab === 'info') renderInfoTab(p);
+    else if (activeTab === 'oportunidad') renderOporTab(p);
+    else renderInvTab(p);
+}
+
+function renderInfoTab(p) {
+    var c = p.coordinates_center;
+    document.getElementById('cd-body').innerHTML =
+        '<div class="cd-section">' +
+          '<div class="cd-section-ttl">Identificación</div>' +
+          '<div class="cd-row"><div class="cd-label">ID Catastral</div><input class="cd-input" id="ci-pid" value="'+esc(p.parcel_id)+'"/></div>' +
+          '<div class="cd-row"><div class="cd-label">Superficie (ha)</div><input class="cd-input" id="ci-area" type="number" step="any" value="'+(p.surface_area||'')+'"/></div>' +
+          '<div class="cd-row-h">' +
+            '<div class="cd-row"><div class="cd-label">Municipio</div><input class="cd-input" id="ci-muni" value="'+esc(p.municipality)+'"/></div>' +
+            '<div class="cd-row"><div class="cd-label">Provincia</div><input class="cd-input" id="ci-prov" value="'+esc(p.province)+'"/></div>' +
+          '</div>' +
+          '<div class="cd-row-h">' +
+            '<div class="cd-row"><div class="cd-label">Zona catastral</div><input class="cd-input" id="ci-zone" value="'+esc(p.zone)+'"/></div>' +
+            '<div class="cd-row"><div class="cd-label">Uso del suelo</div>' +
+              '<select class="cd-select" id="ci-uso">'+
+                ['','Agrícola','Ganadero','Mixto','Forestal','Urbano','Industrial','Turístico','Otro'].map(function(u){ return '<option'+(u===p.land_use?' selected':'')+'>'+u+'</option>'; }).join('')+
+              '</select></div>' +
+          '</div>' +
+          '<div class="cd-row"><div class="cd-label">Notas</div><textarea class="cd-textarea" id="ci-notes">'+esc(p.notes)+'</textarea></div>' +
+          (c?'<div class="cd-coords">'+c.lat.toFixed(6)+', '+c.lng.toFixed(6)+'</div>':'') +
+          '<button class="cd-save-btn" onclick="saveInfo()">Guardar</button>' +
+        '</div>';
+}
+
+function saveInfo() {
+    if (!activeParcela) return;
+    var payload = {
+        parcel_id:    document.getElementById('ci-pid').value.trim() || null,
+        surface_area: parseFloat(document.getElementById('ci-area').value) || null,
+        municipality: document.getElementById('ci-muni').value.trim() || null,
+        province:     document.getElementById('ci-prov').value.trim() || null,
+        zone:         document.getElementById('ci-zone').value.trim() || null,
+        land_use:     document.getElementById('ci-uso').value || null,
+        notes:        document.getElementById('ci-notes').value.trim() || null,
+    };
+    patchParcela(payload, function(){ toast('Guardado'); });
+}
+
+function renderOporTab(p) {
+    var op = p.oportunidad || {};
+    var pot = op.potencial || 3;
+    var stars = '';
+    for (var i=1;i<=5;i++) stars += '<button class="cd-star'+(i<=pot?' on':'')+'" onclick="setOpPot('+i+')" data-s="'+i+'">★</button>';
+    document.getElementById('cd-body').innerHTML =
+        '<div class="cd-section">' +
+          '<div class="cd-section-ttl">Estado de adquisición</div>' +
+          '<div class="cd-row"><div class="cd-label">Estado</div>' +
+            '<select class="cd-select" id="op-estado">'+
+              Object.keys(ESTADOS).map(function(k){ return '<option value="'+k+'"'+(k===op.estado?' selected':'')+'>'+ESTADOS[k].label+'</option>'; }).join('')+
+            '</select></div>' +
+          '<div class="cd-row-h">' +
+            '<div class="cd-row"><div class="cd-label">Prioridad</div>' +
+              '<select class="cd-select" id="op-pri">'+
+                Object.keys(PRI_LBL).map(function(k){ return '<option value="'+k+'"'+(k===op.prioridad?' selected':'')+'>'+PRI_LBL[k]+'</option>'; }).join('')+
+              '</select></div>' +
+            '<div class="cd-row"><div class="cd-label">Potencial</div>' +
+              '<div class="cd-stars" id="op-stars">'+stars+'</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="cd-row"><div class="cd-label">Seguimiento</div><input class="cd-input" id="op-seg" type="date" value="'+(op.proximo_seguimiento||'')+'"/></div>' +
+          '<div class="cd-row"><div class="cd-label">Descripción</div><textarea class="cd-textarea" id="op-desc">'+esc(op.descripcion||'')+'</textarea></div>' +
+          '<div class="cd-row"><div class="cd-label">Observaciones</div><textarea class="cd-textarea" id="op-obs">'+esc(op.observaciones||'')+'</textarea></div>' +
+          '<button class="cd-save-btn" onclick="saveOportunidad()">Guardar</button>' +
+        '</div>';
+    currentOpPot = pot;
+}
+
+var currentOpPot = 3;
+function setOpPot(n) {
+    currentOpPot = n;
+    document.querySelectorAll('#op-stars .cd-star').forEach(function(b){ b.classList.toggle('on', parseInt(b.dataset.s)<=n); });
+}
+
+function saveOportunidad() {
+    if (!activeParcela) return;
+    patchParcela({
+        oportunidad: {
+            estado:              document.getElementById('op-estado').value,
+            prioridad:           document.getElementById('op-pri').value,
+            potencial:           currentOpPot,
+            descripcion:         document.getElementById('op-desc').value.trim(),
+            observaciones:       document.getElementById('op-obs').value.trim(),
+            proximo_seguimiento: document.getElementById('op-seg').value || null,
+        }
+    }, function(){ toast('Oportunidad guardada'); renderMap(); });
+}
+
+function renderInvTab(p) {
+    var invHtml = p.investigaciones.length ?
+        p.investigaciones.map(function(inv){
+            return '<div class="inv-item">' +
+                '<button class="inv-del" onclick="deleteInv('+inv.id+')">×</button>' +
+                (inv.nombre?'<div class="inv-name">'+esc(inv.nombre)+'</div>':'') +
+                '<div class="inv-meta">'+
+                  [inv.telefono?'📞 '+inv.telefono:'', inv.email?'✉ '+inv.email:'', inv.fuente_informacion?'Fuente: '+inv.fuente_informacion:''].filter(Boolean).join(' · ')+
+                '</div>' +
+                (inv.notas?'<div class="inv-notes">'+esc(inv.notas)+'</div>':'') +
+                '<div style="font-size:10px;color:rgba(255,255,255,0.2);margin-top:4px">'+inv.fecha+'</div>' +
+                '</div>';
+        }).join('') :
+        '<div class="inv-empty">Sin investigaciones registradas</div>';
+
+    document.getElementById('cd-body').innerHTML =
+        '<div class="cd-section">' +
+          '<div class="cd-section-ttl">Investigación de propietario</div>' +
+          '<div id="inv-list">'+invHtml+'</div>' +
+          '<div id="inv-form-wrap"></div>' +
+          '<button class="inv-add-btn" onclick="openInvForm()">+ Agregar investigación</button>' +
+        '</div>';
+}
+
+function openInvForm() {
+    document.getElementById('inv-form-wrap').innerHTML =
+        '<div class="inv-form">' +
+          '<div class="inv-form-ttl">Nueva investigación</div>' +
+          '<input class="cd-input" id="if-nombre" placeholder="Nombre del propietario"/>' +
+          '<div style="display:flex;gap:6px">' +
+            '<input class="cd-input" id="if-tel" placeholder="Teléfono" style="flex:1"/>' +
+            '<input class="cd-input" id="if-email" placeholder="Email" style="flex:1"/>' +
+          '</div>' +
+          '<select class="cd-select" id="if-fuente">' +
+            '<option value="">Fuente de información</option>' +
+            ['Registro público','Vecinos','Portal digital','Notaría','AFIP/ARBA','Catastro oficial','Otro'].map(function(f){ return '<option>'+f+'</option>'; }).join('')+
+          '</select>' +
+          '<textarea class="cd-textarea" id="if-notas" placeholder="Notas..." rows="2" style="min-height:44px"></textarea>' +
+          '<div style="display:flex;gap:6px;justify-content:flex-end">' +
+            '<button class="btn-inv-cancel" onclick="closeInvForm()">Cancelar</button>' +
+            '<button class="btn-inv-save" onclick="submitInv()">Registrar</button>' +
+          '</div>' +
+        '</div>';
+}
+function closeInvForm() { document.getElementById('inv-form-wrap').innerHTML=''; }
+
+function submitInv() {
+    if (!activeParcela) return;
+    var payload = {
+        nombre:            document.getElementById('if-nombre').value.trim(),
+        telefono:          document.getElementById('if-tel').value.trim(),
+        email:             document.getElementById('if-email').value.trim(),
+        fuente_informacion:document.getElementById('if-fuente').value,
+        notas:             document.getElementById('if-notas').value.trim(),
+    };
+    fetch('/api/catastro/parcelas/'+activeParcela.id+'/investigaciones', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(inv){
+        activeParcela.investigaciones.unshift(inv);
+        var idx=allParcelas.findIndex(function(x){ return x.id===activeParcela.id; });
+        if(idx!==-1) allParcelas[idx]=activeParcela;
+        renderInvTab(activeParcela);
+        toast('Investigación registrada');
+    });
+}
+
+function deleteInv(invId) {
+    if (!confirm('¿Eliminar esta investigación?')) return;
+    fetch('/api/catastro/investigaciones/'+invId, {
+        method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
+    }).then(function(){
+        activeParcela.investigaciones = activeParcela.investigaciones.filter(function(i){ return i.id!==invId; });
+        renderInvTab(activeParcela);
+    });
+}
+
+// ── Patch helper ──────────────────────────────────────────────────────────────
+function patchParcela(payload, cb) {
+    fetch('/api/catastro/parcelas/'+activeParcela.id, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(updated){
+        activeParcela = updated;
+        var idx=allParcelas.findIndex(function(x){ return x.id===updated.id; });
+        if(idx!==-1) allParcelas[idx]=updated;
+        if(cb) cb();
+    });
+}
+
+// ── Convert to lead ───────────────────────────────────────────────────────────
+function convertirLead() {
+    if (!activeParcela || !confirm('¿Crear un lead de captación a partir de esta parcela?')) return;
+    fetch('/api/catastro/parcelas/'+activeParcela.id+'/convertir-lead', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body:'{}'
+    }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.lead_id) toast('Lead #'+d.lead_id+' creado en Captación');
+    });
+}
+
+// ── Delete parcela ────────────────────────────────────────────────────────────
+function deleteParcela() {
+    if (!activeParcela || !confirm('¿Eliminar esta parcela?')) return;
+    fetch('/api/catastro/parcelas/'+activeParcela.id, {
+        method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
+    }).then(function(){
+        allParcelas = allParcelas.filter(function(p){ return p.id!==activeParcela.id; });
+        closeDetail(); renderMap();
+    });
+}
+
+// ── Add mode ──────────────────────────────────────────────────────────────────
+function toggleAddMode() {
+    addMode = !addMode;
+    var btn = document.getElementById('add-mode-btn');
+    var hint = document.getElementById('add-hint');
+    if (addMode) {
+        btn.textContent = '✕ Cancelar';
+        btn.style.background='rgba(59,130,246,0.25)';
+        map.getContainer().style.cursor='crosshair';
+        hint.style.display='block';
+    } else {
+        btn.textContent='+ Nueva Parcela';
+        btn.style.background='';
+        map.getContainer().style.cursor='';
+        hint.style.display='none';
+    }
+}
+
+function openParcelaModal(lat, lng) {
+    document.getElementById('pf-lat').value  = lat ? lat.toFixed(6) : '';
+    document.getElementById('pf-lng').value  = lng ? lng.toFixed(6) : '';
+    document.getElementById('pf-id').value   = '';
+    document.getElementById('pf-area').value = '';
+    document.getElementById('pf-muni').value = '';
+    document.getElementById('pf-prov').value = '';
+    document.getElementById('pf-zone').value = '';
+    document.getElementById('pf-uso').value  = '';
+    document.getElementById('pf-notes').value='';
+    document.getElementById('pf-estado').value='sin_evaluar';
+    document.getElementById('pf-pri').value  ='media';
+    document.getElementById('pf-desc').value ='';
+    document.getElementById('parcela-modal').classList.add('open');
+}
+
+function closeParcelaModal() {
+    document.getElementById('parcela-modal').classList.remove('open');
+}
+
+function submitParcelaForm() {
+    var lat = parseFloat(document.getElementById('pf-lat').value);
+    var lng = parseFloat(document.getElementById('pf-lng').value);
+    var payload = {
+        lat:              isNaN(lat) ? null : lat,
+        lng:              isNaN(lng) ? null : lng,
+        parcel_id:        document.getElementById('pf-id').value.trim() || null,
+        surface_area:     parseFloat(document.getElementById('pf-area').value) || null,
+        municipality:     document.getElementById('pf-muni').value.trim() || null,
+        province:         document.getElementById('pf-prov').value.trim() || null,
+        zone:             document.getElementById('pf-zone').value.trim() || null,
+        land_use:         document.getElementById('pf-uso').value || null,
+        notes:            document.getElementById('pf-notes').value.trim() || null,
+        create_oportunidad: true,
+        estado:           document.getElementById('pf-estado').value,
+        prioridad:        document.getElementById('pf-pri').value,
+        potencial:        3,
+        descripcion:      document.getElementById('pf-desc').value.trim() || null,
+    };
+    fetch('/api/catastro/parcelas', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(p){
+        allParcelas.unshift(p);
+        closeParcelaModal();
+        addToMap(p);
+        openDetail(p.id);
+        toast('Parcela creada');
+    });
+}
+
+// ── GeoJSON Import ────────────────────────────────────────────────────────────
+var geoFile = null;
+function openImportModal() { document.getElementById('import-modal').classList.add('open'); }
+function closeImportModal() { document.getElementById('import-modal').classList.remove('open'); }
+
+function handleGeoFile(inp) {
+    if (!inp.files.length) return;
+    geoFile = inp.files[0];
+    document.getElementById('geo-fname').textContent = geoFile.name;
+    document.getElementById('geo-import-btn').disabled = false;
+}
+
+function submitGeoImport() {
+    if (!geoFile) return;
+    var fd = new FormData(); fd.append('file', geoFile);
+    fetch('/api/catastro/import-geojson', {
+        method:'POST', credentials:'same-origin',
+        headers:{'X-CSRFToken':CSRF}, body: fd
+    }).then(function(r){ return r.json(); }).then(function(d){
+        var res = document.getElementById('import-result');
+        res.style.display='block';
+        res.style.color = d.errors&&d.errors.length ? '#ef4444' : '#22c55e';
+        res.innerHTML = '✓ '+d.created+' parcelas importadas.'+(d.errors&&d.errors.length?'<br>Errores: '+d.errors.join('<br>'):'');
+        loadParcelas();
+    });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
+function fmtDate(iso){ var d=new Date(iso); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+function toast(msg){
+    var t=document.getElementById('toast-container'); if(!t)return;
+    var el=document.createElement('div'); el.className='toast toast-success'; el.textContent=msg;
+    t.appendChild(el); setTimeout(function(){el.remove();},2800);
+}
+
+// Close modals on overlay click / ESC
+document.getElementById('parcela-modal').addEventListener('click',function(e){if(e.target===this)closeParcelaModal();});
+document.getElementById('import-modal').addEventListener('click',function(e){if(e.target===this)closeImportModal();});
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeDetail(); closeParcelaModal(); closeImportModal(); if(addMode)toggleAddMode(); }});
+</script>
+{% endblock %}

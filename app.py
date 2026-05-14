@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -1130,6 +1130,268 @@ def import_leads():
             created += 1
         except Exception as e:
             errors.append(f"Fila {i+2}: {e}")
+    db.session.commit()
+    return jsonify({"created": created, "errors": errors})
+
+# ── Catastro admin page ──────────────────────────────────────────────────────
+
+@app.route('/admin/catastro')
+@login_required
+def admin_catastro():
+    return render_template('admin/catastro.html')
+
+# ── Catastro API: Parcelas ────────────────────────────────────────────────────
+
+@app.route('/api/catastro/parcelas', methods=['GET'])
+@api_login_required
+def get_parcelas():
+    q = request.args.get('q', '').strip()
+    query = ParcelaCatastral.query.filter(ParcelaCatastral.deleted_at.is_(None))
+    if q:
+        query = query.filter(db.or_(
+            ParcelaCatastral.municipality.ilike(f'%{q}%'),
+            ParcelaCatastral.province.ilike(f'%{q}%'),
+            ParcelaCatastral.zone.ilike(f'%{q}%'),
+            ParcelaCatastral.parcel_id.ilike(f'%{q}%'),
+        ))
+    return jsonify([p.as_dict() for p in query.order_by(ParcelaCatastral.created_at.desc()).all()])
+
+@app.route('/api/catastro/parcelas', methods=['POST'])
+@api_login_required
+def create_parcela():
+    data = request.get_json()
+    lat  = data.get('lat')
+    lng  = data.get('lng')
+    p = ParcelaCatastral(
+        parcel_id=data.get('parcel_id') or None,
+        geojson_geometry=data.get('geojson_geometry') or None,
+        surface_area=float(data['surface_area']) if data.get('surface_area') else None,
+        zone=data.get('zone') or None,
+        municipality=data.get('municipality') or None,
+        province=data.get('province') or None,
+        coordinates_center=f"{lat},{lng}" if lat is not None and lng is not None else None,
+        land_use=data.get('land_use') or None,
+        notes=data.get('notes') or None,
+    )
+    db.session.add(p)
+    db.session.flush()
+    if data.get('create_oportunidad'):
+        db.session.add(OportunidadTerreno(
+            parcela_id=p.id,
+            estado=data.get('estado', 'sin_evaluar'),
+            prioridad=data.get('prioridad', 'media'),
+            potencial=int(data.get('potencial', 3)),
+            descripcion=data.get('descripcion') or None,
+            created_by=session.get('admin_username'),
+            ultima_interaccion=datetime.utcnow(),
+        ))
+    db.session.commit()
+    return jsonify(p.as_dict()), 201
+
+@app.route('/api/catastro/parcelas/<int:id>', methods=['GET'])
+@api_login_required
+def get_parcela(id):
+    p = db.session.get(ParcelaCatastral, id)
+    if not p or p.deleted_at:
+        return jsonify({"error": "No encontrada"}), 404
+    return jsonify(p.as_dict())
+
+@app.route('/api/catastro/parcelas/<int:id>', methods=['PATCH'])
+@api_login_required
+def update_parcela(id):
+    p = db.session.get(ParcelaCatastral, id)
+    if not p or p.deleted_at:
+        return jsonify({"error": "No encontrada"}), 404
+    data = request.get_json()
+    for f in ['parcel_id', 'zone', 'municipality', 'province', 'land_use', 'notes', 'geojson_geometry']:
+        if f in data:
+            setattr(p, f, data[f] or None)
+    if 'surface_area' in data:
+        p.surface_area = float(data['surface_area']) if data['surface_area'] else None
+    if 'lat' in data and 'lng' in data:
+        p.coordinates_center = f"{data['lat']},{data['lng']}"
+    op = data.get('oportunidad')
+    if op is not None:
+        if p.oportunidad:
+            for f in ['estado', 'prioridad', 'descripcion', 'observaciones']:
+                if f in op:
+                    setattr(p.oportunidad, f, op[f] or None)
+            if 'potencial' in op:
+                p.oportunidad.potencial = int(op['potencial'])
+            if 'proximo_seguimiento' in op:
+                p.oportunidad.proximo_seguimiento = (
+                    datetime.fromisoformat(op['proximo_seguimiento']) if op['proximo_seguimiento'] else None
+                )
+            p.oportunidad.ultima_interaccion = datetime.utcnow()
+        else:
+            db.session.add(OportunidadTerreno(
+                parcela_id=p.id,
+                estado=op.get('estado', 'sin_evaluar'),
+                prioridad=op.get('prioridad', 'media'),
+                potencial=int(op.get('potencial', 3)),
+                descripcion=op.get('descripcion') or None,
+                created_by=session.get('admin_username'),
+                ultima_interaccion=datetime.utcnow(),
+            ))
+    db.session.commit()
+    return jsonify(p.as_dict())
+
+@app.route('/api/catastro/parcelas/<int:id>', methods=['DELETE'])
+@api_login_required
+def delete_parcela(id):
+    p = db.session.get(ParcelaCatastral, id)
+    if not p:
+        return jsonify({"error": "No encontrada"}), 404
+    p.deleted_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"message": "Parcela eliminada"})
+
+# ── Catastro API: Investigaciones ─────────────────────────────────────────────
+
+@app.route('/api/catastro/parcelas/<int:id>/investigaciones', methods=['POST'])
+@api_login_required
+def add_investigacion(id):
+    p = db.session.get(ParcelaCatastral, id)
+    if not p or p.deleted_at:
+        return jsonify({"error": "No encontrada"}), 404
+    data = request.get_json()
+    inv = InvestigacionPropietario(
+        parcela_id=id,
+        nombre=data.get('nombre') or None,
+        telefono=data.get('telefono') or None,
+        email=data.get('email') or None,
+        fuente_informacion=data.get('fuente_informacion') or None,
+        notas=data.get('notas') or None,
+        fecha=datetime.utcnow(),
+    )
+    db.session.add(inv)
+    db.session.commit()
+    return jsonify(inv.as_dict()), 201
+
+@app.route('/api/catastro/investigaciones/<int:inv_id>', methods=['DELETE'])
+@api_login_required
+def delete_investigacion(inv_id):
+    inv = db.session.get(InvestigacionPropietario, inv_id)
+    if not inv:
+        return jsonify({"error": "No encontrada"}), 404
+    db.session.delete(inv)
+    db.session.commit()
+    return jsonify({"message": "Eliminada"})
+
+# ── Catastro API: Convert to Captacion lead ───────────────────────────────────
+
+@app.route('/api/catastro/parcelas/<int:id>/convertir-lead', methods=['POST'])
+@api_login_required
+def convertir_parcela_lead(id):
+    p = db.session.get(ParcelaCatastral, id)
+    if not p or p.deleted_at:
+        return jsonify({"error": "No encontrada"}), 404
+    parts = [p.municipality, p.province]
+    direccion = ' — '.join(filter(None, parts)) or f'Parcela #{p.parcel_id or p.id}'
+    notes_extra = f'Superficie: {p.surface_area} ha\n' if p.surface_area else ''
+    lead = CaptacionLead(
+        direccion=direccion,
+        barrio=p.zone,
+        ciudad=p.municipality,
+        tipo_propiedad='terreno',
+        operacion='venta',
+        estado='detectada',
+        prioridad=p.oportunidad.prioridad if p.oportunidad else 'media',
+        potencial=p.oportunidad.potencial if p.oportunidad else 3,
+        descripcion=notes_extra + (p.notes or ''),
+        fuente='Catastro',
+        created_by=session.get('admin_username'),
+        ultima_interaccion=datetime.utcnow(),
+    )
+    db.session.add(lead)
+    db.session.flush()
+    if p.investigaciones:
+        inv = p.investigaciones[0]
+        db.session.add(PropietarioLead(
+            lead_id=lead.id,
+            nombre=inv.nombre,
+            telefono=inv.telefono,
+            email=inv.email,
+        ))
+    db.session.commit()
+    return jsonify({'message': 'Lead creado', 'lead_id': lead.id})
+
+# ── Catastro API: GeoJSON export ──────────────────────────────────────────────
+
+@app.route('/api/catastro/geojson', methods=['GET'])
+@api_login_required
+def export_geojson():
+    import json as _json
+    parcelas = ParcelaCatastral.query.filter(ParcelaCatastral.deleted_at.is_(None)).all()
+    features = []
+    for p in parcelas:
+        geom = None
+        if p.geojson_geometry:
+            try:
+                geom = _json.loads(p.geojson_geometry)
+            except Exception:
+                pass
+        if not geom and p.coordinates_center:
+            try:
+                lat, lng = p.coordinates_center.split(',')
+                geom = {'type': 'Point', 'coordinates': [float(lng), float(lat)]}
+            except Exception:
+                pass
+        if geom:
+            op = p.oportunidad
+            features.append({
+                'type': 'Feature',
+                'geometry': geom,
+                'properties': {
+                    'id': p.id, 'parcel_id': p.parcel_id,
+                    'municipality': p.municipality, 'surface_area': p.surface_area,
+                    'estado': op.estado if op else None,
+                    'potencial': op.potencial if op else None,
+                }
+            })
+    return jsonify({'type': 'FeatureCollection', 'features': features})
+
+# ── Catastro API: GeoJSON import ──────────────────────────────────────────────
+
+@app.route('/api/catastro/import-geojson', methods=['POST'])
+@api_login_required
+def import_geojson():
+    import json as _json
+    if 'file' not in request.files:
+        return jsonify({"error": "No se envió archivo"}), 400
+    try:
+        data = _json.loads(request.files['file'].read().decode('utf-8'))
+    except Exception as e:
+        return jsonify({"error": f"JSON inválido: {e}"}), 400
+    features = data.get('features', []) if data.get('type') == 'FeatureCollection' else [data]
+    created, errors = 0, []
+    for i, feat in enumerate(features):
+        try:
+            geom  = feat.get('geometry') or {}
+            props = feat.get('properties') or {}
+            coords_center = None
+            if geom.get('type') == 'Point':
+                c = geom['coordinates']
+                coords_center = f"{c[1]},{c[0]}"
+            elif geom.get('type') in ('Polygon', 'MultiPolygon'):
+                all_c = (geom['coordinates'][0] if geom['type'] == 'Polygon'
+                         else [c for ring in geom['coordinates'] for c in ring[0]])
+                if all_c:
+                    coords_center = f"{sum(c[1] for c in all_c)/len(all_c)},{sum(c[0] for c in all_c)/len(all_c)}"
+            db.session.add(ParcelaCatastral(
+                parcel_id=str(props.get('id') or props.get('parcel_id') or '') or None,
+                geojson_geometry=_json.dumps(geom) if geom else None,
+                surface_area=float(props['surface_area']) if props.get('surface_area') else None,
+                zone=str(props.get('zone') or props.get('zona') or '') or None,
+                municipality=str(props.get('municipality') or props.get('municipio') or '') or None,
+                province=str(props.get('province') or props.get('provincia') or '') or None,
+                coordinates_center=coords_center,
+                land_use=str(props.get('land_use') or '') or None,
+                notes=str(props.get('notes') or props.get('notas') or '') or None,
+            ))
+            created += 1
+        except Exception as e:
+            errors.append(f"Feature {i+1}: {e}")
     db.session.commit()
     return jsonify({"created": created, "errors": errors})
 
