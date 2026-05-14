@@ -285,6 +285,47 @@ body { background: #0a0f1a; }
     padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
 .stars-small { display: inline-flex; gap: 1px; }
 .star-s { width: 9px; height: 9px; }
+
+/* ── Propietario card ─────────────────────────────────────────────────────── */
+.prop-card {
+    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 8px; padding: 9px 11px; display: flex; align-items: center; gap: 10px;
+}
+.prop-avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #93c5fd; flex-shrink: 0;
+}
+.prop-info { flex: 1; min-width: 0; }
+.prop-link {
+    font-size: 13px; font-weight: 600; color: #93c5fd; text-decoration: none;
+    display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: color 0.15s;
+}
+.prop-link:hover { color: white; text-decoration: underline; }
+.prop-meta { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+.prop-unlink {
+    height: 24px; padding: 0 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12);
+    background: none; color: rgba(255,255,255,0.3); font-size: 10.5px; font-family: inherit;
+    cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+}
+.prop-unlink:hover { border-color: #ef4444; color: #f87171; }
+.prop-empty { font-size: 12px; color: rgba(255,255,255,0.25); padding: 6px 0; }
+.prop-search-wrap { display: flex; flex-direction: column; gap: 5px; }
+.prop-results {
+    max-height: 140px; overflow-y: auto; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08); background: rgba(10,15,26,0.8);
+}
+.prop-results:empty { display: none; }
+.prop-result-item {
+    padding: 7px 10px; cursor: pointer; font-size: 12.5px; color: rgba(255,255,255,0.7);
+    display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.12s;
+}
+.prop-result-item:last-child { border-bottom: none; }
+.prop-result-item:hover { background: rgba(59,130,246,0.15); color: white; }
+.prop-result-name { font-weight: 600; flex: 1; }
+.prop-result-tel  { font-size: 11px; color: rgba(255,255,255,0.3); }
 </style>
 {% endblock %}
 
@@ -933,6 +974,14 @@ function renderInfoTab(p) {
           '<div class="cd-row"><div class="cd-label">Notas</div><textarea class="cd-textarea" id="ci-notes">'+esc(p.notes)+'</textarea></div>' +
           '<button class="cd-save-btn" onclick="saveInfo()">Guardar</button>' +
         '</div>' +
+        '<div class="cd-section">' +
+          '<div class="cd-section-ttl">Propietario</div>' +
+          renderPropietarioCard(p) +
+          '<div class="prop-search-wrap" id="prop-search-wrap">' +
+            '<input class="cd-input" id="prop-q" placeholder="Buscar cliente..." oninput="searchClientes(this.value)" autocomplete="off"/>' +
+            '<div class="prop-results" id="prop-results"></div>' +
+          '</div>' +
+        '</div>' +
         '<div class="cd-section" id="neighbors-section">' +
           '<div class="cd-section-ttl">Vecinos próximos</div>' +
           '<div id="neighbor-list-wrap" style="color:rgba(255,255,255,0.2);font-size:11.5px">Cargando...</div>' +
@@ -1219,6 +1268,96 @@ function toast(msg){
     var t=document.getElementById('toast-container'); if(!t) return;
     var el=document.createElement('div'); el.className='toast toast-success'; el.textContent=msg;
     t.appendChild(el); setTimeout(function(){el.remove();},2800);
+}
+
+// ── Propietario / client picker ───────────────────────────────────────────────
+var allClientes = null;  // lazy-loaded once
+
+function renderPropietarioCard(p) {
+    if (!p.propietario) {
+        return '<div class="prop-empty">Sin propietario asignado</div>';
+    }
+    var pr = p.propietario;
+    var initial = ((pr.nombre||pr.apellido||'?')[0]).toUpperCase();
+    var fullName = (pr.nombre + ' ' + pr.apellido).trim();
+    var meta = [pr.telefono, pr.email].filter(Boolean).join(' · ');
+    return '<div class="prop-card">' +
+        '<div class="prop-avatar">'+esc(initial)+'</div>' +
+        '<div class="prop-info">' +
+          '<a class="prop-link" href="/cliente/'+pr.id+'" target="_blank">'+esc(fullName)+'</a>' +
+          (meta ? '<div class="prop-meta">'+esc(meta)+'</div>' : '') +
+        '</div>' +
+        '<button class="prop-unlink" onclick="unlinkPropietario()" title="Desvincular">&#215;</button>' +
+        '</div>';
+}
+
+function loadClientesIfNeeded(cb) {
+    if (allClientes) { cb(allClientes); return; }
+    fetch('/api/clientes', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(list){
+            allClientes = list.filter(function(c){ return !c.deleted_at; });
+            cb(allClientes);
+        });
+}
+
+function searchClientes(q) {
+    var resultsEl = document.getElementById('prop-results');
+    if (!resultsEl) return;
+    q = q.trim().toLowerCase();
+    if (!q) { resultsEl.innerHTML = ''; return; }
+    loadClientesIfNeeded(function(list){
+        var matches = list.filter(function(c){
+            var full = (c.nombre + ' ' + c.apellido + ' ' + (c.telefono||'')).toLowerCase();
+            return full.includes(q);
+        }).slice(0, 8);
+        if (!matches.length) {
+            resultsEl.innerHTML = '<div class="prop-result-item" style="color:rgba(255,255,255,0.25);cursor:default">Sin resultados</div>';
+            return;
+        }
+        resultsEl.innerHTML = matches.map(function(c){
+            var name = (c.nombre + ' ' + c.apellido).trim();
+            return '<div class="prop-result-item" onclick="assignPropietario('+c.id+')">' +
+                '<span class="prop-result-name">'+esc(name)+'</span>' +
+                (c.telefono?'<span class="prop-result-tel">'+esc(c.telefono)+'</span>':'') +
+                '</div>';
+        }).join('');
+    });
+}
+
+function assignPropietario(clienteId) {
+    if (!activeParcela) return;
+    patchParcela({propietario_id: clienteId}, function(){
+        // clear search UI
+        var q = document.getElementById('prop-q'); if(q) q.value='';
+        var r = document.getElementById('prop-results'); if(r) r.innerHTML='';
+        // re-render propietario card in place
+        var sec = document.querySelector('#cd-body .cd-section:last-of-type');
+        if (sec) {
+            sec.querySelector('.prop-empty') && sec.querySelector('.prop-empty').remove();
+            var existingCard = sec.querySelector('.prop-card');
+            if (existingCard) existingCard.remove();
+            sec.insertAdjacentHTML('afterbegin', '<div class="cd-section-ttl">Propietario</div>');
+            var wrap = document.getElementById('prop-search-wrap');
+            sec.insertBefore(parseFrag(renderPropietarioCard(activeParcela)), wrap);
+        }
+        toast('Propietario asignado');
+    });
+}
+
+function unlinkPropietario() {
+    if (!activeParcela) return;
+    patchParcela({propietario_id: null}, function(){
+        var card = document.querySelector('.prop-card');
+        if (card) {
+            card.outerHTML = '<div class="prop-empty">Sin propietario asignado</div>';
+        }
+        toast('Propietario desvinculado');
+    });
+}
+
+function parseFrag(html) {
+    var t = document.createElement('template'); t.innerHTML = html; return t.content.firstChild;
 }
 
 // ── Keyboard navigation ───────────────────────────────────────────────────────

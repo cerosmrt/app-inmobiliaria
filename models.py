@@ -236,6 +236,8 @@ class ParcelaCatastral(db.Model):
     source_provider    = db.Column(db.String, default='manual', nullable=True)  # manual|geojson|api_future
     bbox               = db.Column(db.String, nullable=True)   # "minlat,minlng,maxlat,maxlng"
     neighbor_cache     = db.Column(db.Text, nullable=True)     # JSON list of nearby IDs
+    propietario_id     = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
+    propietario        = db.relationship('Cliente', backref='parcelas_catastrales', foreign_keys=[propietario_id])
     created_at         = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at         = db.Column(db.DateTime, nullable=True)
 
@@ -263,6 +265,14 @@ class ParcelaCatastral(db.Model):
             'land_use': self.land_use or '',
             'notes': self.notes or '',
             'source_provider': self.source_provider or 'manual',
+            'propietario_id': self.propietario_id,
+            'propietario': {
+                'id':       self.propietario.id,
+                'nombre':   self.propietario.nombre,
+                'apellido': self.propietario.apellido,
+                'telefono': self.propietario.telefono or '',
+                'email':    self.propietario.email or '',
+            } if self.propietario else None,
             'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
             'oportunidad': self.oportunidad.as_dict() if self.oportunidad else None,
             'investigaciones': [i.as_dict() for i in self.investigaciones],

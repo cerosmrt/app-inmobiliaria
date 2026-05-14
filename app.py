@@ -1177,6 +1177,7 @@ def create_parcela():
         land_use=data.get('land_use') or None,
         notes=data.get('notes') or None,
         source_provider=data.get('source_provider', 'manual'),
+        propietario_id=data.get('propietario_id') or None,
     )
     db.session.add(p)
     db.session.flush()
@@ -1208,6 +1209,8 @@ def update_parcela(id):
     if not p or p.deleted_at:
         return jsonify({"error": "No encontrada"}), 404
     data = request.get_json()
+    if 'propietario_id' in data:
+        p.propietario_id = data['propietario_id'] or None
     for f in ['parcel_id', 'zone', 'municipality', 'province', 'land_use', 'notes', 'geojson_geometry', 'source_provider', 'bbox', 'neighbor_cache']:
         if f in data:
             setattr(p, f, data[f] or None)
@@ -1500,6 +1503,7 @@ with app.app_context():
             "ALTER TABLE parcelas_catastrales ADD COLUMN source_provider VARCHAR DEFAULT 'manual'",
             "ALTER TABLE parcelas_catastrales ADD COLUMN bbox VARCHAR",
             "ALTER TABLE parcelas_catastrales ADD COLUMN neighbor_cache TEXT",
+            "ALTER TABLE parcelas_catastrales ADD COLUMN propietario_id INTEGER REFERENCES clientes(id)",
         ]:
             try:
                 _conn.execute(db.text(_ddl))
