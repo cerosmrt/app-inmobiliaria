@@ -455,6 +455,8 @@ def add_propiedad():
         es_usd=data.get('es_usd', True),
         precio_a_consultar=data.get('precio_a_consultar', False),
         ambientes=data.get('ambientes'),
+        superficie_terreno=data.get('superficie_terreno'),
+        superficie_cubierta=data.get('superficie_cubierta'),
         tipo=data['tipo'],
         operacion=data.get('operacion'),
         estado=data['estado'],
@@ -519,7 +521,9 @@ def update_propiedad(id):
     p.rango_max        = data.get('rango_max', p.rango_max)
     p.es_usd           = data.get('es_usd', p.es_usd)
     p.precio_a_consultar = data.get('precio_a_consultar', p.precio_a_consultar)
-    p.ambientes        = data.get('ambientes', p.ambientes)
+    p.ambientes            = data.get('ambientes', p.ambientes)
+    p.superficie_terreno   = data.get('superficie_terreno', p.superficie_terreno)
+    p.superficie_cubierta  = data.get('superficie_cubierta', p.superficie_cubierta)
     p.tipo             = data.get('tipo', p.tipo)
     p.operacion        = data.get('operacion', p.operacion)
     p.publicada        = data.get('publicada', p.publicada)
@@ -1404,6 +1408,8 @@ with app.app_context():
             "ALTER TABLE propiedades ADD COLUMN deleted_at DATETIME",
             "ALTER TABLE clientes ADD COLUMN deleted_at DATETIME",
             "ALTER TABLE propiedades ADD COLUMN codigo VARCHAR",
+            "ALTER TABLE propiedades ADD COLUMN superficie_terreno REAL",
+            "ALTER TABLE propiedades ADD COLUMN superficie_cubierta REAL",
         ]:
             try:
                 _conn.execute(db.text(_ddl))

@@ -25,6 +25,8 @@ class Propiedad(db.Model):
     es_usd = db.Column(db.Boolean, default=True)
     precio_a_consultar = db.Column(db.Boolean, default=False)
     ambientes = db.Column(db.Integer, nullable=True)
+    superficie_terreno  = db.Column(db.Float, nullable=True)
+    superficie_cubierta = db.Column(db.Float, nullable=True)
     tipo = db.Column(db.String)         # casa, departamento, local, terreno, otro
     operacion = db.Column(db.String, nullable=True)  # venta, alquiler
     estado = db.Column(db.String)       # disponible, reservada, vendida, rentada, cerrada
@@ -55,6 +57,8 @@ class Propiedad(db.Model):
             'es_usd': self.es_usd,
             'precio_a_consultar': self.precio_a_consultar,
             'ambientes': self.ambientes,
+            'superficie_terreno': self.superficie_terreno,
+            'superficie_cubierta': self.superficie_cubierta,
             'tipo': self.tipo,
             'operacion': self.operacion or '',
             'estado': self.estado,
