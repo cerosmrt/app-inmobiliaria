@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -892,6 +892,246 @@ def get_stats():
         'clientes':             Cliente.query.filter(Cliente.deleted_at.is_(None)).count(),
         'consultas_no_leidas':  Consulta.query.filter_by(leida=False).count(),
     })
+
+# ── Captacion admin page ─────────────────────────────────────────────────────
+
+@app.route('/admin/captacion')
+@login_required
+def admin_captacion():
+    return render_template('admin/captacion.html')
+
+# ── Captacion API: Leads ──────────────────────────────────────────────────────
+
+@app.route('/api/captacion/leads', methods=['GET'])
+@api_login_required
+def get_leads():
+    q         = request.args.get('q', '').strip()
+    estado    = request.args.get('estado', '')
+    prioridad = request.args.get('prioridad', '')
+    query = CaptacionLead.query.filter(CaptacionLead.deleted_at.is_(None))
+    if estado:
+        query = query.filter_by(estado=estado)
+    if prioridad:
+        query = query.filter_by(prioridad=prioridad)
+    if q:
+        query = query.filter(db.or_(
+            CaptacionLead.direccion.ilike(f'%{q}%'),
+            CaptacionLead.barrio.ilike(f'%{q}%'),
+            CaptacionLead.ciudad.ilike(f'%{q}%'),
+        ))
+    leads = query.order_by(CaptacionLead.fecha_creacion.desc()).all()
+    return jsonify([l.as_dict() for l in leads])
+
+@app.route('/api/captacion/leads', methods=['POST'])
+@api_login_required
+def create_lead():
+    data = request.get_json()
+    if not data.get('direccion'):
+        return jsonify({"error": "Dirección requerida"}), 400
+    lead = CaptacionLead(
+        direccion=data['direccion'].strip(),
+        barrio=data.get('barrio') or None,
+        ciudad=data.get('ciudad') or None,
+        tipo_propiedad=data.get('tipo_propiedad') or None,
+        operacion=data.get('operacion') or None,
+        estado=data.get('estado', 'detectada'),
+        prioridad=data.get('prioridad', 'media'),
+        potencial=int(data.get('potencial', 3)),
+        fuente=data.get('fuente') or None,
+        descripcion=data.get('descripcion') or None,
+        notas=data.get('notas') or None,
+        created_by=session.get('admin_username'),
+        ultima_interaccion=datetime.utcnow(),
+        proximo_seguimiento=datetime.fromisoformat(data['proximo_seguimiento']) if data.get('proximo_seguimiento') else None,
+    )
+    db.session.add(lead)
+    db.session.flush()
+    prop = data.get('propietario') or {}
+    if prop.get('nombre') or prop.get('telefono'):
+        db.session.add(PropietarioLead(
+            lead_id=lead.id,
+            nombre=prop.get('nombre') or None,
+            telefono=prop.get('telefono') or None,
+            email=prop.get('email') or None,
+            whatsapp=prop.get('whatsapp') or None,
+            observaciones=prop.get('observaciones') or None,
+        ))
+    db.session.commit()
+    return jsonify(lead.as_dict()), 201
+
+@app.route('/api/captacion/leads/<int:id>', methods=['GET'])
+@api_login_required
+def get_lead(id):
+    lead = db.session.get(CaptacionLead, id)
+    if not lead or lead.deleted_at:
+        return jsonify({"error": "No encontrado"}), 404
+    return jsonify(lead.as_dict())
+
+@app.route('/api/captacion/leads/<int:id>', methods=['PATCH'])
+@api_login_required
+def update_lead(id):
+    lead = db.session.get(CaptacionLead, id)
+    if not lead or lead.deleted_at:
+        return jsonify({"error": "No encontrado"}), 404
+    data = request.get_json()
+    for f in ['direccion', 'barrio', 'ciudad', 'tipo_propiedad', 'operacion',
+              'estado', 'prioridad', 'potencial', 'fuente', 'descripcion', 'notas']:
+        if f in data:
+            setattr(lead, f, data[f])
+    if 'proximo_seguimiento' in data:
+        lead.proximo_seguimiento = datetime.fromisoformat(data['proximo_seguimiento']) if data['proximo_seguimiento'] else None
+    lead.ultima_interaccion = datetime.utcnow()
+    prop = data.get('propietario')
+    if prop is not None:
+        if lead.propietario:
+            for f in ['nombre', 'telefono', 'email', 'whatsapp', 'observaciones']:
+                if f in prop:
+                    setattr(lead.propietario, f, prop[f] or None)
+        else:
+            db.session.add(PropietarioLead(lead_id=lead.id, **{
+                f: prop.get(f) or None for f in ['nombre', 'telefono', 'email', 'whatsapp', 'observaciones']
+            }))
+    db.session.commit()
+    return jsonify(lead.as_dict())
+
+@app.route('/api/captacion/leads/<int:id>', methods=['DELETE'])
+@api_login_required
+def delete_lead(id):
+    lead = db.session.get(CaptacionLead, id)
+    if not lead:
+        return jsonify({"error": "No encontrado"}), 404
+    lead.deleted_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"message": "Lead eliminado"})
+
+# ── Captacion API: Actividades ────────────────────────────────────────────────
+
+@app.route('/api/captacion/leads/<int:id>/actividades', methods=['POST'])
+@api_login_required
+def add_actividad(id):
+    lead = db.session.get(CaptacionLead, id)
+    if not lead or lead.deleted_at:
+        return jsonify({"error": "No encontrado"}), 404
+    data = request.get_json()
+    if not data.get('tipo'):
+        return jsonify({"error": "Tipo requerido"}), 400
+    act = CaptacionActividad(
+        lead_id=id,
+        tipo=data['tipo'],
+        descripcion=data.get('descripcion', '') or '',
+        fecha=datetime.utcnow(),
+        created_by=session.get('admin_username'),
+    )
+    db.session.add(act)
+    lead.ultima_interaccion = datetime.utcnow()
+    db.session.commit()
+    return jsonify(act.as_dict()), 201
+
+@app.route('/api/captacion/leads/<int:id>/actividades/<int:act_id>', methods=['DELETE'])
+@api_login_required
+def delete_actividad(id, act_id):
+    act = db.session.get(CaptacionActividad, act_id)
+    if not act or act.lead_id != id:
+        return jsonify({"error": "No encontrado"}), 404
+    db.session.delete(act)
+    db.session.commit()
+    return jsonify({"message": "Actividad eliminada"})
+
+# ── Captacion API: Conversión ─────────────────────────────────────────────────
+
+@app.route('/api/captacion/leads/<int:id>/convertir', methods=['POST'])
+@api_login_required
+def convertir_lead(id):
+    lead = db.session.get(CaptacionLead, id)
+    if not lead or lead.deleted_at:
+        return jsonify({"error": "No encontrado"}), 404
+    prop = Propiedad(
+        direccion=lead.direccion,
+        barrio=lead.barrio,
+        tipo=lead.tipo_propiedad or 'otro',
+        operacion=lead.operacion,
+        estado='disponible',
+        descripcion=lead.descripcion,
+    )
+    db.session.add(prop)
+    if lead.propietario and lead.propietario.nombre:
+        parts = lead.propietario.nombre.strip().split(' ', 1)
+        cliente = Cliente(
+            nombre=parts[0],
+            apellido=parts[1] if len(parts) > 1 else '',
+            telefono=lead.propietario.telefono or '',
+            email=lead.propietario.email,
+            tipo='propietario',
+        )
+        db.session.add(cliente)
+        db.session.flush()
+        prop.propietarios.append(cliente)
+    db.session.flush()
+    lead.estado = 'captada'
+    lead.ultima_interaccion = datetime.utcnow()
+    db.session.add(CaptacionActividad(
+        lead_id=id,
+        tipo='conversion',
+        descripcion=f'Convertido a propiedad #{prop.id}',
+        created_by=session.get('admin_username'),
+    ))
+    db.session.commit()
+    return jsonify({'message': 'Convertido', 'propiedad_id': prop.id})
+
+# ── Captacion API: Seguimientos ───────────────────────────────────────────────
+
+@app.route('/api/captacion/seguimientos', methods=['GET'])
+@api_login_required
+def get_seguimientos():
+    leads = CaptacionLead.query.filter(
+        CaptacionLead.deleted_at.is_(None),
+        CaptacionLead.proximo_seguimiento.isnot(None),
+        CaptacionLead.estado.notin_(['captada', 'descartada']),
+    ).order_by(CaptacionLead.proximo_seguimiento).all()
+    return jsonify([l.as_dict() for l in leads])
+
+# ── Captacion API: Import CSV ─────────────────────────────────────────────────
+
+@app.route('/api/captacion/import', methods=['POST'])
+@api_login_required
+def import_leads():
+    if 'file' not in request.files:
+        return jsonify({"error": "No se envió archivo"}), 400
+    import csv as _csv, io as _io2
+    content = request.files['file'].read().decode('utf-8-sig')
+    reader  = _csv.DictReader(_io2.StringIO(content))
+    created, errors = 0, []
+    for i, row in enumerate(reader):
+        try:
+            lead = CaptacionLead(
+                direccion=row.get('direccion', '').strip() or 'Sin dirección',
+                barrio=row.get('barrio', '').strip() or None,
+                ciudad=row.get('ciudad', '').strip() or None,
+                tipo_propiedad=row.get('tipo_propiedad', '').strip() or None,
+                operacion=row.get('operacion', '').strip() or None,
+                estado=row.get('estado', 'detectada').strip() or 'detectada',
+                prioridad=row.get('prioridad', 'media').strip() or 'media',
+                fuente=row.get('fuente', '').strip() or None,
+                descripcion=row.get('descripcion', '').strip() or None,
+                created_by=session.get('admin_username'),
+                ultima_interaccion=datetime.utcnow(),
+            )
+            db.session.add(lead)
+            db.session.flush()
+            nombre = row.get('propietario_nombre', '').strip()
+            if nombre:
+                db.session.add(PropietarioLead(
+                    lead_id=lead.id,
+                    nombre=nombre,
+                    telefono=row.get('propietario_telefono', '').strip() or None,
+                    email=row.get('propietario_email', '').strip() or None,
+                    whatsapp=row.get('propietario_whatsapp', '').strip() or None,
+                ))
+            created += 1
+        except Exception as e:
+            errors.append(f"Fila {i+2}: {e}")
+    db.session.commit()
+    return jsonify({"created": created, "errors": errors})
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 

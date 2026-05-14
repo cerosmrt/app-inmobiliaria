@@ -129,6 +129,94 @@ class Admin(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+class CaptacionLead(db.Model):
+    __tablename__ = 'captacion_leads'
+    id                  = db.Column(db.Integer, primary_key=True)
+    direccion           = db.Column(db.String, nullable=False)
+    barrio              = db.Column(db.String, nullable=True)
+    ciudad              = db.Column(db.String, nullable=True)
+    tipo_propiedad      = db.Column(db.String, nullable=True)
+    operacion           = db.Column(db.String, nullable=True)
+    estado              = db.Column(db.String, default='detectada', index=True)
+    prioridad           = db.Column(db.String, default='media')
+    potencial           = db.Column(db.Integer, default=3)
+    fuente              = db.Column(db.String, nullable=True)
+    descripcion         = db.Column(db.Text, nullable=True)
+    notas               = db.Column(db.Text, nullable=True)
+    fecha_creacion      = db.Column(db.DateTime, default=datetime.utcnow)
+    ultima_interaccion  = db.Column(db.DateTime, nullable=True)
+    proximo_seguimiento = db.Column(db.DateTime, nullable=True)
+    created_by          = db.Column(db.String, nullable=True)
+    deleted_at          = db.Column(db.DateTime, nullable=True)
+
+    propietario  = db.relationship('PropietarioLead', backref='lead', uselist=False, cascade='all, delete-orphan')
+    actividades  = db.relationship('CaptacionActividad', backref='lead', cascade='all, delete-orphan',
+                                   order_by='CaptacionActividad.fecha.desc()')
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'direccion': self.direccion,
+            'barrio': self.barrio or '',
+            'ciudad': self.ciudad or '',
+            'tipo_propiedad': self.tipo_propiedad or '',
+            'operacion': self.operacion or '',
+            'estado': self.estado,
+            'prioridad': self.prioridad or 'media',
+            'potencial': self.potencial or 3,
+            'fuente': self.fuente or '',
+            'descripcion': self.descripcion or '',
+            'notas': self.notas or '',
+            'fecha_creacion': self.fecha_creacion.strftime('%d/%m/%Y') if self.fecha_creacion else '',
+            'ultima_interaccion': self.ultima_interaccion.strftime('%d/%m/%Y %H:%M') if self.ultima_interaccion else None,
+            'proximo_seguimiento': self.proximo_seguimiento.strftime('%Y-%m-%d') if self.proximo_seguimiento else None,
+            'created_by': self.created_by or '',
+            'propietario': self.propietario.as_dict() if self.propietario else None,
+            'actividades': [a.as_dict() for a in self.actividades],
+        }
+
+
+class PropietarioLead(db.Model):
+    __tablename__ = 'propietario_leads'
+    id             = db.Column(db.Integer, primary_key=True)
+    lead_id        = db.Column(db.Integer, db.ForeignKey('captacion_leads.id'), nullable=False)
+    nombre         = db.Column(db.String, nullable=True)
+    telefono       = db.Column(db.String, nullable=True)
+    email          = db.Column(db.String, nullable=True)
+    whatsapp       = db.Column(db.String, nullable=True)
+    observaciones  = db.Column(db.Text, nullable=True)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'nombre': self.nombre or '',
+            'telefono': self.telefono or '',
+            'email': self.email or '',
+            'whatsapp': self.whatsapp or '',
+            'observaciones': self.observaciones or '',
+        }
+
+
+class CaptacionActividad(db.Model):
+    __tablename__ = 'captacion_actividades'
+    id          = db.Column(db.Integer, primary_key=True)
+    lead_id     = db.Column(db.Integer, db.ForeignKey('captacion_leads.id'), nullable=False)
+    tipo        = db.Column(db.String, nullable=False)
+    descripcion = db.Column(db.Text, nullable=True)
+    fecha       = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by  = db.Column(db.String, nullable=True)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'lead_id': self.lead_id,
+            'tipo': self.tipo,
+            'descripcion': self.descripcion or '',
+            'fecha': self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else '',
+            'created_by': self.created_by or '',
+        }
+
+
 class Consulta(db.Model):
     __tablename__ = 'consultas'
     id = db.Column(db.Integer, primary_key=True)

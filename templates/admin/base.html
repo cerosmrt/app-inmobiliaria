@@ -39,6 +39,12 @@
                 Archivados
             </a>
 
+            <a class="sb-link" href="/admin/captacion" data-page="captacion">
+                <svg class="sb-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+                Captación
+                <span class="sb-badge" id="badge-seguimientos"></span>
+            </a>
+
             <div class="sb-divider"></div>
             <div class="sb-section">Comunicación</div>
             <a class="sb-link" href="/admin/consultas" data-page="consultas">
@@ -129,6 +135,10 @@
     if (path.startsWith('/cliente')) {
         var el2 = document.querySelector('.sb-link[data-tab="clientes"]');
         if (el2) el2.classList.add('sb-active');
+    }
+    if (path.startsWith('/admin/captacion')) {
+        var el3 = document.querySelector('.sb-link[data-page="captacion"]');
+        if (el3) el3.classList.add('sb-active');
     }
 })();
 </script>

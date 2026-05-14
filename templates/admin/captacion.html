@@ -1,0 +1,1517 @@
+{% extends "admin/base.html" %}
+{% block title %}Captación{% endblock %}
+
+{% block head %}
+<style>
+/* ── Pipeline colours ─────────────────────────────────────────────────────── */
+:root {
+    --col-detectada:  #64748b;
+    --col-investigar: #3b82f6;
+    --col-contactar:  #f59e0b;
+    --col-respondio:  #10b981;
+    --col-tasacion:   #8b5cf6;
+    --col-negociacion:#f97316;
+    --col-captada:    #22c55e;
+    --col-descartada: #ef4444;
+    --pri-baja:       #94a3b8;
+    --pri-media:      #3b82f6;
+    --pri-alta:       #f59e0b;
+    --pri-urgente:    #ef4444;
+    --dp-width: 400px;
+}
+
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+.cap-shell {
+    display: flex;
+    height: calc(100vh - 46px);
+    overflow: hidden;
+}
+.cap-main {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── Topbar ───────────────────────────────────────────────────────────────── */
+.cap-topbar {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    z-index: 30;
+}
+.cap-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+}
+.cap-views {
+    display: flex;
+    gap: 2px;
+    background: var(--bg);
+    padding: 3px;
+    border-radius: var(--radius-sm);
+}
+.cap-view-btn {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all var(--tx);
+}
+.cap-view-btn.active {
+    background: white;
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: var(--shadow-xs);
+}
+.cap-search {
+    flex: 1;
+    max-width: 260px;
+    height: 30px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--text);
+    transition: border-color var(--tx);
+}
+.cap-search:focus { outline: none; border-color: var(--red); }
+.cap-filters {
+    display: flex;
+    gap: 6px;
+}
+.cap-filter-sel {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    color: var(--text);
+    background: white;
+    cursor: pointer;
+}
+.cap-filter-sel:focus { outline: none; border-color: var(--red); }
+.ml-auto { margin-left: auto; }
+.btn-cap-new {
+    height: 30px;
+    padding: 0 14px;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background var(--tx);
+    white-space: nowrap;
+}
+.btn-cap-new:hover { background: var(--red-hover); }
+
+/* ── Kanban ───────────────────────────────────────────────────────────────── */
+.kb-board {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    gap: 10px;
+    padding: 14px 16px;
+    align-items: flex-start;
+}
+.kb-board::-webkit-scrollbar { height: 6px; }
+.kb-board::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+.kb-col {
+    flex-shrink: 0;
+    width: 208px;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    border-radius: var(--radius);
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+.kb-col-hdr {
+    padding: 9px 10px 8px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.kb-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.kb-col-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-2);
+    flex: 1;
+}
+.kb-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 6px;
+    min-width: 20px;
+    text-align: center;
+}
+.kb-col-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 60px;
+}
+.kb-col-body::-webkit-scrollbar { width: 4px; }
+.kb-col-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+.kb-col-body.drag-over {
+    background: rgba(59,130,246,0.07);
+    border-radius: var(--radius-sm);
+    outline: 2px dashed rgba(59,130,246,0.35);
+    outline-offset: -2px;
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+.kb-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 10px 9px 13px;
+    cursor: pointer;
+    transition: box-shadow var(--tx), transform var(--tx), border-color var(--tx);
+    position: relative;
+    user-select: none;
+}
+.kb-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.kb-card:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: #c7d0de;
+    transform: translateY(-1px);
+}
+.kb-card.selected {
+    border-color: var(--red);
+    box-shadow: 0 0 0 2px rgba(196,18,48,0.12);
+}
+.kb-card.dragging { opacity: 0.35; }
+
+.kb-card-addr {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+    margin-bottom: 3px;
+}
+.kb-card-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    line-height: 1.3;
+}
+.kb-card-owner {
+    font-size: 11.5px;
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.kb-card-ft {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+.kb-stars { display: flex; gap: 1px; }
+.kb-star { width: 9px; height: 9px; }
+.kb-age { font-size: 10px; color: var(--muted); }
+.pri-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.seg-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--col-contactar);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(245,158,11,0.2);
+}
+.kb-add-btn {
+    width: 100%;
+    padding: 7px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-family: inherit;
+    cursor: pointer;
+    border-top: 1px solid var(--border);
+    transition: all var(--tx);
+    text-align: center;
+    border-radius: 0 0 var(--radius) var(--radius);
+    flex-shrink: 0;
+}
+.kb-add-btn:hover { background: rgba(196,18,48,0.05); color: var(--red); }
+
+/* ── Lista view ───────────────────────────────────────────────────────────── */
+.lista-wrap {
+    flex: 1;
+    overflow: auto;
+    padding: 14px 16px;
+}
+.lista-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+}
+.lista-table th {
+    background: #f8fafc;
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+.lista-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.lista-table tr:last-child td { border-bottom: none; }
+.lista-table tbody tr { cursor: pointer; transition: background var(--tx); }
+.lista-table tbody tr:hover { background: #fafbfc; }
+.lista-table tbody tr.selected { background: #fef2f4; }
+
+/* ── Seguimientos view ────────────────────────────────────────────────────── */
+.seg-wrap {
+    flex: 1;
+    overflow: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.seg-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: box-shadow var(--tx);
+}
+.seg-card:hover { box-shadow: var(--shadow-sm); }
+.seg-date {
+    min-width: 60px;
+    text-align: center;
+}
+.seg-date .seg-day { font-size: 20px; font-weight: 800; line-height: 1; color: var(--red); }
+.seg-date .seg-mon { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.seg-info { flex: 1; }
+.seg-addr { font-size: 13px; font-weight: 600; color: var(--text); }
+.seg-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.seg-overdue .seg-day { color: var(--col-descartada); }
+.seg-today .seg-day { color: var(--col-captada); }
+
+/* ── Detail Panel ─────────────────────────────────────────────────────────── */
+.detail-panel {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-left: 1px solid var(--border);
+    background: white;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+.detail-panel.open { width: var(--dp-width); }
+.dp-inner {
+    width: var(--dp-width);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.dp-hdr {
+    padding: 11px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.dp-close {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid var(--border); background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); transition: all var(--tx);
+}
+.dp-close:hover { background: #fef2f4; border-color: var(--red); color: var(--red); }
+.dp-estado-sel {
+    flex: 1; height: 28px; padding: 0 8px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12.5px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: border-color var(--tx);
+    background: white;
+}
+.dp-estado-sel:focus { outline: none; border-color: var(--red); }
+.dp-actions { display: flex; gap: 5px; }
+.btn-dp {
+    height: 28px; padding: 0 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: white;
+    font-size: 11.5px; font-weight: 600; font-family: inherit;
+    cursor: pointer; color: var(--text-2); transition: all var(--tx);
+    white-space: nowrap;
+}
+.btn-dp:hover { border-color: var(--red); color: var(--red); }
+.btn-dp-red { background: var(--red); color: white; border-color: var(--red); }
+.btn-dp-red:hover { background: var(--red-hover); color: white; border-color: var(--red-hover); }
+.dp-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.dp-body::-webkit-scrollbar { width: 5px; }
+.dp-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+
+.dp-section { display: flex; flex-direction: column; gap: 8px; }
+.dp-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding-bottom: 5px;
+}
+.dp-row { display: flex; flex-direction: column; gap: 3px; }
+.dp-label { font-size: 10.5px; color: var(--muted); font-weight: 500; }
+.dp-input {
+    width: 100%; padding: 5px 8px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12.5px; font-family: inherit; color: var(--text);
+    transition: border-color var(--tx); background: white;
+}
+.dp-input:focus { outline: none; border-color: var(--red); }
+.dp-input-row { display: flex; gap: 6px; }
+.dp-input-row .dp-input { flex: 1; }
+.dp-textarea {
+    width: 100%; padding: 6px 8px; min-height: 60px; resize: vertical;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12px; font-family: inherit; color: var(--text);
+    transition: border-color var(--tx); background: white; line-height: 1.4;
+}
+.dp-textarea:focus { outline: none; border-color: var(--red); }
+.dp-select {
+    width: 100%; padding: 5px 8px; height: 31px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12.5px; font-family: inherit; color: var(--text);
+    transition: border-color var(--tx); background: white; cursor: pointer;
+}
+.dp-select:focus { outline: none; border-color: var(--red); }
+.dp-row-h { display: flex; gap: 6px; }
+.dp-row-h .dp-row { flex: 1; }
+.dp-stars-input { display: flex; gap: 4px; align-items: center; }
+.dp-star-btn {
+    font-size: 18px; cursor: pointer; line-height: 1;
+    color: #e2e8f0; transition: color var(--tx);
+    background: none; border: none; padding: 0;
+}
+.dp-star-btn.on { color: #f59e0b; }
+
+.dp-save-btn {
+    width: 100%; height: 32px; background: var(--red); color: white;
+    border: none; border-radius: var(--radius-sm); font-size: 12.5px;
+    font-weight: 600; font-family: inherit; cursor: pointer; transition: background var(--tx);
+}
+.dp-save-btn:hover { background: var(--red-hover); }
+
+/* ── Timeline ─────────────────────────────────────────────────────────────── */
+.tl-wrap { display: flex; flex-direction: column; gap: 0; }
+.act-quick {
+    display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.act-btn {
+    height: 26px; padding: 0 10px; border-radius: 13px;
+    border: 1.5px solid var(--border); background: white;
+    font-size: 11px; font-weight: 600; font-family: inherit;
+    cursor: pointer; color: var(--text-2); transition: all var(--tx);
+    display: flex; align-items: center; gap: 4px;
+}
+.act-btn:hover { border-color: var(--red); color: var(--red); background: #fef2f4; }
+.act-form {
+    display: none; flex-direction: column; gap: 5px;
+    background: #f8fafc; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 9px; margin-bottom: 8px;
+}
+.act-form.open { display: flex; }
+.act-form-hdr {
+    font-size: 11px; font-weight: 700; color: var(--text-2); margin-bottom: 2px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.act-form-btns { display: flex; gap: 5px; justify-content: flex-end; }
+.btn-act-save {
+    height: 26px; padding: 0 12px; background: var(--red); color: white;
+    border: none; border-radius: var(--radius-sm); font-size: 11.5px;
+    font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.btn-act-cancel {
+    height: 26px; padding: 0 10px; background: none; color: var(--muted);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 11.5px; font-family: inherit; cursor: pointer;
+}
+.tl-item {
+    display: flex; gap: 9px; padding: 7px 0;
+    border-bottom: 1px solid var(--border); align-items: flex-start;
+    position: relative;
+}
+.tl-item:last-child { border-bottom: none; }
+.tl-icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0; margin-top: 1px;
+}
+.tl-content { flex: 1; min-width: 0; }
+.tl-tipo { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.tl-desc { font-size: 11.5px; color: var(--text-2); margin-top: 1px; word-break: break-word; }
+.tl-meta { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+.tl-del {
+    opacity: 0; background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 14px; padding: 0 3px;
+    transition: opacity var(--tx), color var(--tx);
+    flex-shrink: 0; line-height: 1;
+}
+.tl-item:hover .tl-del { opacity: 1; }
+.tl-del:hover { color: var(--col-descartada); }
+.tl-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.cap-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,0.6); z-index: 200;
+    align-items: center; justify-content: center;
+}
+.cap-modal-overlay.open { display: flex; }
+.cap-modal {
+    background: white; border-radius: var(--radius-lg);
+    width: 560px; max-width: 94vw; max-height: 88vh;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    animation: fadeInModal 0.14s ease;
+}
+.cap-modal-hdr {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+}
+.cap-modal-hdr h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.cap-modal-body {
+    overflow-y: auto; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 11px;
+    flex: 1;
+}
+.cap-modal-body::-webkit-scrollbar { width: 5px; }
+.cap-modal-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+.cap-modal-ft {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+    flex-shrink: 0;
+}
+.form-row { display: flex; flex-direction: column; gap: 4px; }
+.form-row label { font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.form-input {
+    width: 100%; padding: 7px 10px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 13px; font-family: inherit; color: var(--text);
+    transition: border-color var(--tx);
+}
+.form-input:focus { outline: none; border-color: var(--red); }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.form-section {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); padding-top: 4px;
+    border-top: 1px solid var(--border); margin-top: 2px;
+}
+.modal-close-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    background: none; cursor: pointer; color: var(--muted); font-size: 16px;
+    display: flex; align-items: center; justify-content: center; transition: all var(--tx);
+}
+.modal-close-btn:hover { background: #fef2f4; border-color: var(--red); color: var(--red); }
+.btn-gray { height: 34px; padding: 0 14px; border: 1px solid var(--border); background: none; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; cursor: pointer; color: var(--text-2); }
+.btn-red  { height: 34px; padding: 0 18px; background: var(--red); color: white; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.btn-red:hover { background: var(--red-hover); }
+
+/* ── Import modal ─────────────────────────────────────────────────────────── */
+.import-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 24px; text-align: center; color: var(--muted);
+    font-size: 13px; cursor: pointer; transition: all var(--tx);
+}
+.import-zone:hover, .import-zone.drag-over {
+    border-color: var(--red); color: var(--red); background: #fef2f4;
+}
+.import-csv-hint {
+    font-size: 11px; color: var(--muted); background: var(--bg);
+    border-radius: var(--radius-sm); padding: 8px 10px; font-family: monospace;
+    line-height: 1.6; margin-top: 6px;
+}
+
+/* ── Status chips ─────────────────────────────────────────────────────────── */
+.estado-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 10px; white-space: nowrap;
+}
+
+@keyframes fadeInModal { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.kb-empty {
+    font-size: 11px; color: var(--muted); text-align: center;
+    padding: 12px 8px; line-height: 1.4;
+}
+
+/* ── Conversion notice ────────────────────────────────────────────────────── */
+.conv-notice {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm);
+    padding: 9px 11px; font-size: 12px; color: #166534;
+    display: flex; align-items: center; gap: 7px;
+}
+</style>
+{% endblock %}
+
+{% block page_topbar %}{% endblock %}
+
+{% block content %}
+<!-- ── Topbar ────────────────────────────────────────────────────────────── -->
+<div class="cap-topbar">
+    <span class="cap-title">Captación</span>
+    <div class="cap-views">
+        <button class="cap-view-btn active" onclick="setView('kanban', this)">Kanban</button>
+        <button class="cap-view-btn" onclick="setView('lista', this)">Lista</button>
+        <button class="cap-view-btn" onclick="setView('seguimientos', this)">Seguimientos</button>
+    </div>
+    <input class="cap-search" id="cap-search" type="text" placeholder="Buscar dirección, barrio..." oninput="filterLeads()" />
+    <div class="cap-filters">
+        <select class="cap-filter-sel" id="flt-prioridad" onchange="filterLeads()">
+            <option value="">Prioridad</option>
+            <option value="urgente">Urgente</option>
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+        </select>
+        <select class="cap-filter-sel" id="flt-tipo" onchange="filterLeads()">
+            <option value="">Tipo</option>
+            <option value="casa">Casa</option>
+            <option value="departamento">Depto</option>
+            <option value="local">Local</option>
+            <option value="terreno">Terreno</option>
+            <option value="otro">Otro</option>
+        </select>
+    </div>
+    <div class="ml-auto" style="display:flex;gap:6px">
+        <button class="btn-dp" onclick="openImportModal()" title="Importar CSV">↑ Importar</button>
+        <button class="btn-cap-new" onclick="openNewLead()">+ Nuevo Lead</button>
+    </div>
+</div>
+
+<!-- ── Shell ─────────────────────────────────────────────────────────────── -->
+<div class="cap-shell">
+
+    <!-- ── Main area ─────────────────────────────────────────────────────── -->
+    <div class="cap-main" id="cap-main">
+
+        <!-- Kanban board -->
+        <div class="kb-board" id="kb-board" style="display:flex"></div>
+
+        <!-- Lista view -->
+        <div class="lista-wrap" id="lista-view" style="display:none">
+            <table class="lista-table">
+                <thead>
+                    <tr>
+                        <th>Dirección</th>
+                        <th>Estado</th>
+                        <th>Prioridad</th>
+                        <th>Propietario</th>
+                        <th>Última actividad</th>
+                        <th>Seguimiento</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-body"></tbody>
+            </table>
+        </div>
+
+        <!-- Seguimientos view -->
+        <div class="seg-wrap" id="seg-view" style="display:none" id="seg-view"></div>
+
+    </div>
+
+    <!-- ── Detail Panel ───────────────────────────────────────────────────── -->
+    <div class="detail-panel" id="detail-panel">
+        <div class="dp-inner">
+            <div class="dp-hdr">
+                <button class="dp-close" onclick="closeDetail()" title="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+                <select class="dp-estado-sel" id="dp-estado" onchange="saveEstado(this.value)">
+                    <option value="detectada">Detectada</option>
+                    <option value="investigar">Investigar</option>
+                    <option value="contactar">Contactar</option>
+                    <option value="respondio">Respondió</option>
+                    <option value="tasacion">Tasación</option>
+                    <option value="negociacion">Negociación</option>
+                    <option value="captada">Captada</option>
+                    <option value="descartada">Descartada</option>
+                </select>
+                <div class="dp-actions">
+                    <button class="btn-dp btn-dp-red" id="dp-convert-btn" onclick="convertirLead()" title="Convertir a propiedad">Convertir</button>
+                    <button class="btn-dp" onclick="deleteLead()" title="Eliminar lead" style="color:#ef4444">✕</button>
+                </div>
+            </div>
+            <div class="dp-body" id="dp-body">
+                <!-- filled dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ New / Edit Lead Modal ═════════════════════════════════════════════════ -->
+<div class="cap-modal-overlay" id="lead-modal">
+    <div class="cap-modal">
+        <div class="cap-modal-hdr">
+            <h3 id="lead-modal-title">Nuevo Lead</h3>
+            <button class="modal-close-btn" onclick="closeLeadModal()">✕</button>
+        </div>
+        <div class="cap-modal-body">
+            <div class="form-row">
+                <label>Dirección *</label>
+                <input class="form-input" id="lf-direccion" type="text" placeholder="Ej: Av. Rivadavia 1234" />
+            </div>
+            <div class="form-grid-2">
+                <div class="form-row">
+                    <label>Barrio</label>
+                    <input class="form-input" id="lf-barrio" type="text" placeholder="Palermo" />
+                </div>
+                <div class="form-row">
+                    <label>Ciudad</label>
+                    <input class="form-input" id="lf-ciudad" type="text" placeholder="Buenos Aires" />
+                </div>
+            </div>
+            <div class="form-grid-3">
+                <div class="form-row">
+                    <label>Tipo</label>
+                    <select class="form-input" id="lf-tipo">
+                        <option value="">—</option>
+                        <option value="casa">Casa</option>
+                        <option value="departamento">Depto</option>
+                        <option value="local">Local</option>
+                        <option value="terreno">Terreno</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Operación</label>
+                    <select class="form-input" id="lf-operacion">
+                        <option value="">—</option>
+                        <option value="venta">Venta</option>
+                        <option value="alquiler">Alquiler</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Estado</label>
+                    <select class="form-input" id="lf-estado">
+                        <option value="detectada">Detectada</option>
+                        <option value="investigar">Investigar</option>
+                        <option value="contactar">Contactar</option>
+                        <option value="respondio">Respondió</option>
+                        <option value="tasacion">Tasación</option>
+                        <option value="negociacion">Negociación</option>
+                        <option value="captada">Captada</option>
+                        <option value="descartada">Descartada</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid-3">
+                <div class="form-row">
+                    <label>Prioridad</label>
+                    <select class="form-input" id="lf-prioridad">
+                        <option value="baja">Baja</option>
+                        <option value="media" selected>Media</option>
+                        <option value="alta">Alta</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Potencial (1-5)</label>
+                    <input class="form-input" id="lf-potencial" type="number" min="1" max="5" value="3" />
+                </div>
+                <div class="form-row">
+                    <label>Fuente</label>
+                    <select class="form-input" id="lf-fuente">
+                        <option value="">—</option>
+                        <option>Referido</option>
+                        <option>Cartel</option>
+                        <option>Portal web</option>
+                        <option>Red social</option>
+                        <option>Contacto directo</option>
+                        <option>Cliente existente</option>
+                        <option>Otro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <label>Descripción</label>
+                <textarea class="form-input" id="lf-descripcion" rows="2" style="resize:vertical;min-height:48px" placeholder="Observaciones sobre la propiedad..."></textarea>
+            </div>
+            <div class="form-row">
+                <label>Próximo seguimiento</label>
+                <input class="form-input" id="lf-seguimiento" type="date" />
+            </div>
+            <div class="form-section">Propietario</div>
+            <div class="form-grid-2">
+                <div class="form-row">
+                    <label>Nombre</label>
+                    <input class="form-input" id="lf-p-nombre" type="text" placeholder="Juan García" />
+                </div>
+                <div class="form-row">
+                    <label>Teléfono</label>
+                    <input class="form-input" id="lf-p-tel" type="text" placeholder="11-1234-5678" />
+                </div>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-row">
+                    <label>Email</label>
+                    <input class="form-input" id="lf-p-email" type="email" placeholder="juan@email.com" />
+                </div>
+                <div class="form-row">
+                    <label>WhatsApp</label>
+                    <input class="form-input" id="lf-p-wa" type="text" placeholder="5491112345678" />
+                </div>
+            </div>
+        </div>
+        <div class="cap-modal-ft">
+            <button class="btn-gray" onclick="closeLeadModal()">Cancelar</button>
+            <button class="btn-red" onclick="submitLeadForm()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Import Modal ══════════════════════════════════════════════════════════ -->
+<div class="cap-modal-overlay" id="import-modal">
+    <div class="cap-modal" style="width:520px">
+        <div class="cap-modal-hdr">
+            <h3>Importar Leads CSV</h3>
+            <button class="modal-close-btn" onclick="closeImportModal()">✕</button>
+        </div>
+        <div class="cap-modal-body">
+            <div class="import-zone" id="import-zone" onclick="document.getElementById('import-file').click()">
+                <div style="font-size:24px;margin-bottom:6px">📄</div>
+                <div>Hacé clic o arrastrá un archivo CSV</div>
+                <input type="file" id="import-file" accept=".csv" style="display:none" onchange="handleImportFile(this)" />
+            </div>
+            <div id="import-file-name" style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px"></div>
+            <div class="form-section" style="margin-top:8px">Formato esperado de columnas</div>
+            <div class="import-csv-hint">
+                direccion, barrio, ciudad, tipo_propiedad, operacion,<br>
+                estado, prioridad, fuente, descripcion,<br>
+                propietario_nombre, propietario_telefono, propietario_email, propietario_whatsapp
+            </div>
+            <div id="import-result" style="margin-top:8px;font-size:12.5px;display:none"></div>
+        </div>
+        <div class="cap-modal-ft">
+            <button class="btn-gray" onclick="closeImportModal()">Cancelar</button>
+            <button class="btn-red" id="import-btn" onclick="submitImport()" disabled>Importar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+var PIPELINE = [
+    {key:'detectada',   label:'Detectada',   color:'#64748b'},
+    {key:'investigar',  label:'Investigar',  color:'#3b82f6'},
+    {key:'contactar',   label:'Contactar',   color:'#f59e0b'},
+    {key:'respondio',   label:'Respondió',   color:'#10b981'},
+    {key:'tasacion',    label:'Tasación',    color:'#8b5cf6'},
+    {key:'negociacion', label:'Negociación', color:'#f97316'},
+    {key:'captada',     label:'Captada',     color:'#22c55e'},
+    {key:'descartada',  label:'Descartada',  color:'#ef4444'},
+];
+var PRI = {baja:'#94a3b8', media:'#3b82f6', alta:'#f59e0b', urgente:'#ef4444'};
+var PRI_LABEL = {baja:'Baja', media:'Media', alta:'Alta', urgente:'Urgente'};
+var ACT_ICONS = {llamada:'📞', whatsapp:'💬', email:'✉️', reunion:'🤝', tasacion:'📋', nota:'📝', conversion:'✅'};
+var ACT_LABEL = {llamada:'Llamada', whatsapp:'WhatsApp', email:'Email', reunion:'Reunión', tasacion:'Tasación', nota:'Nota', conversion:'Conversión'};
+var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+var allLeads = [];
+var activeLead = null;
+var currentView = 'kanban';
+var dragSrcId = null;
+var importFile = null;
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+loadLeads();
+
+function loadLeads() {
+    fetch('/api/captacion/leads', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            allLeads = data;
+            render();
+            updateSeguimientoBadge();
+        });
+}
+
+function render() {
+    var leads = filtered();
+    if (currentView === 'kanban') renderKanban(leads);
+    else if (currentView === 'lista') renderLista(leads);
+    else renderSeguimientos();
+}
+
+function filtered() {
+    var q  = document.getElementById('cap-search').value.toLowerCase();
+    var pr = document.getElementById('flt-prioridad').value;
+    var ti = document.getElementById('flt-tipo').value;
+    return allLeads.filter(function(l){
+        if (q && !(l.direccion+' '+l.barrio+' '+l.ciudad).toLowerCase().includes(q)) return false;
+        if (pr && l.prioridad !== pr) return false;
+        if (ti && l.tipo_propiedad !== ti) return false;
+        return true;
+    });
+}
+
+function filterLeads() { render(); }
+
+function setView(v, btn) {
+    currentView = v;
+    document.querySelectorAll('.cap-view-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('kb-board').style.display   = v === 'kanban' ? 'flex' : 'none';
+    document.getElementById('lista-view').style.display  = v === 'lista'  ? 'block' : 'none';
+    document.getElementById('seg-view').style.display    = v === 'seguimientos' ? 'flex' : 'none';
+    render();
+}
+
+// ── Kanban ────────────────────────────────────────────────────────────────────
+function renderKanban(leads) {
+    var board = document.getElementById('kb-board');
+    board.innerHTML = '';
+    PIPELINE.forEach(function(col){
+        var colLeads = leads.filter(function(l){ return l.estado === col.key; });
+        var el = document.createElement('div');
+        el.className = 'kb-col';
+        el.dataset.estado = col.key;
+        el.innerHTML =
+            '<div class="kb-col-hdr">' +
+              '<span class="kb-dot" style="background:'+col.color+'"></span>' +
+              '<span class="kb-col-name">'+col.label+'</span>' +
+              '<span class="kb-count">'+colLeads.length+'</span>' +
+            '</div>' +
+            '<div class="kb-col-body" id="col-'+col.key+'" ' +
+              'ondragover="dragOver(event)" ondrop="drop(event,\''+col.key+'\')" ondragleave="dragLeave(event)">' +
+              (colLeads.length ? colLeads.map(cardHTML).join('') : '<div class="kb-empty">Sin leads</div>') +
+            '</div>' +
+            '<button class="kb-add-btn" onclick="openNewLead(\''+col.key+'\')">+ Agregar</button>';
+        board.appendChild(el);
+    });
+}
+
+function cardHTML(l) {
+    var priColor = PRI[l.prioridad] || '#94a3b8';
+    var stars = '';
+    for (var i=1; i<=5; i++) {
+        stars += '<svg class="kb-star" viewBox="0 0 20 20" fill="'+(i<=l.potencial?'#f59e0b':'#e2e8f0')+'"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>';
+    }
+    var sub = [l.barrio, l.tipo_propiedad ? cap(l.tipo_propiedad) : ''].filter(Boolean).join(' · ');
+    var owner = l.propietario && l.propietario.nombre ? l.propietario.nombre : '';
+    var age = dayAge(l.ultima_interaccion);
+    var hasSeg = l.proximo_seguimiento;
+    return '<div class="kb-card" id="card-'+l.id+'" draggable="true" ' +
+        'ondragstart="dragStart(event,'+l.id+')" ' +
+        'onclick="openDetail('+l.id+')">' +
+        '<div class="kb-card-addr">'+esc(l.direccion)+'</div>' +
+        (sub ? '<div class="kb-card-sub">'+esc(sub)+'</div>' : '') +
+        (owner ? '<div class="kb-card-owner"><svg width="10" height="10" viewBox="0 0 20 20" fill="#94a3b8"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>'+esc(owner)+'</div>' : '') +
+        '<div class="kb-card-ft">' +
+          '<div class="kb-stars">'+stars+'</div>' +
+          '<div style="display:flex;align-items:center;gap:5px">' +
+            (hasSeg ? '<span class="seg-dot" title="Seguimiento pendiente"></span>' : '') +
+            '<span class="pri-badge" style="background:'+priColor+'22;color:'+priColor+'">'+PRI_LABEL[l.prioridad]+'</span>' +
+          '</div>' +
+        '</div>' +
+        (age ? '<div class="kb-age" style="margin-top:4px">'+age+'</div>' : '') +
+        '</div>';
+}
+
+// ── Lista ─────────────────────────────────────────────────────────────────────
+function renderLista(leads) {
+    var tb = document.getElementById('lista-body');
+    if (!leads.length) {
+        tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin resultados</td></tr>';
+        return;
+    }
+    tb.innerHTML = leads.map(function(l){
+        var est = PIPELINE.find(function(p){ return p.key===l.estado; });
+        var priColor = PRI[l.prioridad] || '#94a3b8';
+        var owner = l.propietario && l.propietario.nombre ? l.propietario.nombre : '—';
+        var segStr = l.proximo_seguimiento ? formatDate(l.proximo_seguimiento) : '—';
+        var segStyle = '';
+        if (l.proximo_seguimiento) {
+            var d = new Date(l.proximo_seguimiento); var today = new Date();
+            if (d < today) segStyle = 'color:var(--col-descartada);font-weight:600';
+        }
+        return '<tr onclick="openDetail('+l.id+')" id="list-row-'+l.id+'">' +
+            '<td><strong>'+esc(l.direccion)+'</strong>' +
+              (l.barrio ? '<br><span style="font-size:11px;color:var(--muted)">'+esc(l.barrio)+'</span>' : '') +
+            '</td>' +
+            '<td><span class="estado-chip" style="background:'+(est?est.color:'#888')+'22;color:'+(est?est.color:'#888')+'">' +
+              '<span style="width:6px;height:6px;border-radius:50%;background:'+(est?est.color:'#888')+'"></span>' +
+              (est?est.label:'?') + '</span></td>' +
+            '<td><span class="pri-badge" style="background:'+priColor+'22;color:'+priColor+'">'+PRI_LABEL[l.prioridad]+'</span></td>' +
+            '<td>'+esc(owner)+'</td>' +
+            '<td style="color:var(--muted);font-size:12px">'+(l.ultima_interaccion||'—')+'</td>' +
+            '<td style="font-size:12px;'+segStyle+'">'+segStr+'</td>' +
+            '</tr>';
+    }).join('');
+}
+
+// ── Seguimientos ──────────────────────────────────────────────────────────────
+function renderSeguimientos() {
+    var wrap = document.getElementById('seg-view');
+    var today = new Date(); today.setHours(0,0,0,0);
+    var leads = allLeads.filter(function(l){
+        return l.proximo_seguimiento && !['captada','descartada'].includes(l.estado);
+    }).sort(function(a,b){ return a.proximo_seguimiento.localeCompare(b.proximo_seguimiento); });
+    if (!leads.length) {
+        wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Sin seguimientos pendientes</div>';
+        return;
+    }
+    wrap.innerHTML = leads.map(function(l){
+        var d = new Date(l.proximo_seguimiento);
+        var isOver = d < today;
+        var isToday = d.getTime() === today.getTime();
+        var est = PIPELINE.find(function(p){ return p.key===l.estado; });
+        var owner = l.propietario && l.propietario.nombre ? l.propietario.nombre : '';
+        return '<div class="seg-card '+(isOver?'seg-overdue':isToday?'seg-today':'')+'" onclick="openDetail('+l.id+')">' +
+            '<div class="seg-date"><div class="seg-day">'+d.getDate()+'</div>' +
+              '<div class="seg-mon">'+['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+'</div>' +
+            '</div>' +
+            '<div class="seg-info">' +
+              '<div class="seg-addr">'+esc(l.direccion)+'</div>' +
+              '<div class="seg-meta">' +
+                (est?'<span style="color:'+est.color+'">●</span> '+est.label+' · ':'') +
+                (owner?esc(owner)+' · ':'') +
+                (isOver?'<strong style="color:var(--col-descartada)">Vencido</strong>' : isToday?'<strong style="color:var(--col-captada)">Hoy</strong>':'Próximo') +
+              '</div>' +
+            '</div>' +
+            '<svg width="14" height="14" viewBox="0 0 20 20" fill="#cbd5e1"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>' +
+            '</div>';
+    }).join('');
+}
+
+// ── Drag and Drop ─────────────────────────────────────────────────────────────
+function dragStart(e, id) {
+    dragSrcId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function(){ var c=document.getElementById('card-'+id); if(c) c.classList.add('dragging'); }, 0);
+}
+function dragOver(e) {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    var col = e.currentTarget; if (!col.classList.contains('drag-over')) col.classList.add('drag-over');
+}
+function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function drop(e, estado) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (!dragSrcId) return;
+    var card = document.getElementById('card-'+dragSrcId);
+    if (card) card.classList.remove('dragging');
+    var lead = allLeads.find(function(l){ return l.id===dragSrcId; });
+    if (!lead || lead.estado === estado) { dragSrcId=null; return; }
+    lead.estado = estado;
+    renderKanban(filtered());
+    if (activeLead && activeLead.id === dragSrcId) {
+        activeLead.estado = estado;
+        document.getElementById('dp-estado').value = estado;
+    }
+    fetch('/api/captacion/leads/'+dragSrcId, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({estado:estado})
+    });
+    dragSrcId = null;
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+function openDetail(id) {
+    var lead = allLeads.find(function(l){ return l.id===id; });
+    if (!lead) return;
+    activeLead = lead;
+    // Mark selected card
+    document.querySelectorAll('.kb-card').forEach(function(c){ c.classList.remove('selected'); });
+    document.querySelectorAll('.lista-table tr').forEach(function(r){ r.classList.remove('selected'); });
+    var c = document.getElementById('card-'+id); if (c) c.classList.add('selected');
+    var r = document.getElementById('list-row-'+id); if (r) r.classList.add('selected');
+    // Estado selector
+    document.getElementById('dp-estado').value = lead.estado;
+    // Convert button only for non-captada, non-descartada
+    document.getElementById('dp-convert-btn').style.display =
+        ['captada','descartada'].includes(lead.estado) ? 'none' : '';
+    // Fill panel body
+    renderDetailBody(lead);
+    document.getElementById('detail-panel').classList.add('open');
+}
+
+function renderDetailBody(lead) {
+    var est = PIPELINE.find(function(p){ return p.key===lead.estado; });
+    var priColor = PRI[lead.prioridad] || '#94a3b8';
+    var p = lead.propietario || {};
+    var stars = '';
+    for (var i=1; i<=5; i++) {
+        stars += '<button class="dp-star-btn'+(i<=lead.potencial?' on':'')+'" onclick="setPotencial('+i+')" data-star="'+i+'">★</button>';
+    }
+    var convNotice = lead.estado==='captada' ?
+        '<div class="conv-notice">✅ Este lead fue convertido a propiedad.</div>' : '';
+    document.getElementById('dp-body').innerHTML =
+        convNotice +
+        '<!-- Lead info -->' +
+        '<div class="dp-section">' +
+          '<div class="dp-section-title">Propiedad</div>' +
+          '<div class="dp-row"><div class="dp-label">Dirección</div>' +
+            '<input class="dp-input" id="dp-dir" value="'+esc(lead.direccion)+'" /></div>' +
+          '<div class="dp-input-row">' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Barrio</div>' +
+              '<input class="dp-input" id="dp-barrio" value="'+esc(lead.barrio)+'" /></div>' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Ciudad</div>' +
+              '<input class="dp-input" id="dp-ciudad" value="'+esc(lead.ciudad)+'" /></div>' +
+          '</div>' +
+          '<div class="dp-input-row">' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Tipo</div>' +
+              '<select class="dp-select" id="dp-tipo">' +
+                ['','casa','departamento','local','terreno','otro'].map(function(t){ return '<option value="'+t+'"'+(t===lead.tipo_propiedad?' selected':'')+'>'+( t?cap(t):'—')+'</option>'; }).join('') +
+              '</select></div>' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Operación</div>' +
+              '<select class="dp-select" id="dp-op">' +
+                ['','venta','alquiler'].map(function(t){ return '<option value="'+t+'"'+(t===lead.operacion?' selected':'')+'>'+( t?cap(t):'—')+'</option>'; }).join('') +
+              '</select></div>' +
+          '</div>' +
+          '<div class="dp-input-row">' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Prioridad</div>' +
+              '<select class="dp-select" id="dp-pri">' +
+                Object.keys(PRI).map(function(k){ return '<option value="'+k+'"'+(k===lead.prioridad?' selected':'')+'>'+PRI_LABEL[k]+'</option>'; }).join('') +
+              '</select></div>' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Potencial</div>' +
+              '<div class="dp-stars-input" id="dp-stars">'+stars+'</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="dp-input-row">' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Fuente</div>' +
+              '<select class="dp-select" id="dp-fuente">' +
+                ['','Referido','Cartel','Portal web','Red social','Contacto directo','Cliente existente','Otro'].map(function(f){ return '<option value="'+f+'"'+(f===lead.fuente?' selected':'')+'>'+( f||'—')+'</option>'; }).join('') +
+              '</select></div>' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Seguimiento</div>' +
+              '<input class="dp-input" id="dp-seg" type="date" value="'+(lead.proximo_seguimiento||'')+'" /></div>' +
+          '</div>' +
+          '<div class="dp-row"><div class="dp-label">Descripción</div>' +
+            '<textarea class="dp-textarea" id="dp-desc">'+esc(lead.descripcion)+'</textarea></div>' +
+          '<div class="dp-row"><div class="dp-label">Notas internas</div>' +
+            '<textarea class="dp-textarea" id="dp-notas">'+esc(lead.notas)+'</textarea></div>' +
+          '<button class="dp-save-btn" onclick="saveDetail()">Guardar cambios</button>' +
+        '</div>' +
+        '<!-- Propietario -->' +
+        '<div class="dp-section">' +
+          '<div class="dp-section-title">Propietario</div>' +
+          '<div class="dp-row"><div class="dp-label">Nombre</div>' +
+            '<input class="dp-input" id="dp-p-nombre" value="'+esc(p.nombre||'')+'" /></div>' +
+          '<div class="dp-input-row">' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">Teléfono</div>' +
+              '<input class="dp-input" id="dp-p-tel" value="'+esc(p.telefono||'')+'" /></div>' +
+            '<div class="dp-row" style="flex:1"><div class="dp-label">WhatsApp</div>' +
+              '<input class="dp-input" id="dp-p-wa" value="'+esc(p.whatsapp||'')+'" /></div>' +
+          '</div>' +
+          '<div class="dp-row"><div class="dp-label">Email</div>' +
+            '<input class="dp-input" id="dp-p-email" type="email" value="'+esc(p.email||'')+'" /></div>' +
+          '<div class="dp-row"><div class="dp-label">Observaciones</div>' +
+            '<textarea class="dp-textarea" id="dp-p-obs">'+esc(p.observaciones||'')+'</textarea></div>' +
+          '<div style="display:flex;gap:6px;margin-top:2px">' +
+            (p.telefono?'<a href="tel:'+esc(p.telefono)+'" class="btn-dp" style="text-decoration:none;height:28px;line-height:28px;font-size:11.5px">📞 Llamar</a>':'') +
+            (p.whatsapp?'<a href="https://wa.me/'+esc(p.whatsapp.replace(/\D/g,''))+'" target="_blank" class="btn-dp" style="text-decoration:none;height:28px;line-height:28px;font-size:11.5px">💬 WhatsApp</a>':'') +
+            (p.email?'<a href="mailto:'+esc(p.email)+'" class="btn-dp" style="text-decoration:none;height:28px;line-height:28px;font-size:11.5px">✉ Email</a>':'') +
+          '</div>' +
+        '</div>' +
+        '<!-- Timeline -->' +
+        '<div class="dp-section">' +
+          '<div class="dp-section-title">Actividad</div>' +
+          renderActQuick() +
+          '<div id="act-form-wrap"></div>' +
+          '<div class="tl-wrap" id="tl-wrap">' + renderTimeline(lead.actividades) + '</div>' +
+        '</div>' +
+        '<div style="color:var(--muted);font-size:10.5px;text-align:center;padding-bottom:4px">' +
+          'Creado '+lead.fecha_creacion+(lead.created_by?' por '+lead.created_by:'') +
+        '</div>';
+    // Set potencial state
+    currentPotencial = lead.potencial || 3;
+}
+
+var currentPotencial = 3;
+function setPotencial(n) {
+    currentPotencial = n;
+    document.querySelectorAll('#dp-stars .dp-star-btn').forEach(function(b){
+        b.classList.toggle('on', parseInt(b.dataset.star) <= n);
+    });
+}
+
+function renderActQuick() {
+    return '<div class="act-quick">' +
+        ['llamada','whatsapp','email','reunion','tasacion','nota'].map(function(t){
+            return '<button class="act-btn" onclick="openActForm(\''+t+'\')">' +
+                ACT_ICONS[t]+' '+ACT_LABEL[t]+'</button>';
+        }).join('') +
+        '</div>';
+}
+
+var actFormOpen = '';
+function openActForm(tipo) {
+    actFormOpen = tipo;
+    document.getElementById('act-form-wrap').innerHTML =
+        '<div class="act-form open">' +
+          '<div class="act-form-hdr">'+ACT_ICONS[tipo]+' '+ACT_LABEL[tipo]+'</div>' +
+          '<textarea class="dp-textarea" id="act-desc" placeholder="Descripción..." rows="2" style="min-height:44px"></textarea>' +
+          '<div class="act-form-btns">' +
+            '<button class="btn-act-cancel" onclick="closeActForm()">Cancelar</button>' +
+            '<button class="btn-act-save" onclick="submitActividad()">Registrar</button>' +
+          '</div>' +
+        '</div>';
+    setTimeout(function(){ var a=document.getElementById('act-desc'); if(a) a.focus(); }, 50);
+}
+function closeActForm() {
+    document.getElementById('act-form-wrap').innerHTML = '';
+    actFormOpen = '';
+}
+
+function submitActividad() {
+    if (!activeLead || !actFormOpen) return;
+    var desc = document.getElementById('act-desc').value.trim();
+    fetch('/api/captacion/leads/'+activeLead.id+'/actividades', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({tipo:actFormOpen, descripcion:desc})
+    }).then(function(r){ return r.json(); }).then(function(act){
+        activeLead.actividades.unshift(act);
+        activeLead.ultima_interaccion = act.fecha;
+        var lead = allLeads.find(function(l){ return l.id===activeLead.id; });
+        if (lead) { lead.actividades = activeLead.actividades; lead.ultima_interaccion = act.fecha; }
+        document.getElementById('tl-wrap').innerHTML = renderTimeline(activeLead.actividades);
+        closeActForm();
+        render();
+    });
+}
+
+function renderTimeline(acts) {
+    if (!acts || !acts.length) return '<div class="tl-empty">Sin actividad registrada</div>';
+    return acts.map(function(a){
+        return '<div class="tl-item">' +
+            '<div class="tl-icon">'+(ACT_ICONS[a.tipo]||'📌')+'</div>' +
+            '<div class="tl-content">' +
+              '<div class="tl-tipo">'+(ACT_LABEL[a.tipo]||a.tipo)+'</div>' +
+              (a.descripcion?'<div class="tl-desc">'+esc(a.descripcion)+'</div>':'') +
+              '<div class="tl-meta">'+a.fecha+(a.created_by?' · '+a.created_by:'')+'</div>' +
+            '</div>' +
+            '<button class="tl-del" onclick="deleteActividad('+a.id+')" title="Eliminar">×</button>' +
+            '</div>';
+    }).join('');
+}
+
+function deleteActividad(actId) {
+    if (!activeLead) return;
+    fetch('/api/captacion/leads/'+activeLead.id+'/actividades/'+actId, {
+        method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
+    }).then(function(){
+        activeLead.actividades = activeLead.actividades.filter(function(a){ return a.id!==actId; });
+        document.getElementById('tl-wrap').innerHTML = renderTimeline(activeLead.actividades);
+    });
+}
+
+function saveEstado(estado) {
+    if (!activeLead) return;
+    activeLead.estado = estado;
+    var lead = allLeads.find(function(l){ return l.id===activeLead.id; });
+    if (lead) lead.estado = estado;
+    document.getElementById('dp-convert-btn').style.display =
+        ['captada','descartada'].includes(estado) ? 'none' : '';
+    fetch('/api/captacion/leads/'+activeLead.id, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({estado:estado})
+    }).then(function(){ render(); });
+}
+
+function saveDetail() {
+    if (!activeLead) return;
+    var payload = {
+        direccion: document.getElementById('dp-dir').value.trim(),
+        barrio:    document.getElementById('dp-barrio').value.trim(),
+        ciudad:    document.getElementById('dp-ciudad').value.trim(),
+        tipo_propiedad: document.getElementById('dp-tipo').value,
+        operacion: document.getElementById('dp-op').value,
+        prioridad: document.getElementById('dp-pri').value,
+        potencial: currentPotencial,
+        fuente:    document.getElementById('dp-fuente').value,
+        descripcion: document.getElementById('dp-desc').value.trim(),
+        notas:     document.getElementById('dp-notas').value.trim(),
+        proximo_seguimiento: document.getElementById('dp-seg').value || null,
+        propietario: {
+            nombre:        document.getElementById('dp-p-nombre').value.trim(),
+            telefono:      document.getElementById('dp-p-tel').value.trim(),
+            email:         document.getElementById('dp-p-email').value.trim(),
+            whatsapp:      document.getElementById('dp-p-wa').value.trim(),
+            observaciones: document.getElementById('dp-p-obs').value.trim(),
+        }
+    };
+    fetch('/api/captacion/leads/'+activeLead.id, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(updated){
+        var idx = allLeads.findIndex(function(l){ return l.id===activeLead.id; });
+        if (idx !== -1) allLeads[idx] = updated;
+        activeLead = updated;
+        render();
+        toast('Guardado');
+    });
+}
+
+function convertirLead() {
+    if (!activeLead) return;
+    if (!confirm('¿Convertir este lead en una propiedad activa?')) return;
+    fetch('/api/captacion/leads/'+activeLead.id+'/convertir', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: '{}'
+    }).then(function(r){ return r.json(); }).then(function(data){
+        if (data.propiedad_id) {
+            toast('Convertido a propiedad #'+data.propiedad_id);
+            loadLeads();
+            if (activeLead) {
+                activeLead.estado = 'captada';
+                document.getElementById('dp-estado').value = 'captada';
+                document.getElementById('dp-convert-btn').style.display = 'none';
+            }
+        }
+    });
+}
+
+function deleteLead() {
+    if (!activeLead) return;
+    if (!confirm('¿Eliminar este lead? Esta acción no se puede deshacer.')) return;
+    fetch('/api/captacion/leads/'+activeLead.id, {
+        method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
+    }).then(function(){
+        allLeads = allLeads.filter(function(l){ return l.id!==activeLead.id; });
+        activeLead = null;
+        closeDetail();
+        render();
+    });
+}
+
+function closeDetail() {
+    document.getElementById('detail-panel').classList.remove('open');
+    document.querySelectorAll('.kb-card').forEach(function(c){ c.classList.remove('selected'); });
+    document.querySelectorAll('.lista-table tr').forEach(function(r){ r.classList.remove('selected'); });
+    activeLead = null;
+}
+
+// ── New Lead Modal ─────────────────────────────────────────────────────────────
+function openNewLead(estadoDefault) {
+    document.getElementById('lead-modal-title').textContent = 'Nuevo Lead';
+    document.getElementById('lf-direccion').value = '';
+    document.getElementById('lf-barrio').value = '';
+    document.getElementById('lf-ciudad').value = '';
+    document.getElementById('lf-tipo').value = '';
+    document.getElementById('lf-operacion').value = '';
+    document.getElementById('lf-estado').value = estadoDefault || 'detectada';
+    document.getElementById('lf-prioridad').value = 'media';
+    document.getElementById('lf-potencial').value = '3';
+    document.getElementById('lf-fuente').value = '';
+    document.getElementById('lf-descripcion').value = '';
+    document.getElementById('lf-seguimiento').value = '';
+    document.getElementById('lf-p-nombre').value = '';
+    document.getElementById('lf-p-tel').value = '';
+    document.getElementById('lf-p-email').value = '';
+    document.getElementById('lf-p-wa').value = '';
+    document.getElementById('lead-modal').classList.add('open');
+    setTimeout(function(){ document.getElementById('lf-direccion').focus(); }, 100);
+}
+
+function closeLeadModal() {
+    document.getElementById('lead-modal').classList.remove('open');
+}
+
+function submitLeadForm() {
+    var dir = document.getElementById('lf-direccion').value.trim();
+    if (!dir) { document.getElementById('lf-direccion').focus(); return; }
+    var payload = {
+        direccion:      dir,
+        barrio:         document.getElementById('lf-barrio').value.trim(),
+        ciudad:         document.getElementById('lf-ciudad').value.trim(),
+        tipo_propiedad: document.getElementById('lf-tipo').value,
+        operacion:      document.getElementById('lf-operacion').value,
+        estado:         document.getElementById('lf-estado').value,
+        prioridad:      document.getElementById('lf-prioridad').value,
+        potencial:      parseInt(document.getElementById('lf-potencial').value) || 3,
+        fuente:         document.getElementById('lf-fuente').value,
+        descripcion:    document.getElementById('lf-descripcion').value.trim(),
+        proximo_seguimiento: document.getElementById('lf-seguimiento').value || null,
+        propietario: {
+            nombre:   document.getElementById('lf-p-nombre').value.trim(),
+            telefono: document.getElementById('lf-p-tel').value.trim(),
+            email:    document.getElementById('lf-p-email').value.trim(),
+            whatsapp: document.getElementById('lf-p-wa').value.trim(),
+        }
+    };
+    fetch('/api/captacion/leads', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(lead){
+        allLeads.unshift(lead);
+        closeLeadModal();
+        render();
+        openDetail(lead.id);
+    });
+}
+
+// ── Import ─────────────────────────────────────────────────────────────────────
+function openImportModal() {
+    document.getElementById('import-modal').classList.add('open');
+    document.getElementById('import-result').style.display = 'none';
+    document.getElementById('import-file-name').textContent = '';
+    document.getElementById('import-btn').disabled = true;
+    importFile = null;
+}
+function closeImportModal() { document.getElementById('import-modal').classList.remove('open'); }
+
+function handleImportFile(inp) {
+    if (!inp.files.length) return;
+    importFile = inp.files[0];
+    document.getElementById('import-file-name').textContent = importFile.name;
+    document.getElementById('import-btn').disabled = false;
+}
+
+function submitImport() {
+    if (!importFile) return;
+    var fd = new FormData();
+    fd.append('file', importFile);
+    fetch('/api/captacion/import', {
+        method:'POST', credentials:'same-origin',
+        headers:{'X-CSRFToken':CSRF},
+        body: fd
+    }).then(function(r){ return r.json(); }).then(function(data){
+        var res = document.getElementById('import-result');
+        res.style.display = 'block';
+        res.style.color = data.errors && data.errors.length ? 'var(--col-descartada)' : 'var(--col-captada)';
+        res.innerHTML = '✓ '+data.created+' leads importados.' +
+            (data.errors && data.errors.length ? '<br>Errores: '+data.errors.join('<br>') : '');
+        loadLeads();
+    });
+}
+
+// ── Seguimientos badge ────────────────────────────────────────────────────────
+function updateSeguimientoBadge() {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var count = allLeads.filter(function(l){
+        if (['captada','descartada'].includes(l.estado)) return false;
+        if (!l.proximo_seguimiento) return false;
+        return new Date(l.proximo_seguimiento) <= today;
+    }).length;
+    var badge = document.getElementById('badge-seguimientos');
+    if (badge) { badge.textContent = count || ''; badge.style.display = count ? 'inline-block' : 'none'; }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function cap(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function dayAge(dt) {
+    if (!dt) return '';
+    var d = new Date(dt.replace(' ','T')); var now = new Date();
+    var diff = Math.floor((now-d)/(1000*60*60*24));
+    if (diff === 0) return 'Hoy';
+    if (diff === 1) return 'Ayer';
+    if (diff < 30) return 'Hace '+diff+' días';
+    return '';
+}
+function formatDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso); var dd=d.getDate(); var mm=d.getMonth()+1; var yy=d.getFullYear();
+    return (dd<10?'0':'')+dd+'/'+(mm<10?'0':'')+mm+'/'+yy;
+}
+function toast(msg) {
+    var t = document.getElementById('toast-container');
+    if (!t) return;
+    var el = document.createElement('div');
+    el.className = 'toast toast-success'; el.textContent = msg;
+    t.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 2800);
+}
+
+// Close modal on overlay click
+document.getElementById('lead-modal').addEventListener('click', function(e){ if(e.target===this) closeLeadModal(); });
+document.getElementById('import-modal').addEventListener('click', function(e){ if(e.target===this) closeImportModal(); });
+// ESC closes detail
+document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDetail(); closeLeadModal(); closeImportModal(); } });
+</script>
+{% endblock %}
