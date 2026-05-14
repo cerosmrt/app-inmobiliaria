@@ -1176,6 +1176,7 @@ def create_parcela():
         coordinates_center=f"{lat},{lng}" if lat is not None and lng is not None else None,
         land_use=data.get('land_use') or None,
         notes=data.get('notes') or None,
+        source_provider=data.get('source_provider', 'manual'),
     )
     db.session.add(p)
     db.session.flush()
@@ -1207,7 +1208,7 @@ def update_parcela(id):
     if not p or p.deleted_at:
         return jsonify({"error": "No encontrada"}), 404
     data = request.get_json()
-    for f in ['parcel_id', 'zone', 'municipality', 'province', 'land_use', 'notes', 'geojson_geometry']:
+    for f in ['parcel_id', 'zone', 'municipality', 'province', 'land_use', 'notes', 'geojson_geometry', 'source_provider', 'bbox', 'neighbor_cache']:
         if f in data:
             setattr(p, f, data[f] or None)
     if 'surface_area' in data:
@@ -1392,12 +1393,98 @@ def import_geojson():
                 coordinates_center=coords_center,
                 land_use=str(props.get('land_use') or '') or None,
                 notes=str(props.get('notes') or props.get('notas') or '') or None,
+                source_provider='geojson',
             ))
             created += 1
         except Exception as e:
             errors.append(f"Feature {i+1}: {e}")
     db.session.commit()
     return jsonify({"created": created, "errors": errors})
+
+# ── Catastro API: Navigation & Explore ───────────────────────────────────────
+
+@app.route('/api/catastro/parcelas/next/<int:id>', methods=['GET'])
+@api_login_required
+def next_parcela(id):
+    p = ParcelaCatastral.query.filter(
+        ParcelaCatastral.id > id, ParcelaCatastral.deleted_at.is_(None)
+    ).order_by(ParcelaCatastral.id.asc()).first()
+    if not p:
+        p = ParcelaCatastral.query.filter(
+            ParcelaCatastral.deleted_at.is_(None)
+        ).order_by(ParcelaCatastral.id.asc()).first()
+    return jsonify(p.as_dict()) if p else jsonify(None)
+
+@app.route('/api/catastro/parcelas/prev/<int:id>', methods=['GET'])
+@api_login_required
+def prev_parcela(id):
+    p = ParcelaCatastral.query.filter(
+        ParcelaCatastral.id < id, ParcelaCatastral.deleted_at.is_(None)
+    ).order_by(ParcelaCatastral.id.desc()).first()
+    if not p:
+        p = ParcelaCatastral.query.filter(
+            ParcelaCatastral.deleted_at.is_(None)
+        ).order_by(ParcelaCatastral.id.desc()).first()
+    return jsonify(p.as_dict()) if p else jsonify(None)
+
+@app.route('/api/catastro/parcelas/nearest/<int:id>', methods=['GET'])
+@api_login_required
+def nearest_parcelas(id):
+    p = db.session.get(ParcelaCatastral, id)
+    if not p or not p.coordinates_center:
+        return jsonify([])
+    try:
+        lat0, lng0 = map(float, p.coordinates_center.split(','))
+    except Exception:
+        return jsonify([])
+    others = ParcelaCatastral.query.filter(
+        ParcelaCatastral.id != id,
+        ParcelaCatastral.deleted_at.is_(None),
+        ParcelaCatastral.coordinates_center.isnot(None)
+    ).all()
+    ranked = []
+    for o in others:
+        try:
+            lat1, lng1 = map(float, o.coordinates_center.split(','))
+            dist = ((lat1 - lat0) ** 2 + (lng1 - lng0) ** 2) ** 0.5
+            ranked.append((dist, o))
+        except Exception:
+            pass
+    ranked.sort(key=lambda x: x[0])
+    return jsonify([o.as_dict() for _, o in ranked[:5]])
+
+@app.route('/api/catastro/layers', methods=['GET'])
+@api_login_required
+def get_catastro_layers():
+    rows = db.session.execute(db.text(
+        "SELECT source_provider, COUNT(*) FROM parcelas_catastrales "
+        "WHERE deleted_at IS NULL GROUP BY source_provider"
+    )).fetchall()
+    return jsonify([{'provider': r[0] or 'manual', 'count': r[1]} for r in rows])
+
+@app.route('/api/catastro/layers/register', methods=['POST'])
+@api_login_required
+def register_catastro_layer():
+    data = request.get_json() or {}
+    return jsonify({'status': 'ok', 'provider': data.get('provider', 'unknown'),
+                    'message': 'Registrado (connector futuro)'})
+
+@app.route('/api/catastro/explore', methods=['GET'])
+@api_login_required
+def explore_catastro():
+    mode = request.args.get('mode', 'sequential')
+    parcelas = ParcelaCatastral.query.filter(ParcelaCatastral.deleted_at.is_(None)).all()
+    if mode == 'spatial':
+        def _key(p):
+            if p.coordinates_center:
+                try:
+                    lat, lng = map(float, p.coordinates_center.split(','))
+                    return (lng, -lat)
+                except Exception:
+                    pass
+            return (float('inf'), float('inf'))
+        parcelas = sorted(parcelas, key=_key)
+    return jsonify([p.as_dict() for p in parcelas])
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -1410,6 +1497,9 @@ with app.app_context():
             "ALTER TABLE propiedades ADD COLUMN codigo VARCHAR",
             "ALTER TABLE propiedades ADD COLUMN superficie_terreno REAL",
             "ALTER TABLE propiedades ADD COLUMN superficie_cubierta REAL",
+            "ALTER TABLE parcelas_catastrales ADD COLUMN source_provider VARCHAR DEFAULT 'manual'",
+            "ALTER TABLE parcelas_catastrales ADD COLUMN bbox VARCHAR",
+            "ALTER TABLE parcelas_catastrales ADD COLUMN neighbor_cache TEXT",
         ]:
             try:
                 _conn.execute(db.text(_ddl))

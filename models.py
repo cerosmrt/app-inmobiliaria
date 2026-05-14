@@ -233,6 +233,9 @@ class ParcelaCatastral(db.Model):
     coordinates_center = db.Column(db.String, nullable=True)   # "lat,lng"
     land_use           = db.Column(db.String, nullable=True)
     notes              = db.Column(db.Text, nullable=True)
+    source_provider    = db.Column(db.String, default='manual', nullable=True)  # manual|geojson|api_future
+    bbox               = db.Column(db.String, nullable=True)   # "minlat,minlng,maxlat,maxlng"
+    neighbor_cache     = db.Column(db.Text, nullable=True)     # JSON list of nearby IDs
     created_at         = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at         = db.Column(db.DateTime, nullable=True)
 
@@ -259,6 +262,7 @@ class ParcelaCatastral(db.Model):
             'coordinates_center': coords,
             'land_use': self.land_use or '',
             'notes': self.notes or '',
+            'source_provider': self.source_provider or 'manual',
             'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
             'oportunidad': self.oportunidad.as_dict() if self.oportunidad else None,
             'investigaciones': [i.as_dict() for i in self.investigaciones],
