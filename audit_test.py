@@ -1340,6 +1340,148 @@ if r_props_bulk.ok and r_props_bulk.json():
                   headers={"X-CSRFToken": real_csrf})
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n=== FASE 25: PIPELINE OPTIMIZACIÓN DE IMÁGENES ===")
+
+# ── 1. Verificación estática — app.py ─────────────────────────────────────────
+try:
+    with open("z:/programming/Dad/app.py", encoding="utf-8") as f:
+        app_src25 = f.read()
+    check("app.py define _PROPS_FOLDER 'static/uploads/properties'",
+          "_PROPS_FOLDER  = 'static/uploads/properties'" in app_src25 or
+          "_PROPS_FOLDER = 'static/uploads/properties'" in app_src25,
+          "constante no encontrada")
+    check("app.py define _THUMBS_FOLDER 'static/uploads/properties/thumbs'",
+          "_THUMBS_FOLDER = 'static/uploads/properties/thumbs'" in app_src25 or
+          "_THUMBS_FOLDER  = 'static/uploads/properties/thumbs'" in app_src25,
+          "constante no encontrada")
+    check("app.py define _WEBP_QUALITY = 82",
+          "_WEBP_QUALITY  = 82" in app_src25 or "_WEBP_QUALITY = 82" in app_src25,
+          "calidad WebP no encontrada")
+    check("app.py define _THUMB_WIDTH = 480",
+          "_THUMB_WIDTH   = 480" in app_src25 or "_THUMB_WIDTH = 480" in app_src25,
+          "ancho miniatura no encontrado")
+    check("app.py tiene función _thumb_path_for",
+          "def _thumb_path_for(" in app_src25, "función no encontrada")
+    check("app.py tiene función _optimize_and_save",
+          "def _optimize_and_save(" in app_src25, "función no encontrada")
+    check("app.py tiene función _save_photo",
+          "def _save_photo(" in app_src25, "función no encontrada")
+    check("app.py upload_foto_propiedad usa _save_photo",
+          "_save_photo(file," in app_src25, "_save_photo no llamado en upload")
+    check("app.py delete_foto_propiedad llama _thumb_path_for",
+          "_thumb_path_for(target)" in app_src25, "_thumb_path_for no en delete handler")
+    check("app.py ImageOps.exif_transpose para auto-orient",
+          "ImageOps.exif_transpose" in app_src25, "exif_transpose no encontrado")
+    check("app.py WebP magic bytes en allowed_file",
+          "_WEBP_MAGIC" in app_src25 and "header[8:12] == b'WEBP'" in app_src25,
+          "validación magic bytes WebP no encontrada")
+    check("allowed_file lee 12 bytes (no 4) para soportar WebP",
+          "file.read(12)" in app_src25, "read(12) no encontrado")
+    check("_optimize_and_save convierte a RGB antes de guardar WebP",
+          "img.convert('RGB')" in app_src25, "conversión RGB no encontrada")
+    check("_save_photo genera filename con .webp",
+          ".webp\"" in app_src25 or "'.webp'" in app_src25 or '".webp"' in app_src25,
+          ".webp no encontrado en _save_photo")
+except Exception as e:
+    fail("FASE 25 lectura app.py", str(e))
+
+# ── 2. Verificación estática — config.py ─────────────────────────────────────
+try:
+    with open("z:/programming/Dad/config.py", encoding="utf-8") as f:
+        cfg_src25 = f.read()
+    check("config.py ALLOWED_EXTENSIONS incluye 'webp'",
+          "'webp'" in cfg_src25, "webp no está en ALLOWED_EXTENSIONS")
+except Exception as e:
+    fail("FASE 25 lectura config.py", str(e))
+
+# ── 3. Verificación estática — templates ─────────────────────────────────────
+try:
+    with open("z:/programming/Dad/templates/index.html", encoding="utf-8") as f:
+        idx_src25 = f.read()
+    check("index.html tiene función thumbUrl",
+          "function thumbUrl(" in idx_src25, "thumbUrl no encontrada")
+    check("index.html renderCard usa thumbUrl para foto de card",
+          "thumbUrl(fotos[0])" in idx_src25, "thumbUrl no usado en renderCard")
+    check("index.html carouselGo usa thumbUrl al cambiar imagen",
+          "thumbUrl(fotos[idx])" in idx_src25, "thumbUrl no usado en carouselGo")
+except Exception as e:
+    fail("FASE 25 lectura index.html", str(e))
+
+try:
+    with open("z:/programming/Dad/templates/propiedad.html", encoding="utf-8") as f:
+        prop_src25 = f.read()
+    check("propiedad.html tiene función thumbUrl",
+          "function thumbUrl(" in prop_src25, "thumbUrl no encontrada")
+    check("propiedad.html renderSimCard usa thumbUrl",
+          "thumbUrl(p.fotos[0])" in prop_src25, "thumbUrl no usado en renderSimCard")
+except Exception as e:
+    fail("FASE 25 lectura propiedad.html", str(e))
+
+# ── 4. Directorios creados al arranque ────────────────────────────────────────
+check("static/uploads/properties/ existe",
+      os.path.isdir("z:/programming/Dad/static/uploads/properties"),
+      "directorio no creado")
+check("static/uploads/properties/thumbs/ existe",
+      os.path.isdir("z:/programming/Dad/static/uploads/properties/thumbs"),
+      "directorio thumbs no creado")
+
+# ── 5. Integration: upload JPEG → WebP + thumbnail generados ─────────────────
+r25p = session.post(f"{BASE}/api/propiedades",
+                    json={"codigo": "F25-IMG", "direccion": "Fase25 Imagen",
+                          "tipo": "departamento", "operacion": "venta", "estado": "disponible"},
+                    headers={"X-CSRFToken": real_csrf})
+pid25 = r25p.json().get("id") if r25p.ok else None
+
+if pid25:
+    r_up25 = session.post(f"{BASE}/api/propiedades/{pid25}/upload",
+                          files={"file": ("foto.jpg", io.BytesIO(jpeg_bytes), "image/jpeg")},
+                          headers={"X-CSRFToken": real_csrf})
+    check("Upload JPEG via pipeline 200", r_up25.status_code == 200, str(r_up25.status_code))
+
+    if r_up25.ok:
+        fotos25 = r_up25.json().get("fotos", [])
+        check("Foto en static/uploads/properties/",
+              fotos25 and fotos25[0].startswith("static/uploads/properties/"),
+              fotos25[0] if fotos25 else "sin fotos")
+        check("Foto guardada como .webp",
+              fotos25 and fotos25[0].endswith(".webp"),
+              fotos25[0] if fotos25 else "no webp")
+        check("Foto NO está en static/uploads/properties/thumbs/ (ruta full)",
+              fotos25 and "/thumbs/" not in fotos25[0],
+              fotos25[0] if fotos25 else "sin fotos")
+
+        if fotos25:
+            full_disk  = os.path.join("z:/programming/Dad", fotos25[0].replace("/", os.sep))
+            thumb_disk = full_disk.replace(
+                os.sep + "properties" + os.sep,
+                os.sep + "properties" + os.sep + "thumbs" + os.sep
+            )
+            check("Full WebP existe en disco", os.path.isfile(full_disk),
+                  f"no encontrado: {full_disk}")
+            full_size  = os.path.getsize(full_disk)  if os.path.isfile(full_disk)  else 0
+            check("Full WebP > 0 bytes",  full_size > 0,  str(full_size))
+
+            # DELETE — debe borrar tanto full como thumb
+            r_del25 = session.delete(f"{BASE}/api/propiedades/{pid25}/fotos/{fotos25[0]}",
+                                     headers={"X-CSRFToken": real_csrf})
+            check("DELETE foto 200", r_del25.status_code == 200, str(r_del25.status_code))
+            check("Full WebP eliminado del disco", not os.path.isfile(full_disk),
+                  f"archivo aún existe: {full_disk}")
+            check("Thumbnail WebP eliminado del disco", not os.path.isfile(thumb_disk),
+                  f"thumbnail aún existe: {thumb_disk}")
+
+    # ── 6. Backward compat: API pública sigue funcionando con fotos legadas ───
+    r_pub25 = requests.get(f"{BASE}/api/public/propiedades")
+    check("API pública sigue respondiendo con fotos legacy en DB",
+          r_pub25.status_code == 200, str(r_pub25.status_code))
+
+    # Cleanup
+    session.delete(f"{BASE}/api/propiedades/{pid25}/permanente",
+                   headers={"X-CSRFToken": real_csrf})
+else:
+    fail("FASE 25 setup", "no se pudo crear propiedad de prueba")
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n\n" + "="*60)
 print(f"TOTAL: {len(PASS)} PASS, {len(FAIL)} FAIL")
 print("="*60)

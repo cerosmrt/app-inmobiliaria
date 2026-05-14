@@ -573,9 +573,17 @@
             }).catch(() => {});
     }
 
+    function thumbUrl(path) {
+        if (!path) return path;
+        var m = 'uploads/properties/';
+        if (path.indexOf(m) !== -1 && path.indexOf('/thumbs/') === -1)
+            return path.replace(m, m + 'thumbs/');
+        return path;
+    }
+
     function renderSimCard(p) {
         const foto   = p.fotos && p.fotos.length
-            ? `<img src="/${p.fotos[0]}" alt="${escHtml(p.direccion)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=sim-no-photo>🏠</div>'">`
+            ? `<img src="/${thumbUrl(p.fotos[0])}" alt="${escHtml(p.direccion)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=sim-no-photo>🏠</div>'">`
             : '<div class="sim-no-photo">🏠</div>';
         const precio = p.precio_a_consultar || !p.rango_min
             ? 'Consultar precio'

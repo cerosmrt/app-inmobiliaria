@@ -6,6 +6,7 @@ from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
 import os
+import io
 import hmac
 import secrets
 import time
@@ -28,7 +29,7 @@ app = Flask(__name__)
 env = os.environ.get('FLASK_ENV', 'default')
 app.config.from_object(app_config[env])
 
-for folder in [app.config['UPLOAD_FOLDER'], 'templates', 'static']:
+for folder in [app.config['UPLOAD_FOLDER'], 'static/uploads/properties', 'static/uploads/properties/thumbs', 'templates', 'static']:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -63,6 +64,13 @@ def _check_login_rate(ip: str) -> bool:
 
 _JPEG_MAGIC = b'\xff\xd8\xff'
 _PNG_MAGIC  = b'\x89PNG'
+_WEBP_MAGIC = b'RIFF'          # WebP: bytes 0-3 == RIFF, bytes 8-11 == WEBP
+
+_PROPS_FOLDER  = 'static/uploads/properties'
+_THUMBS_FOLDER = 'static/uploads/properties/thumbs'
+_WEBP_QUALITY  = 82
+_MAX_DIMENSION = 1920
+_THUMB_WIDTH   = 480
 
 def allowed_file(file) -> bool:
     if not file or not file.filename:
@@ -70,22 +78,25 @@ def allowed_file(file) -> bool:
     ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
     if ext not in app.config['ALLOWED_EXTENSIONS']:
         return False
-    header = file.read(4)
+    header = file.read(12)
     file.seek(0)
-    return header[:3] == _JPEG_MAGIC or header[:4] == _PNG_MAGIC
+    return (header[:3] == _JPEG_MAGIC or
+            header[:4] == _PNG_MAGIC or
+            (header[:4] == _WEBP_MAGIC and header[8:12] == b'WEBP'))
 
 def _unique_filename(prefix: str, original: str) -> str:
     ext = secure_filename(original).rsplit('.', 1)[-1].lower()
     return f"{prefix}_{uuid.uuid4().hex[:10]}.{ext}"
 
 def _save_image(file, filepath: str) -> None:
+    """Legacy save used by client photo uploads."""
     if not _PILLOW:
         file.save(filepath)
         return
     try:
         img = _PillowImage.open(file)
-        if img.width > 1920 or img.height > 1920:
-            img.thumbnail((1920, 1920), _PillowImage.LANCZOS)
+        if img.width > _MAX_DIMENSION or img.height > _MAX_DIMENSION:
+            img.thumbnail((_MAX_DIMENSION, _MAX_DIMENSION), _PillowImage.LANCZOS)
         ext = filepath.rsplit('.', 1)[-1].lower()
         if ext in ('jpg', 'jpeg'):
             if img.mode in ('RGBA', 'P'):
@@ -96,6 +107,57 @@ def _save_image(file, filepath: str) -> None:
     except Exception:
         file.seek(0)
         file.save(filepath)
+
+def _thumb_path_for(full_path: str):
+    """Return the thumbnail path for a property image, or None for legacy paths."""
+    norm = _normalize_foto(full_path)
+    prefix = _PROPS_FOLDER + '/'
+    if norm.startswith(prefix):
+        return _THUMBS_FOLDER + '/' + norm[len(prefix):]
+    return None
+
+def _optimize_and_save(file, full_path: str, thumb_path: str) -> None:
+    """Convert upload to WebP at two sizes. Falls back to raw save on error."""
+    # Read all bytes up front — decouples PIL from the werkzeug stream entirely
+    raw = file.read()
+    file.seek(0)
+    if not _PILLOW:
+        with open(full_path.replace('/', os.sep), 'wb') as f:
+            f.write(raw)
+        return
+    try:
+        from PIL import ImageOps
+        img = _PillowImage.open(io.BytesIO(raw))
+        img = ImageOps.exif_transpose(img)  # auto-orient from EXIF
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        if img.width > _MAX_DIMENSION or img.height > _MAX_DIMENSION:
+            img.thumbnail((_MAX_DIMENSION, _MAX_DIMENSION), _PillowImage.LANCZOS)
+        buf_full = io.BytesIO()
+        img.save(buf_full, 'WEBP', quality=_WEBP_QUALITY, method=6)
+        with open(full_path.replace('/', os.sep), 'wb') as f:
+            f.write(buf_full.getvalue())
+        thumb = img.copy()
+        if thumb.width > _THUMB_WIDTH:
+            new_h = int(thumb.height * _THUMB_WIDTH / thumb.width)
+            thumb = thumb.resize((_THUMB_WIDTH, new_h), _PillowImage.LANCZOS)
+        buf_thumb = io.BytesIO()
+        thumb.save(buf_thumb, 'WEBP', quality=_WEBP_QUALITY, method=6)
+        with open(thumb_path.replace('/', os.sep), 'wb') as f:
+            f.write(buf_thumb.getvalue())
+    except Exception as e:
+        app.logger.warning('Image optimization failed, saving original: %s', e)
+        with open(full_path.replace('/', os.sep), 'wb') as f:
+            f.write(raw)
+
+def _save_photo(file, prefix: str) -> str:
+    """Save a property photo optimized as WebP. Returns the forward-slash full path."""
+    uid        = uuid.uuid4().hex[:10]
+    filename   = f"{prefix}_{uid}.webp"
+    full_path  = f"{_PROPS_FOLDER}/{filename}"
+    thumb_path = f"{_THUMBS_FOLDER}/{filename}"
+    _optimize_and_save(file, full_path, thumb_path)
+    return full_path
 
 def _foto_path(filename: str) -> str:
     """Return a forward-slash photo path for URL-safe DB storage."""
@@ -516,11 +578,9 @@ def upload_foto_propiedad(id):
     file = request.files['file']
     if not allowed_file(file):
         return jsonify({"message": "Formato no permitido"}), 400
-    filename = _unique_filename(f"prop_{id}", file.filename)
-    filepath = _foto_path(filename)                # forward-slash path
-    _save_image(file, filepath)
+    full_path = _save_photo(file, f"prop_{id}")
     existing = _fotos_from_str(p.fotos)
-    existing.append(_normalize_foto(filepath))
+    existing.append(full_path)
     p.fotos = _fotos_to_str(existing)
     db.session.commit()
     return jsonify(p.as_dict()), 200
@@ -543,6 +603,16 @@ def delete_foto_propiedad(id, filename):
                 break
         except OSError as e:
             app.logger.warning('Could not delete photo file %s: %s', candidate, e)
+    # Delete thumbnail if present (new-style photos only)
+    thumb = _thumb_path_for(target)
+    if thumb:
+        for candidate in [thumb, thumb.replace('/', os.sep)]:
+            try:
+                if os.path.exists(candidate):
+                    os.remove(candidate)
+                    break
+            except OSError as e:
+                app.logger.warning('Could not delete thumb file %s: %s', candidate, e)
     return jsonify(p.as_dict())
 
 @app.route('/api/propiedades/<int:id>/fotos/orden', methods=['PUT'])

@@ -668,7 +668,7 @@
         const card = document.getElementById('card-' + propId);
         if (!card) return;
         const img = card.querySelector('.photo-main');
-        if (img) { img.style.opacity = '0'; setTimeout(() => { img.src = '/' + fotos[idx]; img.style.opacity = '1'; }, 100); }
+        if (img) { img.style.opacity = '0'; setTimeout(() => { img.src = '/' + thumbUrl(fotos[idx]); img.style.opacity = '1'; }, 100); }
         card.querySelectorAll('.c-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
     }
 
@@ -715,6 +715,14 @@
         });
     }
 
+    function thumbUrl(path) {
+        if (!path) return path;
+        var m = 'uploads/properties/';
+        if (path.indexOf(m) !== -1 && path.indexOf('/thumbs/') === -1)
+            return path.replace(m, m + 'thumbs/');
+        return path;
+    }
+
     function renderCard(p) {
         const fotos  = p.fotos && p.fotos.length > 0 ? p.fotos : null;
         const moneda = p.es_usd ? 'USD' : '$';
@@ -726,7 +734,7 @@
         carouselIdx[p.id] = 0;
 
         const photoHtml = fotos
-            ? `<img src="/${fotos[0]}" alt="${escAttr(p.direccion)}" loading="lazy" class="photo-main"
+            ? `<img src="/${thumbUrl(fotos[0])}" alt="${escAttr(p.direccion)}" loading="lazy" class="photo-main"
                    onerror="this.parentElement.innerHTML='<div class=no-photo><div class=no-photo-icon>🏠</div></div>'">`
             : `<div class="no-photo"><div class="no-photo-icon">🏠</div></div>`;
 

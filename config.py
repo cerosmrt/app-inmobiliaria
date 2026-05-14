@@ -6,7 +6,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'static/uploads'
-    ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
+    ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB
 
     CONTACTO_TELEFONO = os.environ.get('CONTACTO_TELEFONO', '')
