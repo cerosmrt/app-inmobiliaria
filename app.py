@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -1489,6 +1489,84 @@ def explore_catastro():
         parcelas = sorted(parcelas, key=_key)
     return jsonify([p.as_dict() for p in parcelas])
 
+# ── Catastro v3.0: PropietarioCatastral (M2M owners) ─────────────────────────
+
+@app.route('/api/catastro/parcelas/<int:id>/propietarios', methods=['POST'])
+@api_login_required
+def add_catastro_propietario(id):
+    parcela = ParcelaCatastral.query.get_or_404(id)
+    data    = request.get_json() or {}
+    owner   = PropietarioCatastral(
+        full_name        = data.get('full_name') or None,
+        phone            = data.get('phone') or None,
+        email            = data.get('email') or None,
+        notes            = data.get('notes') or None,
+        source           = data.get('source') or None,
+        confidence_level = data.get('confidence_level', 'unknown'),
+    )
+    db.session.add(owner)
+    db.session.flush()
+    parcela.owners.append(owner)
+    db.session.commit()
+    return jsonify(owner.as_dict()), 201
+
+@app.route('/api/catastro/parcelas/<int:id>/propietarios/<int:oid>', methods=['DELETE'])
+@api_login_required
+def unlink_catastro_propietario(id, oid):
+    parcela = ParcelaCatastral.query.get_or_404(id)
+    owner   = PropietarioCatastral.query.get_or_404(oid)
+    if owner in parcela.owners:
+        parcela.owners.remove(owner)
+        db.session.commit()
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/catastro/propietarios/<int:oid>', methods=['PATCH'])
+@api_login_required
+def update_catastro_propietario(oid):
+    owner = PropietarioCatastral.query.get_or_404(oid)
+    data  = request.get_json() or {}
+    for field in ('full_name', 'phone', 'email', 'notes', 'source', 'confidence_level'):
+        if field in data:
+            setattr(owner, field, data[field] or None)
+    db.session.commit()
+    return jsonify(owner.as_dict())
+
+@app.route('/api/catastro/propietarios/<int:oid>', methods=['DELETE'])
+@api_login_required
+def delete_catastro_propietario(oid):
+    owner = PropietarioCatastral.query.get_or_404(oid)
+    db.session.delete(owner)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+# ── Catastro v3.0: ActividadParcela (activity log) ───────────────────────────
+
+@app.route('/api/catastro/parcelas/<int:id>/actividades', methods=['POST'])
+@api_login_required
+def add_catastro_actividad(id):
+    parcela = ParcelaCatastral.query.get_or_404(id)
+    data    = request.get_json() or {}
+    texto   = (data.get('texto') or '').strip()
+    if not texto:
+        return jsonify({'error': 'texto requerido'}), 400
+    act = ActividadParcela(
+        parcela_id = parcela.id,
+        tipo       = data.get('tipo', 'nota'),
+        texto      = texto,
+        created_by = session.get('admin_username', ''),
+    )
+    db.session.add(act)
+    db.session.commit()
+    return jsonify(act.as_dict()), 201
+
+@app.route('/api/catastro/actividades/<int:act_id>', methods=['DELETE'])
+@api_login_required
+def delete_catastro_actividad(act_id):
+    act = ActividadParcela.query.get_or_404(act_id)
+    db.session.delete(act)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
 # ── Init ──────────────────────────────────────────────────────────────────────
 
 with app.app_context():
@@ -1504,6 +1582,9 @@ with app.app_context():
             "ALTER TABLE parcelas_catastrales ADD COLUMN bbox VARCHAR",
             "ALTER TABLE parcelas_catastrales ADD COLUMN neighbor_cache TEXT",
             "ALTER TABLE parcelas_catastrales ADD COLUMN propietario_id INTEGER REFERENCES clientes(id)",
+            # v3.0 tables created via db.create_all() but columns guarded here for safety
+            "ALTER TABLE propietarios_catastrales ADD COLUMN source VARCHAR",
+            "ALTER TABLE propietarios_catastrales ADD COLUMN confidence_level VARCHAR DEFAULT 'unknown'",
         ]:
             try:
                 _conn.execute(db.text(_ddl))

@@ -14,6 +14,11 @@ propietarios_propiedades = db.Table('propietarios_propiedades',
     db.Column('cliente_id', db.Integer, db.ForeignKey('clientes.id'), primary_key=True)
 )
 
+parcel_propietarios = db.Table('parcel_propietarios',
+    db.Column('parcela_id', db.Integer, db.ForeignKey('parcelas_catastrales.id'), primary_key=True),
+    db.Column('propietario_id', db.Integer, db.ForeignKey('propietarios_catastrales.id'), primary_key=True)
+)
+
 class Propiedad(db.Model):
     __tablename__ = 'propiedades'
     id = db.Column(db.Integer, primary_key=True, index=True)
@@ -244,6 +249,9 @@ class ParcelaCatastral(db.Model):
     oportunidad     = db.relationship('OportunidadTerreno', backref='parcela', uselist=False, cascade='all, delete-orphan')
     investigaciones = db.relationship('InvestigacionPropietario', backref='parcela', cascade='all, delete-orphan',
                                       order_by='InvestigacionPropietario.fecha.desc()')
+    owners          = db.relationship('PropietarioCatastral', secondary=parcel_propietarios, back_populates='parcelas')
+    actividades     = db.relationship('ActividadParcela', backref='parcela', cascade='all, delete-orphan',
+                                      order_by='ActividadParcela.fecha.desc()')
 
     def as_dict(self):
         coords = None
@@ -276,6 +284,8 @@ class ParcelaCatastral(db.Model):
             'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
             'oportunidad': self.oportunidad.as_dict() if self.oportunidad else None,
             'investigaciones': [i.as_dict() for i in self.investigaciones],
+            'owners': [o.as_dict() for o in self.owners],
+            'actividades': [a.as_dict() for a in self.actividades],
         }
 
 
@@ -328,6 +338,51 @@ class InvestigacionPropietario(db.Model):
             'fuente_informacion': self.fuente_informacion or '',
             'notas': self.notas or '',
             'fecha': self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else '',
+        }
+
+
+class PropietarioCatastral(db.Model):
+    __tablename__ = 'propietarios_catastrales'
+    id               = db.Column(db.Integer, primary_key=True)
+    full_name        = db.Column(db.String, nullable=True)
+    phone            = db.Column(db.String, nullable=True)
+    email            = db.Column(db.String, nullable=True)
+    notes            = db.Column(db.Text, nullable=True)
+    source           = db.Column(db.String, nullable=True)
+    confidence_level = db.Column(db.String, default='unknown')  # unknown|inferred|verified
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    parcelas         = db.relationship('ParcelaCatastral', secondary=parcel_propietarios, back_populates='owners')
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'full_name': self.full_name or '',
+            'phone': self.phone or '',
+            'email': self.email or '',
+            'notes': self.notes or '',
+            'source': self.source or '',
+            'confidence_level': self.confidence_level or 'unknown',
+            'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
+        }
+
+
+class ActividadParcela(db.Model):
+    __tablename__ = 'actividades_parcela'
+    id         = db.Column(db.Integer, primary_key=True)
+    parcela_id = db.Column(db.Integer, db.ForeignKey('parcelas_catastrales.id'), nullable=False)
+    tipo       = db.Column(db.String, default='nota')  # nota|seguimiento|contacto|visita
+    texto      = db.Column(db.Text, nullable=False)
+    fecha      = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String, nullable=True)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'parcela_id': self.parcela_id,
+            'tipo': self.tipo or 'nota',
+            'texto': self.texto or '',
+            'fecha': self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else '',
+            'created_by': self.created_by or '',
         }
 
 
