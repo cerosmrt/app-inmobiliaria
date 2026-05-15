@@ -331,9 +331,9 @@ body { background: #0a0f1a; }
 .cat-breadcrumb {
     position: absolute; top: 10px; left: 16px; z-index: 420;
     display: flex; align-items: center; gap: 4px;
-    background: rgba(10,15,26,0.88); backdrop-filter: blur(16px);
+    background: rgba(10,15,26,0.92); backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.09); border-radius: 7px;
-    padding: 5px 10px; max-width: 260px;
+    padding: 5px 10px; max-width: 320px;
 }
 .bc-item { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.45);
     cursor: pointer; white-space: nowrap; transition: color 0.15s; }
@@ -341,25 +341,15 @@ body { background: #0a0f1a; }
 .bc-item.bc-active { color: rgba(255,255,255,0.85); cursor: default; }
 .bc-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
 
-/* ── Province markers ──────────────────────────────────────────────────────── */
-.prov-marker {
-    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+/* ── Province/municipality Leaflet tooltip ─────────────────────────────────── */
+.geo-tooltip {
+    background: rgba(10,15,26,0.92) !important; border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 5px !important; color: rgba(255,255,255,0.8) !important;
+    font-size: 11.5px !important; font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important; padding: 4px 9px !important;
+    backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
 }
-.prov-marker-dot {
-    width: 20px; height: 20px; border-radius: 50%;
-    background: rgba(59,130,246,0.25); border: 2px solid rgba(59,130,246,0.6);
-    box-shadow: 0 0 12px rgba(59,130,246,0.35); transition: all 0.15s;
-}
-.prov-marker:hover .prov-marker-dot { background: rgba(59,130,246,0.5); transform: scale(1.2); }
-.prov-marker-lbl {
-    font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,0.75);
-    background: rgba(10,15,26,0.8); border-radius: 4px; padding: 1px 5px;
-    margin-top: 3px; white-space: nowrap; max-width: 90px; overflow: hidden;
-    text-overflow: ellipsis; text-align: center;
-}
-.prov-marker-cnt {
-    font-size: 8.5px; color: #93c5fd; font-weight: 600; margin-top: 1px; white-space: nowrap;
-}
+.geo-tooltip::before { display: none !important; }
 
 /* ── Owners tab (PropietarioCatastral) ─────────────────────────────────────── */
 .owner-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
@@ -428,7 +418,9 @@ body { background: #0a0f1a; }
     <div class="cat-breadcrumb" id="cat-breadcrumb" style="display:none">
         <span class="bc-item" onclick="drillUp(0)">Argentina</span>
         <span class="bc-sep" id="bc-sep1" style="display:none">›</span>
-        <span class="bc-item bc-active" id="bc-province" style="display:none"></span>
+        <span class="bc-item" id="bc-province" style="display:none" onclick="drillUp(1)"></span>
+        <span class="bc-sep" id="bc-sep2" style="display:none">›</span>
+        <span class="bc-item bc-active" id="bc-municipality" style="display:none"></span>
     </div>
 
     <!-- Floating navigation bar -->
@@ -456,6 +448,17 @@ body { background: #0a0f1a; }
         <label class="layer-item" id="layer-sat" onclick="switchLayer('sat')">
             <div class="layer-dot"></div><span class="layer-label">Satélite</span>
         </label>
+        <div class="layer-divider"></div>
+        <div class="layer-title">Capas GIS</div>
+        <div class="prov-item on" id="gis-provinces" onclick="toggleGisLayer('provinces')">
+            <div class="prov-chk">&#10003;</div><span class="prov-lbl">Provincias</span>
+        </div>
+        <div class="prov-item on" id="gis-municipalities" onclick="toggleGisLayer('municipalities')">
+            <div class="prov-chk">&#10003;</div><span class="prov-lbl">Municipios</span>
+        </div>
+        <div class="prov-item on" id="gis-parcelas" onclick="toggleGisLayer('parcelas')">
+            <div class="prov-chk">&#10003;</div><span class="prov-lbl">Parcelas</span>
+        </div>
         <div class="layer-divider"></div>
         <div class="layer-title">Origen</div>
         <div id="provider-list"></div>
@@ -632,33 +635,35 @@ var PRI_LBL   = {baja:'Baja', media:'Media', alta:'Alta', urgente:'Urgente'};
 var PROV_LABELS = {manual:'Manual', geojson:'GeoJSON', api_future:'API'};
 var CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
-// ── Argentine provinces ───────────────────────────────────────────────────────
-var AR_PROVINCES = [
-    {name:'Buenos Aires',       center:[-36.68,-60.56], bbox:[[-43.2,-73.5],[-33.0,-56.7]]},
-    {name:'CABA',               center:[-34.60,-58.38], bbox:[[-34.72,-58.53],[-34.52,-58.33]]},
-    {name:'Catamarca',          center:[-28.47,-65.78], bbox:[[-30.5,-69.5],[-25.2,-63.5]]},
-    {name:'Chaco',              center:[-26.85,-59.85], bbox:[[-27.0,-63.0],[-22.0,-57.5]]},
-    {name:'Chubut',             center:[-43.80,-66.50], bbox:[[-46.0,-72.5],[-41.0,-62.0]]},
-    {name:'Córdoba',            center:[-31.41,-64.18], bbox:[[-38.0,-68.0],[-29.0,-62.0]]},
-    {name:'Corrientes',         center:[-28.46,-58.60], bbox:[[-30.5,-60.0],[-26.5,-55.5]]},
-    {name:'Entre Ríos',         center:[-32.08,-59.20], bbox:[[-34.0,-60.5],[-30.0,-57.5]]},
-    {name:'Formosa',            center:[-24.90,-59.80], bbox:[[-26.5,-62.5],[-22.0,-58.0]]},
-    {name:'Jujuy',              center:[-23.18,-65.80], bbox:[[-24.5,-67.0],[-21.5,-64.0]]},
-    {name:'La Pampa',           center:[-37.18,-65.45], bbox:[[-40.0,-68.0],[-34.0,-63.0]]},
-    {name:'La Rioja',           center:[-29.41,-66.86], bbox:[[-31.0,-69.0],[-27.0,-65.0]]},
-    {name:'Mendoza',            center:[-34.50,-68.52], bbox:[[-37.5,-70.5],[-31.5,-66.5]]},
-    {name:'Misiones',           center:[-26.87,-54.65], bbox:[[-28.2,-57.0],[-25.5,-53.5]]},
-    {name:'Neuquén',            center:[-38.95,-68.06], bbox:[[-41.0,-71.5],[-36.5,-68.0]]},
-    {name:'Río Negro',          center:[-40.81,-63.00], bbox:[[-43.0,-71.5],[-38.5,-62.5]]},
-    {name:'Salta',              center:[-24.10,-65.10], bbox:[[-26.5,-68.5],[-21.5,-62.0]]},
-    {name:'San Juan',           center:[-30.87,-68.85], bbox:[[-34.5,-70.0],[-28.5,-67.0]]},
-    {name:'San Luis',           center:[-33.30,-66.34], bbox:[[-36.0,-68.0],[-32.0,-65.0]]},
-    {name:'Santa Cruz',         center:[-50.00,-69.00], bbox:[[-55.0,-73.0],[-46.0,-65.0]]},
-    {name:'Santa Fe',           center:[-31.61,-60.70], bbox:[[-34.0,-62.5],[-27.5,-59.0]]},
-    {name:'Santiago del Estero',center:[-27.78,-64.27], bbox:[[-30.0,-66.0],[-24.5,-61.0]]},
-    {name:'Tierra del Fuego',   center:[-54.00,-68.50], bbox:[[-56.0,-74.0],[-52.0,-65.0]]},
-    {name:'Tucumán',            center:[-26.80,-65.22], bbox:[[-28.0,-66.5],[-25.5,-64.5]]},
-];
+// ── Province code map (IGN in1 codes) ────────────────────────────────────────
+var PROVINCE_CODES = {
+    'ciudad autonoma de buenos aires':                       '02',
+    'caba':                                                  '02',
+    'buenos aires':                                          '06',
+    'catamarca':                                             '10',
+    'cordoba':                                               '14',
+    'corrientes':                                            '18',
+    'chaco':                                                 '22',
+    'chubut':                                                '26',
+    'entre rios':                                            '30',
+    'formosa':                                               '34',
+    'jujuy':                                                 '38',
+    'la pampa':                                              '42',
+    'la rioja':                                              '46',
+    'mendoza':                                               '50',
+    'misiones':                                              '54',
+    'neuquen':                                               '58',
+    'rio negro':                                             '62',
+    'salta':                                                 '66',
+    'san juan':                                              '70',
+    'san luis':                                              '74',
+    'santa cruz':                                            '78',
+    'santa fe':                                              '82',
+    'santiago del estero':                                   '86',
+    'tucuman':                                               '90',
+    'tierra del fuego, antartida e islas del atlantico sur': '94',
+    'tierra del fuego':                                      '94',
+};
 
 // ── State ─────────────────────────────────────────────────────────────────────
 var allParcelas   = [];
@@ -671,19 +676,39 @@ var markers       = {};
 var polygons      = {};
 var activeMarker  = null;
 
-// Province navigation
-var navState      = {level: 0, province: null};  // level 0=country, 1=province
-var provMarkers   = [];  // Leaflet province markers at level 0
+// Province/municipality GIS layers
+var provinceGeoLayer   = null;  // L.geoJSON — province polygons
+var municipioGeoLayer  = null;  // L.geoJSON — departamento polygons
+var provinceGeoData    = null;  // cached FeatureCollection
+
+// Hierarchical navigation state
+var navState = {
+    level:        0,     // 0=country, 1=province, 2=municipality
+    province:     null,  // {nombre, id, layer}
+    municipality: null,  // {nombre, id, layer}
+};
+
+// GIS layer visibility
+var layerVis = {provinces: true, municipalities: true, parcelas: true};
 
 // Navigation
-var navMode       = 'sequential';
-var navList       = [];
-var navIndex      = -1;
-var scrollNavOn   = false;
-var _scrollThrot  = false;
+var navMode      = 'sequential';
+var navList      = [];
+var navIndex     = -1;
+var scrollNavOn  = false;
+var _scrollThrot = false;
 
-// Provider filter — keyed by provider string, value = visible (true/false)
-var provFilter    = {};
+// Provider filter
+var provFilter = {};
+
+// ── String normaliser (accent-insensitive matching) ───────────────────────────
+function normalizeStr(s) {
+    if (!s) return '';
+    return s.toLowerCase()
+        .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e')
+        .replace(/[íìï]/g,'i').replace(/[óòö]/g,'o')
+        .replace(/[úùü]/g,'u').replace(/ñ/g,'n').trim();
+}
 
 // ── Leaflet init ──────────────────────────────────────────────────────────────
 var tileLayers = {
@@ -725,8 +750,9 @@ function loadParcelas() {
         .then(function(data){
             allParcelas = data;
             initProviderFilter();
-            renderMap();   // will call renderProvinces() at level 0
-            updateNavBar();
+            // Level 0: show province polygon layer only
+            renderProvincePolygons();
+            buildNavList(); updateNavBar();
             if (currentView === 'parcelas') renderParcelasList();
             if (currentView === 'oportunidades') renderOporList();
         });
@@ -774,7 +800,10 @@ function filterData() {
         var sp = p.source_provider || 'manual';
         if (provFilter[sp] === false) return false;
         if (navState.level >= 1 && navState.province) {
-            if ((p.province||'').trim().toLowerCase() !== navState.province.toLowerCase()) return false;
+            if (normalizeStr(p.province) !== normalizeStr(navState.province.nombre)) return false;
+        }
+        if (navState.level >= 2 && navState.municipality) {
+            if (normalizeStr(p.municipality) !== normalizeStr(navState.municipality.nombre)) return false;
         }
         if (!q) return true;
         return (p.municipality + ' ' + p.province + ' ' + p.zone + ' ' + p.parcel_id).toLowerCase().includes(q);
@@ -788,86 +817,272 @@ function filterParcelas() {
     buildNavList(); updateNavBar();
 }
 
-// ── Province navigation ───────────────────────────────────────────────────────
-function renderProvinces() {
-    provMarkers.forEach(function(m){ map.removeLayer(m); });
-    provMarkers = [];
+// ── Province GeoJSON layer ────────────────────────────────────────────────────
+function loadProvinceGeo(cb) {
+    if (provinceGeoData) { cb(provinceGeoData); return; }
+    fetch('/api/catastro/geo/provincias', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ provinceGeoData = d; cb(d); })
+        .catch(function(){ cb(null); });
+}
+
+function _provinceStyle(feature, selected) {
     var counts = {};
     allParcelas.forEach(function(p){
-        var pv = (p.province||'').trim();
-        if (pv) counts[pv] = (counts[pv]||0) + 1;
+        var pv = normalizeStr(p.province);
+        if (pv) counts[pv] = (counts[pv]||0)+1;
     });
-    AR_PROVINCES.forEach(function(prov){
-        var cnt = counts[prov.name] || 0;
-        var html = '<div class="prov-marker">' +
-            '<div class="prov-marker-dot"></div>' +
-            '<div class="prov-marker-lbl">'+prov.name+'</div>' +
-            (cnt ? '<div class="prov-marker-cnt">'+cnt+' parc.</div>' : '') +
-            '</div>';
-        var m = L.marker(prov.center, {
-            icon: L.divIcon({html:html, className:'', iconSize:[90,50], iconAnchor:[45,10]})
+    var maxC = Math.max.apply(null, Object.values(counts).concat([1]));
+    var name = feature.properties.nombre || '';
+    var cnt  = counts[normalizeStr(name)] || 0;
+    var intensity = cnt / maxC;
+    if (selected) return {fillColor:'#2563eb', fillOpacity:0.35, color:'#3b82f6', weight:2.5, opacity:1};
+    return {
+        fillColor:   cnt > 0 ? '#1d4ed8' : '#111827',
+        fillOpacity: cnt > 0 ? 0.06 + intensity * 0.28 : 0.38,
+        color:       '#374151',
+        weight:      1.5,
+        opacity:     0.85,
+    };
+}
+
+function renderProvincePolygons() {
+    if (provinceGeoLayer) { try{ map.removeLayer(provinceGeoLayer); }catch(e){} }
+    provinceGeoLayer = null;
+    if (!layerVis.provinces) return;
+    loadProvinceGeo(function(data) {
+        if (!data || !data.features) return;
+        var counts = {};
+        allParcelas.forEach(function(p){
+            var pv = normalizeStr(p.province);
+            if (pv) counts[pv] = (counts[pv]||0)+1;
+        });
+        provinceGeoLayer = L.geoJSON(data, {
+            style: function(f){ return _provinceStyle(f, false); },
+            onEachFeature: function(feature, layer) {
+                var name = feature.properties.nombre || '';
+                var cnt  = counts[normalizeStr(name)] || 0;
+                layer.bindTooltip(
+                    name + (cnt ? ' &bull; ' + cnt + ' parc.' : ''),
+                    {sticky:true, className:'geo-tooltip', direction:'top'}
+                );
+                layer.on({
+                    mouseover: function() {
+                        if (!navState.province || normalizeStr(navState.province.nombre) !== normalizeStr(name))
+                            layer.setStyle({fillOpacity:0.5, color:'#60a5fa', weight:2.5});
+                        layer.bringToFront();
+                    },
+                    mouseout: function() {
+                        if (!navState.province || normalizeStr(navState.province.nombre) !== normalizeStr(name))
+                            provinceGeoLayer.resetStyle(layer);
+                    },
+                    click: function(e) { L.DomEvent.stopPropagation(e); _clickProvince(feature, layer); }
+                });
+            }
         }).addTo(map);
-        m.on('click', function(){ clickProvince(prov); });
-        provMarkers.push(m);
     });
 }
 
-function clickProvince(prov) {
+function _clickProvince(feature, layer) {
+    var nombre = feature.properties.nombre || '';
     navState.level    = 1;
-    navState.province = prov.name;
-    // Remove province markers
-    provMarkers.forEach(function(m){ map.removeLayer(m); });
-    provMarkers = [];
-    // Zoom to province bbox
-    map.fitBounds(prov.bbox, {padding:[30,30], maxZoom:9});
+    navState.province = {nombre: nombre, id: feature.properties.in1 || '', layer: layer};
+    navState.municipality = null;
+    // Restyle all provinces
+    if (provinceGeoLayer) {
+        provinceGeoLayer.eachLayer(function(l) {
+            if (!l.feature) return;
+            var n = l.feature.properties.nombre || '';
+            if (normalizeStr(n) === normalizeStr(nombre))
+                l.setStyle({fillColor:'#2563eb', fillOpacity:0.35, color:'#3b82f6', weight:2.5});
+            else
+                l.setStyle({fillOpacity:0.15, color:'#1f2937', weight:1.5});
+        });
+    }
+    map.fitBounds(layer.getBounds(), {padding:[30,30], maxZoom:9, animate:true, duration:0.7});
+    updateBreadcrumb();
+    renderMap();
+    if (layerVis.municipalities) renderMunicipioPolygons();
+    buildNavList(); updateNavBar();
+}
+
+// ── Municipality GeoJSON layer ─────────────────────────────────────────────────
+function renderMunicipioPolygons() {
+    if (municipioGeoLayer) { try{ map.removeLayer(municipioGeoLayer); }catch(e){} }
+    municipioGeoLayer = null;
+    if (!navState.province || !layerVis.municipalities) return;
+    var code = PROVINCE_CODES[normalizeStr(navState.province.nombre)];
+    if (!code) return;
+    fetch('/api/catastro/geo/departamentos/' + code, {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            if (!data || !data.features || !data.features.length) return;
+            var counts = {};
+            filterData().forEach(function(p){
+                var mv = normalizeStr(p.municipality);
+                if (mv) counts[mv] = (counts[mv]||0)+1;
+            });
+            municipioGeoLayer = L.geoJSON(data, {
+                style: function(f) {
+                    var name = f.properties.nombre || '';
+                    var cnt  = counts[normalizeStr(name)] || 0;
+                    if (navState.municipality && normalizeStr(navState.municipality.nombre) === normalizeStr(name))
+                        return {fillColor:'#7c3aed', fillOpacity:0.38, color:'#a78bfa', weight:2, dashArray:null};
+                    return {
+                        fillColor:   cnt > 0 ? '#4c1d95' : '#1f2937',
+                        fillOpacity: cnt > 0 ? 0.12 + (cnt/8)*0.22 : 0.18,
+                        color:       '#4b5563',
+                        weight:      1,
+                        dashArray:   '4,3',
+                        opacity:     0.7,
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    var name = feature.properties.nombre || '';
+                    var cnt  = counts[normalizeStr(name)] || 0;
+                    layer.bindTooltip(
+                        name + (cnt ? ' &bull; ' + cnt : ''),
+                        {sticky:true, className:'geo-tooltip', direction:'top'}
+                    );
+                    layer.on({
+                        mouseover: function() {
+                            if (!navState.municipality || normalizeStr(navState.municipality.nombre) !== normalizeStr(name))
+                                layer.setStyle({fillOpacity:0.42, color:'#a78bfa', weight:2, dashArray:null});
+                        },
+                        mouseout: function() {
+                            if (!navState.municipality || normalizeStr(navState.municipality.nombre) !== normalizeStr(name))
+                                municipioGeoLayer.resetStyle(layer);
+                        },
+                        click: function(e) { L.DomEvent.stopPropagation(e); _clickMunicipio(feature, layer); }
+                    });
+                }
+            }).addTo(map);
+            // Provinces stay on top of municipalities
+            if (municipioGeoLayer) municipioGeoLayer.bringToBack();
+        })
+        .catch(function(){});
+}
+
+function _clickMunicipio(feature, layer) {
+    var nombre = feature.properties.nombre || '';
+    navState.level        = 2;
+    navState.municipality = {nombre: nombre, id: feature.properties.in1||'', layer: layer};
+    if (municipioGeoLayer) {
+        municipioGeoLayer.eachLayer(function(l) {
+            if (!l.feature) return;
+            var n = l.feature.properties.nombre || '';
+            if (normalizeStr(n) === normalizeStr(nombre))
+                l.setStyle({fillColor:'#7c3aed', fillOpacity:0.38, color:'#a78bfa', weight:2, dashArray:null});
+            else
+                municipioGeoLayer.resetStyle(l);
+        });
+    }
+    map.fitBounds(layer.getBounds(), {padding:[20,20], maxZoom:13, animate:true, duration:0.5});
     updateBreadcrumb();
     renderMap();
     buildNavList(); updateNavBar();
 }
 
+// ── Drill up ──────────────────────────────────────────────────────────────────
 function drillUp(level) {
     if (level === 0) {
-        navState.level    = 0;
-        navState.province = null;
+        navState.level = 0; navState.province = null; navState.municipality = null;
         closeDetail();
-        // Clear parcela markers
-        Object.values(markers).forEach(function(m){ map.removeLayer(m); });
-        Object.values(polygons).forEach(function(p){ map.removeLayer(p); });
-        markers = {}; polygons = {}; activeMarker = null;
-        map.setView([-38,-64], 5);
-        renderProvinces();
-        updateBreadcrumb();
-        buildNavList(); updateNavBar();
+        _clearParcelaLayers();
+        if (municipioGeoLayer) { try{map.removeLayer(municipioGeoLayer);}catch(e){} municipioGeoLayer=null; }
+        if (provinceGeoLayer) {
+            provinceGeoLayer.eachLayer(function(l){ provinceGeoLayer.resetStyle(l); });
+        } else {
+            renderProvincePolygons();
+        }
+        map.flyTo([-38,-64], 5, {duration:0.7});
+        updateBreadcrumb(); buildNavList(); updateNavBar();
+    } else if (level === 1 && navState.province) {
+        navState.level = 1; navState.municipality = null;
+        closeDetail();
+        if (municipioGeoLayer) {
+            municipioGeoLayer.eachLayer(function(l){ municipioGeoLayer.resetStyle(l); });
+        }
+        if (navState.province.layer) {
+            try{ map.fitBounds(navState.province.layer.getBounds(), {padding:[30,30], maxZoom:9, duration:0.5}); }catch(e){}
+        }
+        updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
     }
 }
 
+function _clearParcelaLayers() {
+    Object.values(markers).forEach(function(m){ try{map.removeLayer(m);}catch(e){} });
+    Object.values(polygons).forEach(function(p){ try{map.removeLayer(p);}catch(e){} });
+    markers = {}; polygons = {}; activeMarker = null;
+}
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
 function updateBreadcrumb() {
     var bc   = document.getElementById('cat-breadcrumb');
     var sep1 = document.getElementById('bc-sep1');
     var bcp  = document.getElementById('bc-province');
+    var sep2 = document.getElementById('bc-sep2');
+    var bcm  = document.getElementById('bc-municipality');
     if (navState.level === 0) {
-        bc.style.display = 'none';
+        bc.style.display = 'none'; return;
+    }
+    bc.style.display   = 'flex';
+    sep1.style.display = 'inline';
+    bcp.style.display  = 'inline';
+    bcp.textContent    = navState.province ? navState.province.nombre : '';
+    if (navState.level >= 2 && navState.municipality) {
+        sep2.style.display = 'inline';
+        bcm.style.display  = 'inline';
+        bcm.textContent    = navState.municipality.nombre;
     } else {
-        bc.style.display = 'flex';
-        sep1.style.display = 'inline';
-        bcp.style.display  = 'inline';
-        bcp.textContent    = navState.province || '';
+        sep2.style.display = 'none';
+        bcm.style.display  = 'none';
+    }
+}
+
+// ── GIS layer visibility ──────────────────────────────────────────────────────
+function toggleGisLayer(name) {
+    layerVis[name] = !layerVis[name];
+    var el = document.getElementById('gis-' + name);
+    if (el) {
+        el.classList.toggle('on', layerVis[name]);
+        el.querySelector('.prov-chk').innerHTML = layerVis[name] ? '&#10003;' : '';
+    }
+    if (name === 'provinces') {
+        if (layerVis.provinces) {
+            if (!provinceGeoLayer) renderProvincePolygons();
+            else if (!map.hasLayer(provinceGeoLayer)) provinceGeoLayer.addTo(map);
+        } else {
+            if (provinceGeoLayer && map.hasLayer(provinceGeoLayer)) map.removeLayer(provinceGeoLayer);
+        }
+    }
+    if (name === 'municipalities') {
+        if (layerVis.municipalities) {
+            if (navState.level >= 1 && !municipioGeoLayer) renderMunicipioPolygons();
+            else if (municipioGeoLayer && !map.hasLayer(municipioGeoLayer)) municipioGeoLayer.addTo(map);
+        } else {
+            if (municipioGeoLayer && map.hasLayer(municipioGeoLayer)) map.removeLayer(municipioGeoLayer);
+        }
+    }
+    if (name === 'parcelas') {
+        if (layerVis.parcelas) renderMap();
+        else _clearParcelaLayers();
     }
 }
 
 // ── Map rendering ─────────────────────────────────────────────────────────────
 function renderMap() {
     if (navState.level === 0) {
-        renderProvinces();
+        _clearParcelaLayers();
         return;
     }
-    Object.values(markers).forEach(function(m){ map.removeLayer(m); });
-    Object.values(polygons).forEach(function(p){ map.removeLayer(p); });
-    markers = {}; polygons = {};
-    activeMarker = null;
+    if (!layerVis.parcelas) return;
+    _clearParcelaLayers();
     filterData().forEach(function(p){ addToMap(p); });
-    // re-highlight active if still visible
     if (activeParcela && markers[activeParcela.id]) highlightMarker(activeParcela.id);
+    // Ensure province/municipality polygons stay below parcela markers
+    if (municipioGeoLayer) try{ municipioGeoLayer.bringToBack(); }catch(e){}
+    if (provinceGeoLayer)  try{ provinceGeoLayer.bringToBack(); }catch(e){}
 }
 
 function addToMap(p) {
@@ -1081,25 +1296,25 @@ function renderOporList() {
 function openDetail(id) {
     var p = allParcelas.find(function(x){ return x.id===id; });
     if (!p) return;
-    // If still at country level, drill into this parcela's province first
-    if (navState.level === 0 && p.province) {
-        var prov = AR_PROVINCES.find(function(pr){ return pr.name.toLowerCase() === (p.province||'').toLowerCase(); });
-        if (prov) {
-            clickProvince(prov);
+    // Drill into province if needed
+    if (navState.level === 0) {
+        if (p.province && provinceGeoLayer) {
+            var matched = null;
+            provinceGeoLayer.eachLayer(function(l) {
+                if (l.feature && normalizeStr(l.feature.properties.nombre) === normalizeStr(p.province))
+                    matched = {feature: l.feature, layer: l};
+            });
+            if (matched) { _clickProvince(matched.feature, matched.layer); }
+            else {
+                navState.level = 1;
+                navState.province = {nombre: p.province || '', id:'', layer: null};
+                updateBreadcrumb(); renderMap();
+            }
         } else {
             navState.level = 1;
-            navState.province = p.province;
-            provMarkers.forEach(function(m){ map.removeLayer(m); });
-            provMarkers = [];
-            updateBreadcrumb();
-            renderMap();
+            navState.province = {nombre: p.province || '', id:'', layer: null};
+            updateBreadcrumb(); renderMap();
         }
-    } else if (navState.level === 0) {
-        navState.level = 1;
-        provMarkers.forEach(function(m){ map.removeLayer(m); });
-        provMarkers = [];
-        updateBreadcrumb();
-        renderMap();
     }
     activeParcela = p;
     buildNavList();

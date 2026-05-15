@@ -1489,6 +1489,59 @@ def explore_catastro():
         parcelas = sorted(parcelas, key=_key)
     return jsonify([p.as_dict() for p in parcelas])
 
+# ── Catastro v4.0: Geographic boundary proxy (IGN WFS + cache) ───────────────
+import urllib.request as _ureq
+import urllib.parse   as _uparse
+import json           as _jmod
+
+_GEO_CACHE: dict = {}
+
+@app.route('/api/catastro/geo/provincias', methods=['GET'])
+@api_login_required
+def get_provincias_geo():
+    from flask import Response as _Resp
+    if 'provincias' in _GEO_CACHE:
+        return _Resp(_jmod.dumps(_GEO_CACHE['provincias']), mimetype='application/json')
+    url = ('https://wms.ign.gob.ar/geoserver/ows'
+           '?service=WFS&version=1.0.0&request=GetFeature'
+           '&typeName=ign:provincia&outputFormat=application/json')
+    try:
+        req = _ureq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with _ureq.urlopen(req, timeout=20) as r:
+            data = _jmod.loads(r.read().decode('utf-8'))
+        for f in data.get('features', []):
+            props = f.get('properties', {})
+            props['nombre'] = props.get('nam') or props.get('nombre') or ''
+        _GEO_CACHE['provincias'] = data
+        return _Resp(_jmod.dumps(data), mimetype='application/json')
+    except Exception as exc:
+        return jsonify({'type': 'FeatureCollection', 'features': [], 'error': str(exc)})
+
+@app.route('/api/catastro/geo/departamentos/<province_code>', methods=['GET'])
+@api_login_required
+def get_departamentos_geo(province_code):
+    from flask import Response as _Resp
+    cache_key = 'dep_' + province_code
+    if cache_key in _GEO_CACHE:
+        return _Resp(_jmod.dumps(_GEO_CACHE[cache_key]), mimetype='application/json')
+    params = {
+        'service': 'WFS', 'version': '1.0.0', 'request': 'GetFeature',
+        'typeName': 'ign:departamento', 'outputFormat': 'application/json',
+        'CQL_FILTER': "in1 LIKE '" + province_code + "%'",
+    }
+    url = 'https://wms.ign.gob.ar/geoserver/ows?' + _uparse.urlencode(params)
+    try:
+        req = _ureq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with _ureq.urlopen(req, timeout=25) as r:
+            data = _jmod.loads(r.read().decode('utf-8'))
+        for f in data.get('features', []):
+            props = f.get('properties', {})
+            props['nombre'] = props.get('nam') or props.get('nombre') or ''
+        _GEO_CACHE[cache_key] = data
+        return _Resp(_jmod.dumps(data), mimetype='application/json')
+    except Exception as exc:
+        return jsonify({'type': 'FeatureCollection', 'features': [], 'error': str(exc)})
+
 # ── Catastro v3.0: PropietarioCatastral (M2M owners) ─────────────────────────
 
 @app.route('/api/catastro/parcelas/<int:id>/propietarios', methods=['POST'])
