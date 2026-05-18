@@ -78,7 +78,7 @@
 
 {% block page_topbar %}
 <div class="page-topbar">
-    <span class="page-topbar-title" id="topbar-tab-title">Clientes</span>
+    <span class="page-topbar-title" id="topbar-tab-title">Interesados</span>
     <div class="topbar-actions">
         <button class="btn btn-gray" style="font-size:12px;padding:5px 11px" onclick="window.print()" title="Imprimir (Ctrl+P)">🖨 Imprimir</button>
         <button class="btn btn-gray" style="font-size:12px;padding:5px 11px" onclick="document.getElementById('palette-overlay').classList.add('active');document.getElementById('palette-input').focus()" title="Búsqueda rápida (Ctrl+K)">⌕ Buscar</button>
@@ -94,40 +94,60 @@
 
 <div class="container">
 
-    <!-- ═══ TAB CLIENTES ═══ -->
-    <div id="tab-clientes">
+    <!-- ═══ TAB INTERESADOS ═══ -->
+    <div id="tab-interesados">
         <div class="toolbar no-print">
-            <button class="btn btn-green" onclick="agregarFilaCliente()">+ Agregar cliente</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaClientes', 'Clientes')">Imprimir</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosClientes()">Limpiar filtros</button>
+            <button class="btn btn-green" onclick="agregarFilaInteresado()">+ Agregar interesado</button>
+            <button class="btn btn-print" onclick="imprimirTabla('tablaInteresados', 'Interesados')">Imprimir</button>
+            <button class="btn btn-gray"  onclick="resetFiltrosInteresados()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
-            <input type="text" id="filtroTexto" placeholder="Nombre o Apellido" onkeyup="filtrarClientes()" style="min-width:200px">
+            <input type="text" id="filtroInteresadosTexto" placeholder="Nombre o Apellido" onkeyup="filtrarInteresados()" style="min-width:200px">
             <div class="sep"></div>
-            <select id="filtroOperacion" onchange="filtrarClientes()">
+            <select id="filtroInteresadosOperacion" onchange="filtrarInteresados()">
                 <option value="">Todas las operaciones</option>
                 <option value="venta">Venta</option>
                 <option value="renta">Renta</option>
                 <option value="ambas">Ambas</option>
             </select>
-            <input type="number" id="filtroAmbientes" placeholder="Ambientes" onkeyup="filtrarClientes()" style="width:90px">
-            <div class="sep"></div>
-            <label><input type="checkbox" id="togglePropietarios" onchange="filtrarClientes()"> Propietarios</label>
-            <label><input type="checkbox" id="toggleInteresados"  onchange="filtrarClientes()"> Interesados</label>
+            <input type="number" id="filtroInteresadosAmbientes" placeholder="Ambientes" onkeyup="filtrarInteresados()" style="width:90px">
         </div>
         <div class="table-wrap">
-            <table id="tablaClientes">
+            <table id="tablaInteresados">
                 <thead><tr>
-                    <th class="sortable" data-sort="clientes" data-field="nombre"    onclick="sortBy(this)">Cliente <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="interesados" data-field="nombre"    onclick="sortBy(this)">Interesado <span class="sort-icon"></span></th>
                     <th>Teléfono</th>
-                    <th class="sortable" data-sort="clientes" data-field="email"     onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="tipo"      onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
-                    <th>Propiedad</th>
-                    <th class="sortable" data-sort="clientes" data-field="rango_min" onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="rango_max" onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="interesados" data-field="email"     onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
+                    <th>Propiedades de interés</th>
+                    <th class="sortable" data-sort="interesados" data-field="rango_min" onclick="sortBy(this)">Min <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="interesados" data-field="rango_max" onclick="sortBy(this)">Max <span class="sort-icon"></span></th>
                     <th>USD</th>
-                    <th class="sortable" data-sort="clientes" data-field="ambientes" onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="clientes" data-field="operacion" onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="interesados" data-field="ambientes" onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="interesados" data-field="operacion" onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
+                    <th class="no-print">Acciones</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ═══ TAB PROPIETARIOS ═══ -->
+    <div id="tab-propietarios" style="display:none">
+        <div class="toolbar no-print">
+            <button class="btn btn-green" onclick="agregarFilaPropietario()">+ Agregar propietario</button>
+            <button class="btn btn-print" onclick="imprimirTabla('tablaPropietarios', 'Propietarios')">Imprimir</button>
+            <button class="btn btn-gray"  onclick="resetFiltrosPropietarios()">Limpiar filtros</button>
+        </div>
+        <div class="filterbox no-print">
+            <input type="text" id="filtroPropietariosTexto" placeholder="Nombre o Apellido" onkeyup="filtrarPropietarios()" style="min-width:200px">
+        </div>
+        <div class="table-wrap">
+            <table id="tablaPropietarios">
+                <thead><tr>
+                    <th class="sortable" data-sort="propietarios" data-field="nombre" onclick="sortBy(this)">Propietario <span class="sort-icon"></span></th>
+                    <th>Teléfono</th>
+                    <th class="sortable" data-sort="propietarios" data-field="email"  onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
+                    <th>Propiedades</th>
                     <th class="no-print">Acciones</th>
                 </tr></thead>
                 <tbody></tbody>
@@ -290,8 +310,9 @@
 <script>
     let clientes = [];
     let propiedades = [];
-    let sortClientes    = { field: null, dir: 1 };
-    let sortPropiedades = { field: null, dir: 1 };
+    let sortInteresados  = { field: null, dir: 1 };
+    let sortPropietarios = { field: null, dir: 1 };
+    let sortPropiedades  = { field: null, dir: 1 };
     let notasPropiedadId = null;
     const selectedPropIds = new Set();
 
@@ -341,25 +362,21 @@
     // ── URL filter persistence ─────────────────────────────────────────────────
     function guardarFiltrosEnURL() {
         const p = new URLSearchParams();
-        const tabProp = document.getElementById('tab-propiedades');
-        const tabArch = document.getElementById('tab-archivados');
-        const currentTab = tabArch && tabArch.style.display !== 'none' ? 'archivados'
-                         : tabProp && tabProp.style.display !== 'none' ? 'propiedades'
-                         : 'clientes';
+        const tabProp  = document.getElementById('tab-propiedades');
+        const tabArch  = document.getElementById('tab-archivados');
+        const tabPropT = document.getElementById('tab-propietarios');
+        const currentTab = tabArch  && tabArch.style.display  !== 'none' ? 'archivados'
+                         : tabProp  && tabProp.style.display  !== 'none' ? 'propiedades'
+                         : tabPropT && tabPropT.style.display !== 'none' ? 'propietarios'
+                         : 'interesados';
         p.set('tab', currentTab);
-        const texto     = document.getElementById('filtroTexto').value;
-        const operacion = document.getElementById('filtroOperacion').value;
-        const ambientes = document.getElementById('filtroAmbientes').value;
-        if (texto)     p.set('texto', texto);
-        if (operacion) p.set('operacion', operacion);
-        if (ambientes) p.set('ambientes', ambientes);
-        if (document.getElementById('togglePropietarios').checked) p.set('prop', 'true');
-        if (document.getElementById('toggleInteresados').checked)  p.set('int', 'true');
-        const dir    = document.getElementById('filtroDireccion').value;
-        const tipo   = document.getElementById('filtroTipo').value;
-        const op     = document.getElementById('filtroOperacion2').value;
-        const estado = document.getElementById('filtroEstado').value;
-        const amb    = document.getElementById('filtroAmbientesProp').value;
+        var textoEl = document.getElementById('filtroInteresadosTexto');
+        if (textoEl && textoEl.value) p.set('texto', textoEl.value);
+        var dir    = document.getElementById('filtroDireccion').value;
+        var tipo   = document.getElementById('filtroTipo').value;
+        var op     = document.getElementById('filtroOperacion2').value;
+        var estado = document.getElementById('filtroEstado').value;
+        var amb    = document.getElementById('filtroAmbientesProp').value;
         if (dir)    p.set('dir', dir);
         if (tipo)   p.set('tipo', tipo);
         if (op)     p.set('op', op);
@@ -372,11 +389,8 @@
 
     function leerFiltrosDeURL() {
         const p = new URLSearchParams(window.location.search);
-        if (p.get('texto'))     document.getElementById('filtroTexto').value = p.get('texto');
-        if (p.get('operacion')) document.getElementById('filtroOperacion').value = p.get('operacion');
-        if (p.get('ambientes')) document.getElementById('filtroAmbientes').value = p.get('ambientes');
-        if (p.get('prop') === 'true') document.getElementById('togglePropietarios').checked = true;
-        if (p.get('int')  === 'true') document.getElementById('toggleInteresados').checked  = true;
+        var textoEl = document.getElementById('filtroInteresadosTexto');
+        if (textoEl && p.get('texto')) textoEl.value = p.get('texto');
         if (p.get('dir'))    document.getElementById('filtroDireccion').value = p.get('dir');
         if (p.get('tipo'))   document.getElementById('filtroTipo').value = p.get('tipo');
         if (p.get('op'))     document.getElementById('filtroOperacion2').value = p.get('op');
@@ -387,13 +401,13 @@
 
     // ── TABS ──────────────────────────────────────────────────────────────────
     function mostrarTab(tab) {
-        ['clientes','propiedades','archivados'].forEach(function(t) {
+        ['interesados','propietarios','propiedades','archivados'].forEach(function(t) {
             document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none';
         });
         document.querySelectorAll('.sb-link[data-tab]').forEach(function(a) {
             a.classList.toggle('sb-active', a.dataset.tab === tab);
         });
-        var titles = { clientes: 'Clientes', propiedades: 'Propiedades', archivados: 'Archivados' };
+        var titles = { interesados: 'Interesados', propietarios: 'Propietarios', propiedades: 'Propiedades', archivados: 'Archivados' };
         var el = document.getElementById('topbar-tab-title');
         if (el) el.textContent = titles[tab] || tab;
         if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
@@ -404,7 +418,9 @@
     function sortBy(th) {
         const tabla = th.dataset.sort;
         const field = th.dataset.field;
-        const s = tabla === 'clientes' ? sortClientes : sortPropiedades;
+        const sortMap = { interesados: sortInteresados, propietarios: sortPropietarios, propiedades: sortPropiedades };
+        const s = sortMap[tabla];
+        if (!s) return;
         if (s.field === field) s.dir *= -1;
         else { s.field = field; s.dir = 1; }
         document.querySelectorAll('th[data-sort="' + tabla + '"]').forEach(t => {
@@ -413,7 +429,8 @@
             if (icon) icon.textContent = active ? (s.dir === 1 ? '▴' : '▾') : '';
             t.classList.toggle('sorted', active);
         });
-        if (tabla === 'clientes') filtrarClientes();
+        if (tabla === 'interesados') filtrarInteresados();
+        else if (tabla === 'propietarios') filtrarPropietarios();
         else filtrarPropiedades();
     }
 
@@ -482,75 +499,91 @@
             clientes = data.sort(function(a, b) {
                 return (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido, 'es');
             });
-            filtrarClientes();
+            filtrarInteresados();
+            filtrarPropietarios();
         });
     }
 
-    function filtrarClientes() {
-        const texto     = document.getElementById('filtroTexto').value.toLowerCase();
-        const operacion = document.getElementById('filtroOperacion').value;
-        const ambientes = document.getElementById('filtroAmbientes').value;
-        const showProp  = document.getElementById('togglePropietarios').checked;
-        const showInt   = document.getElementById('toggleInteresados').checked;
-
-        let filtrados = clientes.filter(function(c) {
-            const matchTexto = c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
-            const matchOp    = !operacion || c.operacion === operacion;
-            const matchAmb   = !ambientes || c.ambientes == ambientes;
-            const matchTipo  = (!showProp && !showInt)
-                || (showProp && !showInt && c.tipo === 'propietario')
-                || (!showProp && showInt && c.tipo === 'interesado')
-                || (showProp && showInt);
-            return matchTexto && matchOp && matchAmb && matchTipo;
+    function filtrarInteresados() {
+        var texto     = (document.getElementById('filtroInteresadosTexto')    || {value:''}).value.toLowerCase();
+        var operacion = (document.getElementById('filtroInteresadosOperacion') || {value:''}).value;
+        var ambientes = (document.getElementById('filtroInteresadosAmbientes') || {value:''}).value;
+        var filtrados = clientes.filter(function(c) {
+            if (c.tipo !== 'interesado') return false;
+            var matchTexto = c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
+            var matchOp    = !operacion || c.operacion === operacion;
+            var matchAmb   = !ambientes || c.ambientes == ambientes;
+            return matchTexto && matchOp && matchAmb;
         });
-        filtrados = applySort(filtrados, sortClientes);
+        filtrados = applySort(filtrados, sortInteresados);
+        renderClientesTabla('tablaInteresados', filtrados, 'interesado');
+        guardarFiltrosEnURL();
+    }
 
-        const tbody = document.querySelector('#tablaClientes tbody');
+    function filtrarPropietarios() {
+        var texto = (document.getElementById('filtroPropietariosTexto') || {value:''}).value.toLowerCase();
+        var filtrados = clientes.filter(function(c) {
+            if (c.tipo !== 'propietario') return false;
+            return c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
+        });
+        filtrados = applySort(filtrados, sortPropietarios);
+        renderClientesTabla('tablaPropietarios', filtrados, 'propietario');
+        guardarFiltrosEnURL();
+    }
+
+    function renderClientesTabla(tablaId, filtrados, tipo) {
+        var tbody = document.querySelector('#' + tablaId + ' tbody');
+        if (!tbody) return;
         tbody.innerHTML = '';
         filtrados.forEach(function(c) {
-            const row = document.createElement('tr');
-            const propIds = []
-                .concat(c.propiedades_propietario || [])
-                .concat(c.propiedades_interesado  || [])
-                .filter(function(p, i, arr) { return arr.findIndex(function(x) { return x.id === p.id; }) === i; })
-                .map(function(p) { return p.codigo ? esc(p.codigo) : ('#' + p.id); })
-                .join(', ') || '—';
+            var row = document.createElement('tr');
+            var propIds = tipo === 'interesado'
+                ? (c.propiedades_interesado  || []).map(function(p) { return p.codigo ? esc(p.codigo) : ('#' + p.id); }).join(', ') || '—'
+                : (c.propiedades_propietario || []).map(function(p) { return p.codigo ? esc(p.codigo) : ('#' + p.id); }).join(', ') || '—';
+            var extraCols = tipo === 'interesado'
+                ? '<td class="editable-text" data-field="rango_min" data-id="' + c.id + '">' + (c.rango_min || '') + '</td>' +
+                  '<td class="editable-text" data-field="rango_max" data-id="' + c.id + '">' + (c.rango_max || '') + '</td>' +
+                  '<td><input type="checkbox" ' + (c.es_usd ? 'checked' : '') + ' onchange="actualizarCliente(' + c.id + ', \'es_usd\', this.checked)"></td>' +
+                  '<td class="editable-text" data-field="ambientes" data-id="' + c.id + '">' + (c.ambientes || '') + '</td>' +
+                  '<td class="editable-select" data-field="operacion" data-id="' + c.id + '">' + esc(c.operacion || '') + '</td>'
+                : '';
             row.innerHTML =
                 '<td><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></td>' +
                 '<td class="editable-text" data-field="telefono" data-id="' + c.id + '">' +
                     esc(c.telefono) + '&nbsp;<a href="' + waLink(c.telefono) + '" target="_blank" class="wa-link" title="WhatsApp" onclick="event.stopPropagation()">&#x1F4AC;</a>' +
                 '</td>' +
                 '<td class="editable-text" data-field="email" data-id="' + c.id + '">' + esc(c.email || '') + '</td>' +
-                '<td class="editable-select" data-field="tipo" data-id="' + c.id + '"><span class="badge badge-' + esc(c.tipo) + '">' + esc(c.tipo) + '</span></td>' +
                 '<td style="font-size:12px;color:var(--muted);cursor:pointer" onclick="abrirPropiedadesModal(' + c.id + ')" title="Asignar / quitar propiedades">' + propIds + '</td>' +
-                '<td class="editable-text" data-field="rango_min" data-id="' + c.id + '">' + (c.rango_min || '') + '</td>' +
-                '<td class="editable-text" data-field="rango_max" data-id="' + c.id + '">' + (c.rango_max || '') + '</td>' +
-                '<td><input type="checkbox" ' + (c.es_usd ? 'checked' : '') + ' onchange="actualizarCliente(' + c.id + ', \'es_usd\', this.checked)"></td>' +
-                '<td class="editable-text" data-field="ambientes" data-id="' + c.id + '">' + (c.ambientes || '') + '</td>' +
-                '<td class="editable-select" data-field="operacion" data-id="' + c.id + '">' + esc(c.operacion || '') + '</td>' +
+                extraCols +
                 '<td class="no-print"><button class="btn-action btn-cancel" onclick="eliminarCliente(' + c.id + ')">&#x2715;</button></td>';
             tbody.appendChild(row);
         });
-        agregarEventosEdicionTextoClientes();
-        agregarEventosEdicionSelectClientes();
-        guardarFiltrosEnURL();
+        agregarEventosEdicionTextoPersonas();
+        agregarEventosEdicionSelectPersonas();
     }
 
-    function resetFiltrosClientes() {
-        ['togglePropietarios','toggleInteresados'].forEach(function(id) { document.getElementById(id).checked = false; });
-        ['filtroTexto','filtroOperacion','filtroAmbientes'].forEach(function(id) { document.getElementById(id).value = ''; });
-        filtrarClientes();
+    function resetFiltrosInteresados() {
+        ['filtroInteresadosTexto','filtroInteresadosOperacion','filtroInteresadosAmbientes'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        filtrarInteresados();
     }
 
-    function agregarFilaCliente() {
-        const tbody = document.querySelector('#tablaClientes tbody');
-        const row = document.createElement('tr');
+    function resetFiltrosPropietarios() {
+        var el = document.getElementById('filtroPropietariosTexto');
+        if (el) el.value = '';
+        filtrarPropietarios();
+    }
+
+    function agregarFilaInteresado() {
+        var tbody = document.querySelector('#tablaInteresados tbody');
+        var row = document.createElement('tr');
         row.classList.add('new-row');
         row.innerHTML =
             '<td data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>' +
             '<td data-field="telefono"><input type="text" placeholder="Teléfono"></td>' +
             '<td data-field="email"><input type="text" placeholder="Email"></td>' +
-            '<td data-field="tipo"><select><option value="interesado">Interesado</option><option value="propietario">Propietario</option></select></td>' +
             '<td>—</td>' +
             '<td data-field="rango_min"><input type="number" placeholder="Min"></td>' +
             '<td data-field="rango_max"><input type="number" placeholder="Max"></td>' +
@@ -558,26 +591,49 @@
             '<td data-field="ambientes"><input type="number" placeholder="Amb"></td>' +
             '<td data-field="operacion"><select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select></td>' +
             '<td class="no-print">' +
-                '<button class="btn-action btn-save" onclick="guardarNuevoCliente(this)">&#x2714;</button>' +
+                '<button class="btn-action btn-save" onclick="guardarNuevoCliente(this, \'interesado\')">&#x2714;</button>' +
                 '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
             '</td>';
         tbody.insertBefore(row, tbody.firstChild);
     }
 
-    function guardarNuevoCliente(btn) {
+    function agregarFilaPropietario() {
+        var tbody = document.querySelector('#tablaPropietarios tbody');
+        var row = document.createElement('tr');
+        row.classList.add('new-row');
+        row.innerHTML =
+            '<td data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>' +
+            '<td data-field="telefono"><input type="text" placeholder="Teléfono"></td>' +
+            '<td data-field="email"><input type="text" placeholder="Email"></td>' +
+            '<td>—</td>' +
+            '<td class="no-print">' +
+                '<button class="btn-action btn-save" onclick="guardarNuevoCliente(this, \'propietario\')">&#x2714;</button>' +
+                '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
+            '</td>';
+        tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    function guardarNuevoCliente(btn, tipo) {
         const row = btn.closest('tr');
         const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
+        const telEl      = row.querySelector('[data-field="telefono"] input');
+        const emailEl    = row.querySelector('[data-field="email"] input');
+        const rangoMinEl = row.querySelector('[data-field="rango_min"] input');
+        const rangoMaxEl = row.querySelector('[data-field="rango_max"] input');
+        const esUsdEl    = row.querySelector('[data-field="es_usd"]');
+        const ambEl      = row.querySelector('[data-field="ambientes"] input');
+        const opEl       = row.querySelector('[data-field="operacion"] select');
         const cliente = {
             nombre:      nombreCompleto[0] || '',
             apellido:    nombreCompleto.slice(1).join(' ') || '',
-            telefono:    row.querySelector('[data-field="telefono"] input').value,
-            email:       row.querySelector('[data-field="email"] input').value || null,
-            tipo:        row.querySelector('[data-field="tipo"] select').value,
-            rango_min:   parseFloat(row.querySelector('[data-field="rango_min"] input').value) || null,
-            rango_max:   parseFloat(row.querySelector('[data-field="rango_max"] input').value) || null,
-            es_usd:      row.querySelector('[data-field="es_usd"]').checked,
-            ambientes:   parseInt(row.querySelector('[data-field="ambientes"] input').value) || null,
-            operacion:   row.querySelector('[data-field="operacion"] select').value,
+            telefono:    telEl   ? telEl.value   : '',
+            email:       emailEl ? (emailEl.value || null) : null,
+            tipo:        tipo || 'interesado',
+            rango_min:   rangoMinEl ? (parseFloat(rangoMinEl.value) || null) : null,
+            rango_max:   rangoMaxEl ? (parseFloat(rangoMaxEl.value) || null) : null,
+            es_usd:      esUsdEl ? esUsdEl.checked : false,
+            ambientes:   ambEl ? (parseInt(ambEl.value) || null) : null,
+            operacion:   opEl  ? opEl.value : 'venta',
             descripcion: ''
         };
         if (!cliente.nombre || !cliente.apellido || !cliente.telefono) {
@@ -611,8 +667,8 @@
           .catch(function(e) { console.error('Error al actualizar cliente', e); });
     }
 
-    function agregarEventosEdicionTextoClientes() {
-        document.querySelectorAll('#tablaClientes .editable-text').forEach(function(cell) {
+    function agregarEventosEdicionTextoPersonas() {
+        document.querySelectorAll('#tablaInteresados .editable-text, #tablaPropietarios .editable-text').forEach(function(cell) {
             cell.addEventListener('dblclick', function(e) {
                 if (this.querySelector('input') || e.target.tagName === 'A') return;
                 const id = this.dataset.id, field = this.dataset.field;
@@ -637,17 +693,13 @@
         });
     }
 
-    function agregarEventosEdicionSelectClientes() {
-        document.querySelectorAll('#tablaClientes .editable-select').forEach(function(cell) {
+    function agregarEventosEdicionSelectPersonas() {
+        document.querySelectorAll('#tablaInteresados .editable-select, #tablaPropietarios .editable-select').forEach(function(cell) {
             cell.addEventListener('click', function() {
                 if (this.querySelector('select')) return;
                 const id = this.dataset.id, field = this.dataset.field;
-                const oldValue = field === 'tipo'
-                    ? (this.querySelector('.badge') ? this.querySelector('.badge').textContent.trim() : '')
-                    : this.textContent.trim();
-                const options = field === 'tipo'
-                    ? '<option value="interesado">Interesado</option><option value="propietario">Propietario</option>'
-                    : '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
+                const oldValue = this.textContent.trim();
+                const options = '<option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option>';
                 this.innerHTML = '<select>' + options + '</select>';
                 const sel = this.querySelector('select');
                 sel.value = oldValue; sel.focus();
@@ -689,7 +741,6 @@
 
         const tbody = document.querySelector('#tablaPropiedades tbody');
         tbody.innerHTML = '';
-        // Reset selection state when re-rendering
         selectedPropIds.clear();
         actualizarBulkToolbar();
         var chkAll = document.getElementById('chk-all-props');
@@ -755,10 +806,6 @@
     }
 
     function agregarFilaPropiedad() {
-        const propietarios = clientes.filter(function(c) { return c.tipo === 'propietario'; });
-        const optsProp = propietarios.map(function(c) {
-            return '<option value="' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</option>';
-        }).join('');
         const tbody = document.querySelector('#tablaPropiedades tbody');
         const row = document.createElement('tr');
         row.classList.add('new-row');
@@ -1137,7 +1184,8 @@
                 var idx = clientes.findIndex(function(x) { return x.id === cliId; });
                 if (idx >= 0) clientes[idx] = data;
                 renderListaPropiedadesCliente(data);
-                filtrarClientes();
+                filtrarInteresados();
+                filtrarPropietarios();
                 toast('Propiedad asignada', 'success');
             }).catch(function() { toast('Error al asignar propiedad', 'error'); });
     }
@@ -1151,14 +1199,15 @@
                 var idx = clientes.findIndex(function(x) { return x.id === cliId; });
                 if (idx >= 0) clientes[idx] = data;
                 renderListaPropiedadesCliente(data);
-                filtrarClientes();
+                filtrarInteresados();
+                filtrarPropietarios();
                 toast('Propiedad quitada', 'success');
             }).catch(function() { toast('Error al quitar propiedad', 'error'); });
     }
 
     // ── INIT ──────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
-        var tab = new URLSearchParams(window.location.search).get('tab') || 'clientes';
+        var tab = new URLSearchParams(window.location.search).get('tab') || 'interesados';
         mostrarTab(tab);
         leerFiltrosDeURL();
         cargarClientes();

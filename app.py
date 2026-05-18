@@ -1493,8 +1493,10 @@ def explore_catastro():
 import urllib.request as _ureq
 import urllib.parse   as _uparse
 import json           as _jmod
+import ssl            as _ssl
 
 _GEO_CACHE: dict = {}
+_GEO_SSL = _ssl._create_unverified_context()
 
 @app.route('/api/catastro/geo/provincias', methods=['GET'])
 @api_login_required
@@ -1507,7 +1509,7 @@ def get_provincias_geo():
            '&typeName=ign:provincia&outputFormat=application/json')
     try:
         req = _ureq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with _ureq.urlopen(req, timeout=20) as r:
+        with _ureq.urlopen(req, timeout=20, context=_GEO_SSL) as r:
             data = _jmod.loads(r.read().decode('utf-8'))
         for f in data.get('features', []):
             props = f.get('properties', {})
@@ -1532,7 +1534,7 @@ def get_departamentos_geo(province_code):
     url = 'https://wms.ign.gob.ar/geoserver/ows?' + _uparse.urlencode(params)
     try:
         req = _ureq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with _ureq.urlopen(req, timeout=25) as r:
+        with _ureq.urlopen(req, timeout=25, context=_GEO_SSL) as r:
             data = _jmod.loads(r.read().decode('utf-8'))
         for f in data.get('features', []):
             props = f.get('properties', {})

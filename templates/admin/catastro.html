@@ -4,407 +4,303 @@
 {% block head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <style>
-body { background: #0a0f1a; }
-.main-area { background: #0a0f1a; }
-
-/* ── Topbar ───────────────────────────────────────────────────────────────── */
-.cat-topbar {
-    background: rgba(10,15,26,0.97); border-bottom: 1px solid rgba(255,255,255,0.07);
-    padding: 0 16px; height: 46px; display: flex; align-items: center; gap: 10px;
-    position: sticky; top: 0; z-index: 500; backdrop-filter: blur(12px);
+/* ── Design tokens ──────────────────────────────────── */
+:root {
+    --c-bg:      #080c14;
+    --c-surface: #0d1624;
+    --c-panel:   #111927;
+    --c-border:  rgba(255,255,255,0.08);
+    --c-cyan:    #22d3ee;
+    --c-amber:   #f59e0b;
+    --c-red:     #ef4444;
+    --c-green:   #22c55e;
+    --c-text:    rgba(255,255,255,0.82);
+    --c-muted:   rgba(255,255,255,0.38);
+    --c-dim:     rgba(255,255,255,0.15);
+    --mono:      'JetBrains Mono', 'Courier New', monospace;
 }
-.cat-title { font-size: 13px; font-weight: 800; color: white; letter-spacing: 1.5px;
-    text-transform: uppercase; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
-.cat-title-dot { width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
-.cat-views { display: flex; gap: 2px; background: rgba(255,255,255,0.06); padding: 3px; border-radius: 6px; }
-.cat-view-btn { font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 4px; border: none;
-    background: none; color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.15s; font-family: inherit; }
-.cat-view-btn.active { background: rgba(255,255,255,0.1); color: white; }
-.cat-search { height: 30px; padding: 0 10px; flex: 1; max-width: 200px;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px; color: white; font-size: 12.5px; font-family: inherit; }
-.cat-search::placeholder { color: rgba(255,255,255,0.3); }
-.cat-search:focus { outline: none; border-color: rgba(59,130,246,0.6); background: rgba(255,255,255,0.1); }
-.cat-ml { margin-left: auto; display: flex; gap: 6px; }
-.btn-cat { height: 30px; padding: 0 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); font-size: 11.5px; font-weight: 600;
-    font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.btn-cat:hover { background: rgba(255,255,255,0.12); color: white; }
-.btn-cat-blue { background: rgba(59,130,246,0.2); color: #93c5fd; border-color: rgba(59,130,246,0.35); }
-.btn-cat-blue:hover { background: rgba(59,130,246,0.35); color: white; }
-.add-mode-hint { display: none; position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
-    z-index: 600; background: rgba(59,130,246,0.92); color: white; padding: 8px 18px; border-radius: 20px;
-    font-size: 12.5px; font-weight: 600; backdrop-filter: blur(8px); pointer-events: none;
+body { background: var(--c-bg); }
+.main-area { background: var(--c-bg); }
+
+/* ── Status bar ──────────────────────────────────────── */
+.cat-statusbar {
+    background: var(--c-surface); border-bottom: 1px solid var(--c-border);
+    height: 40px; padding: 0 14px;
+    display: flex; align-items: center; gap: 10px;
+    position: sticky; top: 0; z-index: 500;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px;
+}
+.sb-module { display: flex; align-items: center; gap: 7px; color: var(--c-cyan); font-weight: 700; font-size: 11.5px; white-space: nowrap; }
+.sb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-cyan); box-shadow: 0 0 8px var(--c-cyan); animation: dot-ping 2.5s ease-in-out infinite; }
+@keyframes dot-ping { 0%,100%{ box-shadow: 0 0 4px var(--c-cyan); } 50%{ box-shadow: 0 0 14px var(--c-cyan); } }
+.sb-scope { color: var(--c-muted); font-size: 11px; white-space: nowrap; }
+.sb-scope .bc-clickable { cursor: pointer; color: var(--c-muted); transition: color 0.12s; }
+.sb-scope .bc-clickable:hover { color: var(--c-cyan); }
+.sb-scope .bc-active { color: var(--c-text); }
+.sb-sep { width: 1px; height: 16px; background: var(--c-border); margin: 0 2px; }
+.sb-counts { color: var(--c-muted); font-size: 10px; white-space: nowrap; }
+.sb-spacer { flex: 1; }
+.sb-views { display: flex; gap: 1px; background: rgba(255,255,255,0.04); border: 1px solid var(--c-border); border-radius: 2px; padding: 2px; }
+.sb-view { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 2px; border: none; background: none; color: var(--c-muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; }
+.sb-view.active { background: rgba(34,211,238,0.14); color: var(--c-cyan); }
+.sb-search { height: 26px; padding: 0 8px; width: 140px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-border); border-radius: 2px; color: var(--c-text); font-size: 11px; font-family: var(--mono); }
+.sb-search::placeholder { color: var(--c-dim); }
+.sb-search:focus { outline: none; border-color: rgba(34,211,238,0.35); }
+.sb-btn { height: 26px; padding: 0 10px; border-radius: 2px; border: 1px solid var(--c-border); background: rgba(255,255,255,0.04); color: var(--c-muted); font-size: 10.5px; font-family: var(--mono); font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; white-space: nowrap; }
+.sb-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--c-text); }
+.sb-btn-cyan { background: rgba(34,211,238,0.1); color: var(--c-cyan); border-color: rgba(34,211,238,0.25); }
+.sb-btn-cyan:hover { background: rgba(34,211,238,0.2); color: white; }
+.add-mode-hint { display: none; position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+    z-index: 600; background: rgba(34,211,238,0.9); color: #080c14; padding: 6px 16px; border-radius: 2px;
+    font-size: 11px; font-weight: 700; font-family: var(--mono); pointer-events: none;
     animation: pulse-hint 1.5s ease-in-out infinite; }
 @keyframes pulse-hint { 0%,100%{opacity:1} 50%{opacity:0.7} }
 
-/* ── Map shell ────────────────────────────────────────────────────────────── */
-.cat-shell { position: relative; height: calc(100vh - 46px); overflow: hidden; }
-#cat-map { position: absolute; inset: 0; background: #0a0f1a; }
+/* ── Map shell ───────────────────────────────────────── */
+.cat-shell { position: relative; height: calc(100vh - 40px); overflow: hidden; }
+#cat-map { position: absolute; inset: 0; background: var(--c-bg); }
 
-/* ── Floating nav bar ─────────────────────────────────────────────────────── */
+/* ── Floating nav bar (bottom-center) ───────────────── */
 .cat-nav-bar {
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
     z-index: 420; display: flex; align-items: center; gap: 3px;
-    background: rgba(10,15,26,0.92); backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 4px 5px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    background: rgba(8,12,20,0.94); backdrop-filter: blur(16px);
+    border: 1px solid var(--c-border); border-radius: 2px; padding: 4px 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5); font-family: var(--mono);
 }
-.nav-btn { height: 26px; padding: 0 10px; border-radius: 5px;
-    border: 1px solid rgba(255,255,255,0.1); background: none;
-    color: rgba(255,255,255,0.55); font-size: 11.5px; font-weight: 600;
-    font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: white; }
-.nav-btn:disabled { opacity: 0.25; cursor: default; }
-.nav-counter { font-size: 11px; color: rgba(255,255,255,0.35); padding: 0 8px;
-    white-space: nowrap; min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
-.nav-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.1); margin: 0 2px; }
-.nav-mode-sel { height: 26px; padding: 0 6px; border-radius: 5px;
-    border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05);
-    color: rgba(255,255,255,0.45); font-size: 11px; font-family: inherit; cursor: pointer; }
-.nav-mode-sel option { background: #1e293b; }
-.nav-scroll-btn { height: 26px; padding: 0 8px; border-radius: 5px;
-    border: 1px solid rgba(255,255,255,0.1); background: none;
-    color: rgba(255,255,255,0.35); font-size: 10.5px; font-weight: 600;
-    font-family: inherit; cursor: pointer; transition: all 0.15s; }
-.nav-scroll-btn.on { background: rgba(59,130,246,0.18); color: #93c5fd; border-color: rgba(59,130,246,0.4); }
+.nav-btn { height: 24px; padding: 0 9px; border-radius: 2px; border: 1px solid var(--c-border); background: none; color: var(--c-muted); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all 0.15s; }
+.nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: var(--c-text); }
+.nav-btn:disabled { opacity: 0.2; cursor: default; }
+.nav-counter { font-size: 10.5px; color: var(--c-muted); padding: 0 8px; white-space: nowrap; min-width: 48px; text-align: center; font-family: var(--mono); }
+.nav-sep { width: 1px; height: 14px; background: var(--c-border); margin: 0 2px; }
+.nav-mode-sel { height: 24px; padding: 0 5px; border-radius: 2px; border: 1px solid var(--c-border); background: rgba(255,255,255,0.04); color: var(--c-muted); font-size: 10px; font-family: var(--mono); cursor: pointer; }
+.nav-mode-sel option { background: var(--c-surface); }
+.nav-scroll-btn { height: 24px; padding: 0 7px; border-radius: 2px; border: 1px solid var(--c-border); background: none; color: var(--c-muted); font-size: 11px; font-family: var(--mono); cursor: pointer; transition: all 0.15s; }
+.nav-scroll-btn.on { background: rgba(34,211,238,0.12); color: var(--c-cyan); border-color: rgba(34,211,238,0.3); }
 
-/* ── Layer panel ──────────────────────────────────────────────────────────── */
-.layer-panel { position: absolute; bottom: 24px; left: 16px; z-index: 400;
-    background: rgba(10,15,26,0.88); backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; min-width: 148px; }
-.layer-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1.2px; color: rgba(255,255,255,0.3); margin-bottom: 8px; }
-.layer-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; }
-.layer-item:last-child { margin-bottom: 0; }
-.layer-dot { width: 10px; height: 10px; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0; transition: all 0.15s; }
-.layer-item.active .layer-dot { border-color: #3b82f6; background: #3b82f6; }
-.layer-label { font-size: 12px; color: rgba(255,255,255,0.55); transition: color 0.15s; }
-.layer-item.active .layer-label { color: white; }
-.layer-divider { border-top: 1px solid rgba(255,255,255,0.07); margin: 9px 0; }
-/* provider checkboxes */
-.prov-item { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; cursor: pointer; }
-.prov-item:last-child { margin-bottom: 0; }
-.prov-chk { width: 13px; height: 13px; border-radius: 3px; border: 2px solid rgba(255,255,255,0.2);
-    flex-shrink: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
-    font-size: 9px; color: white; }
-.prov-item.on .prov-chk { border-color: #3b82f6; background: #3b82f6; }
-.prov-lbl { font-size: 11.5px; color: rgba(255,255,255,0.45); }
-.prov-item.on .prov-lbl { color: rgba(255,255,255,0.75); }
-.prov-cnt { font-size: 10px; color: rgba(255,255,255,0.2); margin-left: auto; }
+/* ── HUD panel (top-right) ───────────────────────────── */
+.cat-hud {
+    position: absolute; top: 10px; right: 10px; z-index: 420;
+    background: rgba(8,12,20,0.93); backdrop-filter: blur(16px);
+    border: 1px solid var(--c-border); border-radius: 2px;
+    padding: 10px 12px; min-width: 138px; font-family: var(--mono);
+}
+.hud-section { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: var(--c-dim); margin-bottom: 6px; }
+.hud-layer-row { display: flex; gap: 3px; margin-bottom: 2px; }
+.hud-layer-btn { flex: 1; height: 22px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; border: 1px solid var(--c-border); border-radius: 2px; background: none; color: var(--c-muted); cursor: pointer; font-family: var(--mono); transition: all 0.15s; }
+.hud-layer-btn.active { background: rgba(34,211,238,0.12); color: var(--c-cyan); border-color: rgba(34,211,238,0.3); }
+.hud-divider { border-top: 1px solid var(--c-border); margin: 8px 0; }
+.hud-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; cursor: pointer; opacity: 0.55; }
+.hud-row.on { opacity: 1; }
+.hud-row:last-child { margin-bottom: 0; }
+.hud-chk { width: 12px; height: 12px; border-radius: 1px; border: 1px solid var(--c-border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--c-bg); background: transparent; transition: all 0.15s; }
+.hud-row.on .hud-chk { border-color: var(--c-cyan); background: var(--c-cyan); }
+.hud-row span { font-size: 9.5px; color: var(--c-muted); letter-spacing: 0.5px; }
+.hud-row.on span { color: var(--c-text); }
+.hud-legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; font-size: 9.5px; color: var(--c-muted); letter-spacing: 0.3px; }
+.hud-ldot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 
-/* ── Legend ───────────────────────────────────────────────────────────────── */
-.cat-legend { position: absolute; bottom: 24px; right: 16px; z-index: 400;
-    background: rgba(10,15,26,0.88); backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; }
-.legend-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1.2px; color: rgba(255,255,255,0.3); margin-bottom: 7px; }
-.legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 4px;
-    font-size: 11px; color: rgba(255,255,255,0.5); }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-/* ── Detail panel ─────────────────────────────────────────────────────────── */
-.cat-detail { position: absolute; top: 0; right: 0; height: 100%; z-index: 400;
-    width: 0; overflow: hidden; transition: width 0.22s cubic-bezier(0.4,0,0.2,1); }
-.cat-detail.open { width: 380px; }
-.cat-detail-inner { width: 380px; height: 100%;
-    background: rgba(10,15,26,0.96); backdrop-filter: blur(20px);
-    border-left: 1px solid rgba(255,255,255,0.07);
-    display: flex; flex-direction: column; overflow: hidden; }
-.cdh { padding: 10px 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.07);
-    display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+/* ── Detail panel (dossier) ──────────────────────────── */
+.cat-detail { position: absolute; top: 0; right: 0; height: 100%; z-index: 400; width: 0; overflow: hidden; transition: width 0.2s cubic-bezier(0.4,0,0.2,1); }
+.cat-detail.open { width: 360px; }
+.cat-detail-inner { width: 360px; height: 100%; background: rgba(8,12,20,0.97); backdrop-filter: blur(20px); border-left: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden; }
+.cdh { padding: 9px 12px 8px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .cdh-nav { display: flex; gap: 3px; }
-.cdh-nav-btn { width: 24px; height: 24px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);
-    background: none; color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
-.cdh-nav-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+.cdh-nav-btn { width: 22px; height: 22px; border-radius: 2px; border: 1px solid var(--c-border); background: none; color: var(--c-muted); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.cdh-nav-btn:hover { background: rgba(255,255,255,0.08); color: var(--c-text); }
 .cdh-nav-btn:disabled { opacity: 0.2; cursor: default; }
-.cdh-close { width: 24px; height: 24px; border-radius: 5px; cursor: pointer;
-    border: 1px solid rgba(255,255,255,0.1); background: none;
-    display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); transition: all 0.15s; flex-shrink: 0; }
-.cdh-close:hover { border-color: #C41230; color: #f87171; background: rgba(196,18,48,0.1); }
-.cdh-title { flex: 1; font-size: 12.5px; font-weight: 700; color: white;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cdh-close { width: 22px; height: 22px; border-radius: 2px; cursor: pointer; border: 1px solid var(--c-border); background: none; display: flex; align-items: center; justify-content: center; color: var(--c-muted); transition: all 0.15s; flex-shrink: 0; }
+.cdh-close:hover { border-color: var(--c-red); color: var(--c-red); background: rgba(239,68,68,0.08); }
+.cdh-title { flex: 1; font-size: 11px; font-weight: 700; color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); letter-spacing: 0.5px; }
 .cdh-actions { display: flex; gap: 4px; }
-.btn-cd { height: 26px; padding: 0 9px; border-radius: 5px;
-    border: 1px solid rgba(255,255,255,0.1); background: none;
-    color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 600;
-    font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.btn-cd:hover { border-color: rgba(255,255,255,0.3); color: white; }
-.btn-cd-blue { background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
-.btn-cd-blue:hover { background: rgba(59,130,246,0.3); color: white; }
-.btn-cd-red { background: rgba(196,18,48,0.1); color: #f87171; border-color: rgba(196,18,48,0.25); }
-.btn-cd-red:hover { background: rgba(196,18,48,0.25); color: white; }
+.btn-cd { height: 22px; padding: 0 7px; border-radius: 2px; border: 1px solid var(--c-border); background: none; color: var(--c-muted); font-size: 9.5px; font-weight: 700; font-family: var(--mono); cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.5px; }
+.btn-cd:hover { border-color: rgba(255,255,255,0.25); color: var(--c-text); }
+.btn-cd-cyan { background: rgba(34,211,238,0.1); color: var(--c-cyan); border-color: rgba(34,211,238,0.25); }
+.btn-cd-cyan:hover { background: rgba(34,211,238,0.22); color: white; }
+.btn-cd-red { background: rgba(239,68,68,0.08); color: var(--c-red); border-color: rgba(239,68,68,0.2); }
+.btn-cd-red:hover { background: rgba(239,68,68,0.2); color: white; }
 
-/* ── Detail tabs ──────────────────────────────────────────────────────────── */
-.cd-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
-.cd-tab { flex: 1; padding: 8px 0; text-align: center; font-size: 11.5px; font-weight: 600;
-    color: rgba(255,255,255,0.35); cursor: pointer; transition: all 0.15s;
-    border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; }
-.cd-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-.cd-tab:hover:not(.active) { color: rgba(255,255,255,0.6); }
-.cd-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-.cd-body::-webkit-scrollbar { width: 4px; }
-.cd-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+/* ── Dossier body ────────────────────────────────────── */
+.cd-body { flex: 1; overflow-y: auto; padding: 0; display: flex; flex-direction: column; }
+.cd-body::-webkit-scrollbar { width: 3px; }
+.cd-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+.dos-hdr { padding: 9px 12px 5px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--c-dim); letter-spacing: 2px; border-top: 1px solid var(--c-border); display: flex; align-items: center; gap: 6px; }
+.dos-hdr:first-child { border-top: none; }
+.dos-num { color: var(--c-cyan); }
+.dos-section { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 7px; }
 
-/* ── Dark form fields ─────────────────────────────────────────────────────── */
-.cd-section { display: flex; flex-direction: column; gap: 8px; }
-.cd-section-ttl { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: rgba(255,255,255,0.25);
-    border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 5px; }
+/* ── Dark form fields ────────────────────────────────── */
+.cd-section { display: flex; flex-direction: column; gap: 7px; }
+.cd-section-ttl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c-dim); border-bottom: 1px solid var(--c-border); padding-bottom: 4px; font-family: var(--mono); }
 .cd-row { display: flex; flex-direction: column; gap: 3px; }
-.cd-label { font-size: 10.5px; color: rgba(255,255,255,0.35); font-weight: 500; }
-.cd-input { width: 100%; padding: 6px 9px; background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;
-    font-size: 12.5px; font-family: inherit; transition: border-color 0.15s; }
-.cd-input:focus { outline: none; border-color: rgba(59,130,246,0.6); background: rgba(255,255,255,0.09); }
-.cd-input::placeholder { color: rgba(255,255,255,0.2); }
-.cd-select { width: 100%; padding: 6px 9px; height: 32px;
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px; color: white; font-size: 12.5px; font-family: inherit; cursor: pointer; }
-.cd-select:focus { outline: none; border-color: rgba(59,130,246,0.6); }
-.cd-select option { background: #1e293b; }
-.cd-textarea { width: 100%; padding: 7px 9px; min-height: 64px; resize: vertical;
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px; color: white; font-size: 12px; font-family: inherit; line-height: 1.45; }
-.cd-textarea:focus { outline: none; border-color: rgba(59,130,246,0.6); }
+.cd-label { font-size: 10px; color: var(--c-muted); font-weight: 600; font-family: var(--mono); letter-spacing: 0.3px; }
+.cd-input { width: 100%; padding: 5px 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-border); border-radius: 2px; color: var(--c-text); font-size: 12px; font-family: inherit; }
+.cd-input:focus { outline: none; border-color: rgba(34,211,238,0.4); background: rgba(255,255,255,0.07); }
+.cd-input::placeholder { color: var(--c-dim); }
+.cd-select { width: 100%; padding: 5px 8px; height: 30px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-border); border-radius: 2px; color: var(--c-text); font-size: 12px; font-family: inherit; cursor: pointer; }
+.cd-select:focus { outline: none; border-color: rgba(34,211,238,0.4); }
+.cd-select option { background: var(--c-surface); }
+.cd-textarea { width: 100%; padding: 6px 8px; min-height: 58px; resize: vertical; background: rgba(255,255,255,0.05); border: 1px solid var(--c-border); border-radius: 2px; color: var(--c-text); font-size: 12px; font-family: inherit; line-height: 1.45; }
+.cd-textarea:focus { outline: none; border-color: rgba(34,211,238,0.4); }
 .cd-row-h { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .cd-stars { display: flex; gap: 3px; }
-.cd-star { font-size: 20px; cursor: pointer; color: rgba(255,255,255,0.15); transition: color 0.1s; border: none; background: none; padding: 0; }
-.cd-star.on { color: #f59e0b; }
-.cd-save-btn { width: 100%; height: 32px; background: #3b82f6; color: white; border: none;
-    border-radius: 6px; font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer; }
-.cd-save-btn:hover { background: #2563eb; }
-.cd-coords { font-size: 11px; color: rgba(255,255,255,0.3); font-family: monospace;
-    padding: 5px 9px; background: rgba(255,255,255,0.04); border-radius: 5px; letter-spacing: 0.5px; }
-.cd-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600;
-    padding: 2px 7px; border-radius: 10px; }
+.cd-star { font-size: 20px; cursor: pointer; color: var(--c-dim); transition: color 0.1s; border: none; background: none; padding: 0; }
+.cd-star.on { color: var(--c-amber); }
+.cd-save-btn { width: 100%; height: 29px; background: rgba(34,211,238,0.1); color: var(--c-cyan); border: 1px solid rgba(34,211,238,0.25); border-radius: 2px; font-size: 10px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s; }
+.cd-save-btn:hover { background: rgba(34,211,238,0.2); color: white; }
+.cd-coords { font-size: 10px; color: var(--c-muted); font-family: var(--mono); padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 2px; letter-spacing: 0.3px; }
+.cd-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 2px; font-family: var(--mono); letter-spacing: 0.5px; }
 
-/* ── Neighbor section ─────────────────────────────────────────────────────── */
-.neighbor-list { display: flex; flex-direction: column; gap: 4px; }
-.neighbor-item { padding: 6px 9px; border-radius: 6px; cursor: pointer;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-    display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
-.neighbor-item:hover { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
-.neighbor-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.neighbor-lbl { font-size: 12px; color: rgba(255,255,255,0.65); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.neighbor-meta { font-size: 10.5px; color: rgba(255,255,255,0.25); white-space: nowrap; }
+/* ── Neighbor section ────────────────────────────────── */
+.neighbor-list { display: flex; flex-direction: column; gap: 3px; }
+.neighbor-item { padding: 5px 8px; border-radius: 2px; cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid var(--c-border); display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
+.neighbor-item:hover { background: rgba(34,211,238,0.06); border-color: rgba(34,211,238,0.2); }
+.neighbor-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.neighbor-lbl { font-size: 11.5px; color: var(--c-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neighbor-meta { font-size: 10px; color: var(--c-dim); white-space: nowrap; font-family: var(--mono); }
 
-/* ── Investigation entries ────────────────────────────────────────────────── */
-.inv-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 8px; padding: 10px 11px; position: relative; }
-.inv-name { font-size: 13px; font-weight: 600; color: white; margin-bottom: 3px; }
-.inv-meta { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
-.inv-notes { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
-.inv-del { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
-    border-radius: 4px; border: none; background: none; cursor: pointer;
-    color: rgba(255,255,255,0.2); font-size: 14px; opacity: 0; transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; }
+/* ── Investigation entries ───────────────────────────── */
+.inv-item { background: rgba(255,255,255,0.03); border: 1px solid var(--c-border); border-radius: 2px; padding: 9px 10px; position: relative; }
+.inv-name { font-size: 12.5px; font-weight: 600; color: var(--c-text); margin-bottom: 3px; }
+.inv-meta { font-size: 10.5px; color: var(--c-muted); margin-bottom: 3px; }
+.inv-notes { font-size: 11.5px; color: rgba(255,255,255,0.55); line-height: 1.4; }
+.inv-del { position: absolute; top: 7px; right: 7px; width: 20px; height: 20px; border-radius: 2px; border: none; background: none; cursor: pointer; color: var(--c-dim); font-size: 13px; opacity: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
 .inv-item:hover .inv-del { opacity: 1; }
-.inv-del:hover { color: #f87171; background: rgba(196,18,48,0.15); }
-.inv-empty { font-size: 12px; color: rgba(255,255,255,0.25); text-align: center; padding: 20px 0; }
-.inv-form { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 7px; }
-.inv-form-ttl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); }
-.inv-add-btn { width: 100%; height: 30px; background: rgba(59,130,246,0.15); color: #93c5fd;
-    border: 1px dashed rgba(59,130,246,0.3); border-radius: 6px; font-size: 12px;
-    font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; }
-.inv-add-btn:hover { background: rgba(59,130,246,0.25); color: white; }
-.btn-inv-save { height: 28px; padding: 0 14px; background: #3b82f6; color: white; border: none;
-    border-radius: 5px; font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer; }
-.btn-inv-cancel { height: 28px; padding: 0 10px; background: none; color: rgba(255,255,255,0.4);
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; font-size: 11.5px; font-family: inherit; cursor: pointer; }
+.inv-del:hover { color: var(--c-red); background: rgba(239,68,68,0.12); }
+.inv-empty { font-size: 11px; color: var(--c-dim); text-align: center; padding: 14px 0; font-family: var(--mono); }
+.inv-form { background: rgba(255,255,255,0.03); border: 1px solid var(--c-border); border-radius: 2px; padding: 9px; display: flex; flex-direction: column; gap: 6px; }
+.inv-form-ttl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c-dim); font-family: var(--mono); }
+.inv-add-btn { width: 100%; height: 28px; background: rgba(34,211,238,0.06); color: var(--c-cyan); border: 1px dashed rgba(34,211,238,0.25); border-radius: 2px; font-size: 10px; font-weight: 700; font-family: var(--mono); cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; }
+.inv-add-btn:hover { background: rgba(34,211,238,0.14); color: white; }
+.btn-inv-save { height: 26px; padding: 0 12px; background: rgba(34,211,238,0.14); color: var(--c-cyan); border: 1px solid rgba(34,211,238,0.3); border-radius: 2px; font-size: 10.5px; font-weight: 700; font-family: var(--mono); cursor: pointer; }
+.btn-inv-cancel { height: 26px; padding: 0 10px; background: none; color: var(--c-muted); border: 1px solid var(--c-border); border-radius: 2px; font-size: 10.5px; font-family: var(--mono); cursor: pointer; }
 
-/* ── List views ───────────────────────────────────────────────────────────── */
-.cat-list-wrap { flex: 1; overflow: auto; padding: 16px; background: var(--bg); min-height: calc(100vh - 46px); }
-.cat-table { width: 100%; border-collapse: collapse; background: white;
-    border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); font-size: 12.5px; }
-.cat-table th { background: #f8fafc; padding: 9px 12px; text-align: left;
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border); }
-.cat-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+/* ── List views ──────────────────────────────────────── */
+.cat-list-wrap { flex: 1; overflow: auto; padding: 16px; background: var(--c-bg); min-height: calc(100vh - 40px); }
+.cat-table { width: 100%; border-collapse: collapse; background: var(--c-surface); border-radius: 2px; border: 1px solid var(--c-border); font-size: 11.5px; font-family: var(--mono); }
+.cat-table th { background: var(--c-panel); padding: 8px 10px; text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--c-dim); border-bottom: 1px solid var(--c-border); }
+.cat-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; color: var(--c-text); }
 .cat-table tr:last-child td { border-bottom: none; }
 .cat-table tbody tr { cursor: pointer; transition: background 0.12s; }
-.cat-table tbody tr:hover { background: #fafbfc; }
+.cat-table tbody tr:hover { background: rgba(34,211,238,0.04); }
 
-/* ── Modals ───────────────────────────────────────────────────────────────── */
-.cat-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
-    z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+/* ── Modals ──────────────────────────────────────────── */
+.cat-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 .cat-modal-overlay.open { display: flex; }
-.cat-modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-    width: 520px; max-width: 94vw; max-height: 88vh; display: flex; flex-direction: column;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.6); animation: fadeInModal 0.14s ease; }
-.cat-modal-hdr { padding: 16px 20px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);
-    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.cat-modal-hdr h3 { font-size: 15px; font-weight: 700; color: white; margin: 0; }
-.cat-modal-body { overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.cat-modal-body::-webkit-scrollbar { width: 4px; }
-.cat-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-.cat-modal-ft { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08);
-    display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+.cat-modal { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 2px; width: 520px; max-width: 94vw; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 32px 80px rgba(0,0,0,0.7); animation: fadeInModal 0.14s ease; }
+.cat-modal-hdr { padding: 14px 18px 12px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.cat-modal-hdr h3 { font-size: 13px; font-weight: 700; color: var(--c-text); margin: 0; font-family: var(--mono); letter-spacing: 0.5px; }
+.cat-modal-body { overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.cat-modal-body::-webkit-scrollbar { width: 3px; }
+.cat-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+.cat-modal-ft { padding: 10px 18px; border-top: 1px solid var(--c-border); display: flex; justify-content: flex-end; gap: 7px; flex-shrink: 0; }
 .form-row-d { display: flex; flex-direction: column; gap: 4px; }
-.form-row-d label { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.5); }
-.form-input-d { width: 100%; padding: 7px 10px; background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: white;
-    font-size: 13px; font-family: inherit; transition: border-color 0.15s; }
-.form-input-d:focus { outline: none; border-color: rgba(59,130,246,0.7); }
-.form-input-d::placeholder { color: rgba(255,255,255,0.2); }
-.form-input-d option { background: #1e293b; }
-.form-grid-d { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.form-section-d { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: rgba(255,255,255,0.25);
-    padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.07); margin-top: 2px; }
-.modal-close-d { width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
-    background: none; cursor: pointer; color: rgba(255,255,255,0.4); font-size: 16px;
-    display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-.modal-close-d:hover { border-color: #C41230; color: #f87171; }
-.btn-d-cancel { height: 34px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.15); background: none;
-    border-radius: 6px; font-size: 13px; font-family: inherit; cursor: pointer; color: rgba(255,255,255,0.5); }
-.btn-d-save { height: 34px; padding: 0 20px; background: #3b82f6; color: white; border: none;
-    border-radius: 6px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
-.btn-d-save:hover { background: #2563eb; }
+.form-row-d label { font-size: 10px; font-weight: 700; color: var(--c-muted); font-family: var(--mono); letter-spacing: 0.5px; }
+.form-input-d { width: 100%; padding: 6px 9px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-border); border-radius: 2px; color: var(--c-text); font-size: 12.5px; font-family: inherit; }
+.form-input-d:focus { outline: none; border-color: rgba(34,211,238,0.4); }
+.form-input-d::placeholder { color: var(--c-dim); }
+.form-input-d option { background: var(--c-surface); }
+.form-grid-d { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.form-section-d { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c-dim); font-family: var(--mono); padding-top: 4px; border-top: 1px solid var(--c-border); margin-top: 2px; }
+.modal-close-d { width: 26px; height: 26px; border-radius: 2px; border: 1px solid var(--c-border); background: none; cursor: pointer; color: var(--c-muted); font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.modal-close-d:hover { border-color: var(--c-red); color: var(--c-red); }
+.btn-d-cancel { height: 32px; padding: 0 12px; border: 1px solid var(--c-border); background: none; border-radius: 2px; font-size: 12px; font-family: var(--mono); cursor: pointer; color: var(--c-muted); }
+.btn-d-save { height: 32px; padding: 0 18px; background: rgba(34,211,238,0.14); color: var(--c-cyan); border: 1px solid rgba(34,211,238,0.3); border-radius: 2px; font-size: 12px; font-weight: 700; font-family: var(--mono); cursor: pointer; }
+.btn-d-save:hover { background: rgba(34,211,238,0.26); color: white; }
 
-/* ── Markers ──────────────────────────────────────────────────────────────── */
-.cat-marker { width: 14px; height: 14px; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.45); box-shadow: 0 0 0 3px rgba(0,0,0,0.3);
-    cursor: pointer; transition: transform 0.15s; }
+/* ── Markers ─────────────────────────────────────────── */
+.cat-marker { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4); cursor: pointer; transition: transform 0.12s; }
 .cat-marker:hover { transform: scale(1.4); }
-.cat-marker-active { width: 18px; height: 18px; border-radius: 50%;
-    border: 2.5px solid white; cursor: pointer; position: relative; }
+.cat-marker-active { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; cursor: pointer; position: relative; }
 .cat-marker-pulse { animation: active-pulse 1.8s ease-out infinite; }
-@keyframes active-pulse {
-    0%   { box-shadow: 0 0 0 0 currentColor; }
-    70%  { box-shadow: 0 0 0 8px transparent; }
-    100% { box-shadow: 0 0 0 0 transparent; }
-}
-@keyframes marker-pulse { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(2.2);opacity:0} }
+@keyframes active-pulse { 0%{ box-shadow: 0 0 0 0 currentColor; } 70%{ box-shadow: 0 0 0 8px transparent; } 100%{ box-shadow: 0 0 0 0 transparent; } }
 @keyframes fadeInModal { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
-
-.estado-d { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
-    padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.estado-d { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 2px; white-space: nowrap; font-family: var(--mono); letter-spacing: 0.3px; }
 .stars-small { display: inline-flex; gap: 1px; }
 .star-s { width: 9px; height: 9px; }
 
-/* ── Propietario card ─────────────────────────────────────────────────────── */
-.prop-card {
-    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
-    border-radius: 8px; padding: 9px 11px; display: flex; align-items: center; gap: 10px;
-}
-.prop-avatar {
-    width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.25);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; color: #93c5fd; flex-shrink: 0;
-}
+/* ── Propietario card ────────────────────────────────── */
+.prop-card { background: rgba(34,211,238,0.05); border: 1px solid rgba(34,211,238,0.15); border-radius: 2px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; }
+.prop-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(34,211,238,0.15); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--c-cyan); flex-shrink: 0; }
 .prop-info { flex: 1; min-width: 0; }
-.prop-link {
-    font-size: 13px; font-weight: 600; color: #93c5fd; text-decoration: none;
-    display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    transition: color 0.15s;
-}
+.prop-link { font-size: 12.5px; font-weight: 600; color: var(--c-cyan); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prop-link:hover { color: white; text-decoration: underline; }
-.prop-meta { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 1px; }
-.prop-unlink {
-    height: 24px; padding: 0 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12);
-    background: none; color: rgba(255,255,255,0.3); font-size: 10.5px; font-family: inherit;
-    cursor: pointer; flex-shrink: 0; transition: all 0.15s;
-}
-.prop-unlink:hover { border-color: #ef4444; color: #f87171; }
-.prop-empty { font-size: 12px; color: rgba(255,255,255,0.25); padding: 6px 0; }
+.prop-meta { font-size: 10.5px; color: var(--c-muted); margin-top: 1px; }
+.prop-unlink { height: 22px; padding: 0 7px; border-radius: 2px; border: 1px solid var(--c-border); background: none; color: var(--c-dim); font-size: 10px; font-family: var(--mono); cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
+.prop-unlink:hover { border-color: var(--c-red); color: var(--c-red); }
+.prop-empty { font-size: 11px; color: var(--c-dim); padding: 5px 0; font-family: var(--mono); }
 .prop-search-wrap { display: flex; flex-direction: column; gap: 5px; }
-.prop-results {
-    max-height: 140px; overflow-y: auto; border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.08); background: rgba(10,15,26,0.8);
-}
+.prop-results { max-height: 130px; overflow-y: auto; border-radius: 2px; border: 1px solid var(--c-border); background: var(--c-surface); }
 .prop-results:empty { display: none; }
-.prop-result-item {
-    padding: 7px 10px; cursor: pointer; font-size: 12.5px; color: rgba(255,255,255,0.7);
-    display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);
-    transition: background 0.12s;
-}
+.prop-result-item { padding: 6px 9px; cursor: pointer; font-size: 12px; color: var(--c-muted); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.12s; }
 .prop-result-item:last-child { border-bottom: none; }
-.prop-result-item:hover { background: rgba(59,130,246,0.15); color: white; }
+.prop-result-item:hover { background: rgba(34,211,238,0.08); color: var(--c-text); }
 .prop-result-name { font-weight: 600; flex: 1; }
-.prop-result-tel  { font-size: 11px; color: rgba(255,255,255,0.3); }
+.prop-result-tel  { font-size: 10.5px; color: var(--c-dim); }
 
-/* ── Breadcrumb ────────────────────────────────────────────────────────────── */
-.cat-breadcrumb {
-    position: absolute; top: 10px; left: 16px; z-index: 420;
-    display: flex; align-items: center; gap: 4px;
-    background: rgba(10,15,26,0.92); backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.09); border-radius: 7px;
-    padding: 5px 10px; max-width: 320px;
-}
-.bc-item { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.45);
-    cursor: pointer; white-space: nowrap; transition: color 0.15s; }
-.bc-item:hover { color: white; }
-.bc-item.bc-active { color: rgba(255,255,255,0.85); cursor: default; }
-.bc-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
-
-/* ── Province/municipality Leaflet tooltip ─────────────────────────────────── */
-.geo-tooltip {
-    background: rgba(10,15,26,0.92) !important; border: 1px solid rgba(255,255,255,0.12) !important;
-    border-radius: 5px !important; color: rgba(255,255,255,0.8) !important;
-    font-size: 11.5px !important; font-weight: 600 !important;
-    font-family: 'Inter', sans-serif !important; padding: 4px 9px !important;
-    backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
-}
+/* ── Geo tooltip ─────────────────────────────────────── */
+.geo-tooltip { background: rgba(8,12,20,0.95) !important; border: 1px solid rgba(34,211,238,0.2) !important; border-radius: 2px !important; color: var(--c-text) !important; font-size: 10.5px !important; font-weight: 600 !important; font-family: var(--mono) !important; padding: 3px 8px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; }
 .geo-tooltip::before { display: none !important; }
 
-/* ── Owners tab (PropietarioCatastral) ─────────────────────────────────────── */
-.owner-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 8px; padding: 10px 11px; position: relative; }
-.owner-name { font-size: 13px; font-weight: 600; color: white; margin-bottom: 3px; }
-.owner-meta { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 3px; }
-.owner-conf { display: inline-flex; align-items: center; gap: 4px; font-size: 10px;
-    font-weight: 700; padding: 1px 7px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-.conf-unknown  { background: rgba(148,163,184,0.15); color: #94a3b8; }
-.conf-inferred { background: rgba(251,191,36,0.15);  color: #fbbf24; }
-.conf-verified { background: rgba(34,197,94,0.15);   color: #22c55e; }
-.owner-del { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
-    border-radius: 4px; border: none; background: none; cursor: pointer;
-    color: rgba(255,255,255,0.2); font-size: 14px; opacity: 0; transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; }
-.owner-item:hover .owner-del { opacity: 1; }
-.owner-del:hover { color: #f87171; background: rgba(196,18,48,0.15); }
-.owner-empty { font-size: 12px; color: rgba(255,255,255,0.25); text-align: center; padding: 20px 0; }
-.owner-form { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+/* ── Aggregated dots ─────────────────────────────────── */
+.agg-dot { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; letter-spacing: -0.5px; border: 2px solid rgba(255,255,255,0.2); cursor: pointer; transition: transform 0.12s; }
+.agg-dot:hover { transform: scale(1.2); }
+.agg-dot.urgente { animation: urgente-ping 1.6s ease-in-out infinite; }
+@keyframes urgente-ping { 0%,100%{ box-shadow: 0 0 8px #ef444455; } 50%{ box-shadow: 0 0 20px #ef4444aa, 0 0 35px #ef444433; } }
 
-/* ── Activity tab ──────────────────────────────────────────────────────────── */
-.act-item { display: flex; gap: 9px; padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05); }
+/* ── Geo loading ─────────────────────────────────────── */
+#geo-loading { position: absolute; bottom: 68px; left: 50%; transform: translateX(-50%); z-index: 410; background: rgba(8,12,20,0.93); backdrop-filter: blur(12px); border: 1px solid var(--c-border); border-radius: 2px; padding: 6px 14px; font-size: 10px; color: var(--c-muted); font-family: var(--mono); letter-spacing: 0.5px; display: none; align-items: center; gap: 8px; white-space: nowrap; }
+#geo-loading.visible { display: flex; }
+.geo-spin { width: 10px; height: 10px; border: 1.5px solid rgba(255,255,255,0.1); border-top-color: var(--c-cyan); border-radius: 50%; animation: geo-rotate 0.7s linear infinite; flex-shrink: 0; }
+@keyframes geo-rotate { to { transform: rotate(360deg); } }
+
+/* ── Owner items ─────────────────────────────────────── */
+.owner-item { background: rgba(255,255,255,0.03); border: 1px solid var(--c-border); border-radius: 2px; padding: 9px 10px; position: relative; }
+.owner-name { font-size: 12.5px; font-weight: 600; color: var(--c-text); margin-bottom: 3px; }
+.owner-meta { font-size: 10.5px; color: var(--c-muted); margin-bottom: 3px; }
+.owner-conf { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--mono); }
+.conf-unknown  { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.conf-inferred { background: rgba(245,158,11,0.1);  color: var(--c-amber); }
+.conf-verified { background: rgba(34,197,94,0.1);   color: var(--c-green); }
+.owner-del { position: absolute; top: 7px; right: 7px; width: 20px; height: 20px; border-radius: 2px; border: none; background: none; cursor: pointer; color: var(--c-dim); font-size: 13px; opacity: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+.owner-item:hover .owner-del { opacity: 1; }
+.owner-del:hover { color: var(--c-red); background: rgba(239,68,68,0.12); }
+.owner-empty { font-size: 11px; color: var(--c-dim); text-align: center; padding: 14px 0; font-family: var(--mono); }
+.owner-form { background: rgba(255,255,255,0.03); border: 1px solid var(--c-border); border-radius: 2px; padding: 9px; display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Activity log ────────────────────────────────────── */
+.act-item { display: flex; gap: 9px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
 .act-item:last-child { border-bottom: none; }
 .act-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 3px; }
-.act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.act-line { width: 1px; flex: 1; background: rgba(255,255,255,0.06); margin-top: 4px; }
+.act-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.act-line { width: 1px; flex: 1; background: var(--c-border); margin-top: 3px; }
 .act-content { flex: 1; min-width: 0; }
-.act-tipo { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.8px; color: rgba(255,255,255,0.3); margin-bottom: 2px; }
-.act-texto { font-size: 12.5px; color: rgba(255,255,255,0.75); line-height: 1.4;
-    word-break: break-word; }
-.act-fecha { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 3px; }
-.act-del { border: none; background: none; cursor: pointer; color: rgba(255,255,255,0.15);
-    font-size: 13px; padding: 0 4px; opacity: 0; transition: opacity 0.15s, color 0.15s; }
+.act-tipo { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--c-dim); margin-bottom: 2px; font-family: var(--mono); }
+.act-texto { font-size: 12px; color: var(--c-text); line-height: 1.4; word-break: break-word; }
+.act-fecha { font-size: 9.5px; color: var(--c-dim); margin-top: 2px; font-family: var(--mono); }
+.act-del { border: none; background: none; cursor: pointer; color: var(--c-dim); font-size: 12px; padding: 0 4px; opacity: 0; transition: opacity 0.15s, color 0.15s; }
 .act-item:hover .act-del { opacity: 1; }
-.act-del:hover { color: #f87171; }
+.act-del:hover { color: var(--c-red); }
 .act-add-form { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 0; }
 </style>
 {% endblock %}
 
 {% block page_topbar %}
-<div class="cat-topbar">
-    <div class="cat-title"><span class="cat-title-dot"></span>Catastro</div>
-    <div class="cat-views">
-        <button class="cat-view-btn active" onclick="setView('mapa',this)">Mapa</button>
-        <button class="cat-view-btn" onclick="setView('parcelas',this)">Parcelas</button>
-        <button class="cat-view-btn" onclick="setView('oportunidades',this)">Oportunidades</button>
+<div class="cat-statusbar">
+    <div class="sb-module"><span class="sb-dot"></span>CATASTRO</div>
+    <div class="sb-sep"></div>
+    <div class="sb-scope" id="sb-scope">ARG</div>
+    <div class="sb-sep"></div>
+    <div class="sb-counts" id="sb-counts"></div>
+    <div class="sb-spacer"></div>
+    <div class="sb-views">
+        <button class="sb-view active" id="sbv-mapa"     onclick="setView('mapa',this)">MAPA</button>
+        <button class="sb-view"        id="sbv-parcelas" onclick="setView('parcelas',this)">REGISTRO</button>
+        <button class="sb-view"        id="sbv-opor"     onclick="setView('oportunidades',this)">OBJETIVOS</button>
     </div>
-    <input class="cat-search" id="cat-q" type="text" placeholder="Municipio, zona, ID..." oninput="filterParcelas()">
-    <div class="cat-ml">
-        <button class="btn-cat" onclick="openImportModal()">GeoJSON</button>
-        <button class="btn-cat btn-cat-blue" id="add-mode-btn" onclick="toggleAddMode()">+ Nueva</button>
-    </div>
+    <input class="sb-search" id="cat-q" type="text" placeholder="buscar..." oninput="filterParcelas()">
+    <button class="sb-btn" onclick="openImportModal()">GeoJSON</button>
+    <button class="sb-btn sb-btn-cyan" id="add-mode-btn" onclick="toggleAddMode()">+ NUEVO</button>
 </div>
 <div class="add-mode-hint" id="add-hint">Clic en el mapa para colocar la parcela</div>
 {% endblock %}
@@ -413,92 +309,69 @@ body { background: #0a0f1a; }
 <!-- MAP SHELL -->
 <div class="cat-shell" id="mapa-view">
     <div id="cat-map"></div>
+    <div id="geo-loading"><div class="geo-spin"></div>CARGANDO PROVINCIAS…</div>
 
-    <!-- Breadcrumb -->
-    <div class="cat-breadcrumb" id="cat-breadcrumb" style="display:none">
-        <span class="bc-item" onclick="drillUp(0)">Argentina</span>
-        <span class="bc-sep" id="bc-sep1" style="display:none">›</span>
-        <span class="bc-item" id="bc-province" style="display:none" onclick="drillUp(1)"></span>
-        <span class="bc-sep" id="bc-sep2" style="display:none">›</span>
-        <span class="bc-item bc-active" id="bc-municipality" style="display:none"></span>
+    <!-- HUD top-right -->
+    <div class="cat-hud" id="cat-hud">
+        <div class="hud-section">BASE</div>
+        <div class="hud-layer-row">
+            <button class="hud-layer-btn active" id="hud-layer-dark"  onclick="switchLayer('dark')">OSC</button>
+            <button class="hud-layer-btn"         id="hud-layer-osm"  onclick="switchLayer('osm')">OSM</button>
+            <button class="hud-layer-btn"         id="hud-layer-sat"  onclick="switchLayer('sat')">SAT</button>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section">CAPAS GIS</div>
+        <div class="hud-row on" id="hud-gis-provinces"     onclick="toggleGisLayer('provinces')">
+            <div class="hud-chk">&#10003;</div><span>PROVINCIAS</span>
+        </div>
+        <div class="hud-row on" id="hud-gis-municipalities" onclick="toggleGisLayer('municipalities')">
+            <div class="hud-chk">&#10003;</div><span>MUNICIPIOS</span>
+        </div>
+        <div class="hud-row on" id="hud-gis-parcelas"      onclick="toggleGisLayer('parcelas')">
+            <div class="hud-chk">&#10003;</div><span>PARCELAS</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section">ORIGEN</div>
+        <div id="hud-provider-list"></div>
+        <div class="hud-divider"></div>
+        <div class="hud-section">ESTADO</div>
+        <div class="hud-legend-item"><span class="hud-ldot" style="background:#64748b"></span>SIN EVALUAR</div>
+        <div class="hud-legend-item"><span class="hud-ldot" style="background:#22d3ee"></span>EVALUANDO</div>
+        <div class="hud-legend-item"><span class="hud-ldot" style="background:#f59e0b"></span>CONTACTAR</div>
+        <div class="hud-legend-item"><span class="hud-ldot" style="background:#f97316"></span>NEGOCIACIÓN</div>
+        <div class="hud-legend-item"><span class="hud-ldot" style="background:#22c55e"></span>ADQUIRIDA</div>
+        <div class="hud-legend-item"><span class="hud-ldot" style="background:#ef4444"></span>DESCARTADA</div>
     </div>
 
-    <!-- Floating navigation bar -->
+    <!-- Nav bar (bottom center) -->
     <div class="cat-nav-bar" id="cat-nav-bar">
-        <button class="nav-btn" id="nav-prev" onclick="navPrev()" title="Anterior (←)" disabled>&#8592;</button>
+        <button class="nav-btn" id="nav-prev" onclick="navPrev()" title="Anterior" disabled>&#8592;</button>
         <span class="nav-counter" id="nav-counter">— / —</span>
-        <button class="nav-btn" id="nav-next" onclick="navNext()" title="Siguiente (→)" disabled>&#8594;</button>
+        <button class="nav-btn" id="nav-next" onclick="navNext()" title="Siguiente" disabled>&#8594;</button>
         <div class="nav-sep"></div>
         <select class="nav-mode-sel" id="nav-mode-sel" onchange="setNavMode(this.value)">
-            <option value="sequential">Secuencial</option>
-            <option value="spatial">Espacial</option>
+            <option value="sequential">SEQ</option>
+            <option value="spatial">GEO</option>
         </select>
-        <button class="nav-scroll-btn" id="scroll-btn" onclick="toggleScrollNav()" title="Scroll para navegar">&#8645; Scroll</button>
+        <button class="nav-scroll-btn" id="scroll-btn" onclick="toggleScrollNav()">&#8645;</button>
     </div>
 
-    <!-- Layer panel -->
-    <div class="layer-panel">
-        <div class="layer-title">Capa base</div>
-        <label class="layer-item active" id="layer-dark" onclick="switchLayer('dark')">
-            <div class="layer-dot"></div><span class="layer-label">Oscuro</span>
-        </label>
-        <label class="layer-item" id="layer-osm" onclick="switchLayer('osm')">
-            <div class="layer-dot"></div><span class="layer-label">OpenStreetMap</span>
-        </label>
-        <label class="layer-item" id="layer-sat" onclick="switchLayer('sat')">
-            <div class="layer-dot"></div><span class="layer-label">Satélite</span>
-        </label>
-        <div class="layer-divider"></div>
-        <div class="layer-title">Capas GIS</div>
-        <div class="prov-item on" id="gis-provinces" onclick="toggleGisLayer('provinces')">
-            <div class="prov-chk">&#10003;</div><span class="prov-lbl">Provincias</span>
-        </div>
-        <div class="prov-item on" id="gis-municipalities" onclick="toggleGisLayer('municipalities')">
-            <div class="prov-chk">&#10003;</div><span class="prov-lbl">Municipios</span>
-        </div>
-        <div class="prov-item on" id="gis-parcelas" onclick="toggleGisLayer('parcelas')">
-            <div class="prov-chk">&#10003;</div><span class="prov-lbl">Parcelas</span>
-        </div>
-        <div class="layer-divider"></div>
-        <div class="layer-title">Origen</div>
-        <div id="provider-list"></div>
-    </div>
-
-    <!-- Legend -->
-    <div class="cat-legend">
-        <div class="legend-title">Estado</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Sin evaluar</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Evaluando</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Contactar</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Negociación</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Adquirida</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Descartada</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>Sin oportunidad</div>
-    </div>
-
-    <!-- Detail panel -->
+    <!-- Detail panel (dossier — no tabs) -->
     <div class="cat-detail" id="cat-detail">
         <div class="cat-detail-inner">
             <div class="cdh">
                 <div class="cdh-nav">
-                    <button class="cdh-nav-btn" id="cdh-prev" onclick="navPrev()" title="Anterior">&#8592;</button>
-                    <button class="cdh-nav-btn" id="cdh-next" onclick="navNext()" title="Siguiente">&#8594;</button>
+                    <button class="cdh-nav-btn" id="cdh-prev" onclick="navPrev()" title="Anterior" disabled>&#8592;</button>
+                    <button class="cdh-nav-btn" id="cdh-next" onclick="navNext()" title="Siguiente" disabled>&#8594;</button>
                 </div>
-                <div class="cdh-title" id="cdh-title">Parcela</div>
+                <div class="cdh-title" id="cdh-title">OBJETIVO</div>
                 <div class="cdh-actions">
-                    <button class="btn-cd btn-cd-blue" onclick="convertirLead()">Lead</button>
-                    <button class="btn-cd btn-cd-red" onclick="deleteParcela()">&#215;</button>
+                    <button class="btn-cd btn-cd-cyan" onclick="convertirLead()">LEAD</button>
+                    <button class="btn-cd btn-cd-red"  onclick="deleteParcela()">&#215;</button>
                     <button class="cdh-close" onclick="closeDetail()">
                         <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     </button>
                 </div>
-            </div>
-            <div class="cd-tabs">
-                <button class="cd-tab active" onclick="switchTab('info',this)">Info</button>
-                <button class="cd-tab" onclick="switchTab('propietarios',this)">Propietarios</button>
-                <button class="cd-tab" onclick="switchTab('oportunidad',this)">Oportunidad</button>
-                <button class="cd-tab" onclick="switchTab('investigacion',this)">Investigación</button>
-                <button class="cd-tab" onclick="switchTab('actividad',this)">Actividad</button>
             </div>
             <div class="cd-body" id="cd-body"></div>
         </div>
@@ -623,15 +496,15 @@ body { background: #0a0f1a; }
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 var ESTADOS = {
-    sin_evaluar:    {label:'Sin evaluar',  color:'#64748b'},
-    evaluando:      {label:'Evaluando',    color:'#3b82f6'},
-    contactar:      {label:'Contactar',    color:'#f59e0b'},
-    en_negociacion: {label:'Negociación',  color:'#f97316'},
-    adquirida:      {label:'Adquirida',    color:'#22c55e'},
-    descartada:     {label:'Descartada',   color:'#ef4444'},
+    sin_evaluar:    {label:'SIN EVALUAR',  color:'#64748b'},
+    evaluando:      {label:'EVALUANDO',    color:'#22d3ee'},
+    contactar:      {label:'CONTACTAR',    color:'#f59e0b'},
+    en_negociacion: {label:'NEGOCIACIÓN',  color:'#f97316'},
+    adquirida:      {label:'ADQUIRIDA',    color:'#22c55e'},
+    descartada:     {label:'DESCARTADA',   color:'#ef4444'},
 };
-var PRI_COLOR = {baja:'#94a3b8', media:'#3b82f6', alta:'#f59e0b', urgente:'#ef4444'};
-var PRI_LBL   = {baja:'Baja', media:'Media', alta:'Alta', urgente:'Urgente'};
+var PRI_COLOR = {baja:'#94a3b8', media:'#22d3ee', alta:'#f59e0b', urgente:'#ef4444'};
+var PRI_LBL   = {baja:'BAJA', media:'MEDIA', alta:'ALTA', urgente:'URGENTE'};
 var PROV_LABELS = {manual:'Manual', geojson:'GeoJSON', api_future:'API'};
 var CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -730,8 +603,8 @@ function switchLayer(name) {
     map.removeLayer(tileLayers[currentLayer]);
     tileLayers[name].addTo(map);
     currentLayer = name;
-    document.querySelectorAll('.layer-item[id^="layer-"]').forEach(function(el){
-        el.classList.toggle('active', el.id === 'layer-' + name);
+    document.querySelectorAll('.hud-layer-btn').forEach(function(el){
+        el.classList.toggle('active', el.id === 'hud-layer-' + name);
     });
 }
 
@@ -750,6 +623,7 @@ function loadParcelas() {
         .then(function(data){
             allParcelas = data;
             initProviderFilter();
+            updateBreadcrumb();
             // Level 0: show province polygon layer only
             renderProvincePolygons();
             buildNavList(); updateNavBar();
@@ -777,12 +651,12 @@ function renderProviderList(counts) {
     }
     var html = Object.keys(counts).map(function(sp){
         var on = provFilter[sp] !== false;
-        return '<div class="prov-item'+(on?' on':'')+'" onclick="toggleProvider(\''+sp+'\')">' +
-            '<div class="prov-chk">'+(on?'&#10003;':'')+'</div>' +
-            '<span class="prov-lbl">'+(PROV_LABELS[sp]||sp)+'</span>' +
-            '<span class="prov-cnt">'+counts[sp]+'</span></div>';
-    }).join('') || '<div style="font-size:11px;color:rgba(255,255,255,0.2)">Sin datos</div>';
-    document.getElementById('provider-list').innerHTML = html;
+        return '<div class="hud-row'+(on?' on':'')+'" onclick="toggleProvider(\''+sp+'\')">' +
+            '<div class="hud-chk">'+(on?'&#10003;':'')+'</div>' +
+            '<span>'+(PROV_LABELS[sp]||sp).toUpperCase()+'</span></div>';
+    }).join('') || '<div style="font-size:9px;color:var(--c-dim);font-family:var(--mono)">SIN DATOS</div>';
+    var el = document.getElementById('hud-provider-list');
+    if (el) el.innerHTML = html;
 }
 
 function toggleProvider(sp) {
@@ -818,12 +692,33 @@ function filterParcelas() {
 }
 
 // ── Province GeoJSON layer ────────────────────────────────────────────────────
+function _geoLoadEl() { return document.getElementById('geo-loading'); }
+function showGeoLoading() { var el = _geoLoadEl(); if(el) el.classList.add('visible'); }
+function hideGeoLoading() { var el = _geoLoadEl(); if(el) el.classList.remove('visible'); }
+function showGeoError(msg) {
+    var el = _geoLoadEl();
+    if (!el) return;
+    el.innerHTML = '<span style="color:#f87171">&#9888;</span> ' + (msg || 'No se pudo cargar el mapa de provincias');
+    el.classList.add('visible');
+    setTimeout(function(){ el.classList.remove('visible'); el.innerHTML = '<div class="geo-spin"></div>Cargando provincias…'; }, 6000);
+}
+
 function loadProvinceGeo(cb) {
     if (provinceGeoData) { cb(provinceGeoData); return; }
+    showGeoLoading();
     fetch('/api/catastro/geo/provincias', {credentials:'same-origin'})
         .then(function(r){ return r.json(); })
-        .then(function(d){ provinceGeoData = d; cb(d); })
-        .catch(function(){ cb(null); });
+        .then(function(d){
+            hideGeoLoading();
+            if (!d || !d.features || !d.features.length) {
+                showGeoError(d && d.error ? 'IGN no disponible: ' + d.error.slice(0,60) : null);
+                cb(null);
+                return;
+            }
+            provinceGeoData = d;
+            cb(d);
+        })
+        .catch(function(e){ hideGeoLoading(); showGeoError(); cb(null); });
 }
 
 function _provinceStyle(feature, selected) {
@@ -838,11 +733,11 @@ function _provinceStyle(feature, selected) {
     var intensity = cnt / maxC;
     if (selected) return {fillColor:'#2563eb', fillOpacity:0.35, color:'#3b82f6', weight:2.5, opacity:1};
     return {
-        fillColor:   cnt > 0 ? '#1d4ed8' : '#111827',
-        fillOpacity: cnt > 0 ? 0.06 + intensity * 0.28 : 0.38,
-        color:       '#374151',
-        weight:      1.5,
-        opacity:     0.85,
+        fillColor:   cnt > 0 ? '#1d4ed8' : '#0f172a',
+        fillOpacity: cnt > 0 ? 0.18 + intensity * 0.32 : 0.15,
+        color:       cnt > 0 ? '#60a5fa' : '#4b5563',
+        weight:      cnt > 0 ? 2 : 1.5,
+        opacity:     0.9,
     };
 }
 
@@ -851,32 +746,15 @@ function renderProvincePolygons() {
     provinceGeoLayer = null;
     if (!layerVis.provinces) return;
     loadProvinceGeo(function(data) {
-        if (!data || !data.features) return;
-        var counts = {};
-        allParcelas.forEach(function(p){
-            var pv = normalizeStr(p.province);
-            if (pv) counts[pv] = (counts[pv]||0)+1;
-        });
+        if (!data) return;
         provinceGeoLayer = L.geoJSON(data, {
-            style: function(f){ return _provinceStyle(f, false); },
+            style: {fillColor:'#0f172a', fillOpacity:0.25, color:'#334155', weight:1, opacity:0.65},
             onEachFeature: function(feature, layer) {
-                var name = feature.properties.nombre || '';
-                var cnt  = counts[normalizeStr(name)] || 0;
-                layer.bindTooltip(
-                    name + (cnt ? ' &bull; ' + cnt + ' parc.' : ''),
-                    {sticky:true, className:'geo-tooltip', direction:'top'}
-                );
-                layer.on({
-                    mouseover: function() {
-                        if (!navState.province || normalizeStr(navState.province.nombre) !== normalizeStr(name))
-                            layer.setStyle({fillOpacity:0.5, color:'#60a5fa', weight:2.5});
-                        layer.bringToFront();
-                    },
-                    mouseout: function() {
-                        if (!navState.province || normalizeStr(navState.province.nombre) !== normalizeStr(name))
-                            provinceGeoLayer.resetStyle(layer);
-                    },
-                    click: function(e) { L.DomEvent.stopPropagation(e); _clickProvince(feature, layer); }
+                var nombre = feature.properties.nombre || '';
+                layer.bindTooltip(nombre, {sticky:true, className:'geo-tooltip', direction:'top'});
+                layer.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    _clickProvince(feature, layer);
                 });
             }
         }).addTo(map);
@@ -888,22 +766,8 @@ function _clickProvince(feature, layer) {
     navState.level    = 1;
     navState.province = {nombre: nombre, id: feature.properties.in1 || '', layer: layer};
     navState.municipality = null;
-    // Restyle all provinces
-    if (provinceGeoLayer) {
-        provinceGeoLayer.eachLayer(function(l) {
-            if (!l.feature) return;
-            var n = l.feature.properties.nombre || '';
-            if (normalizeStr(n) === normalizeStr(nombre))
-                l.setStyle({fillColor:'#2563eb', fillOpacity:0.35, color:'#3b82f6', weight:2.5});
-            else
-                l.setStyle({fillOpacity:0.15, color:'#1f2937', weight:1.5});
-        });
-    }
-    map.fitBounds(layer.getBounds(), {padding:[30,30], maxZoom:9, animate:true, duration:0.7});
-    updateBreadcrumb();
-    renderMap();
-    if (layerVis.municipalities) renderMunicipioPolygons();
-    buildNavList(); updateNavBar();
+    try { map.fitBounds(layer.getBounds(), {padding:[20,20], maxZoom:9, animate:false}); } catch(e){}
+    updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
 }
 
 // ── Municipality GeoJSON layer ─────────────────────────────────────────────────
@@ -917,47 +781,17 @@ function renderMunicipioPolygons() {
         .then(function(r){ return r.json(); })
         .then(function(data) {
             if (!data || !data.features || !data.features.length) return;
-            var counts = {};
-            filterData().forEach(function(p){
-                var mv = normalizeStr(p.municipality);
-                if (mv) counts[mv] = (counts[mv]||0)+1;
-            });
             municipioGeoLayer = L.geoJSON(data, {
-                style: function(f) {
-                    var name = f.properties.nombre || '';
-                    var cnt  = counts[normalizeStr(name)] || 0;
-                    if (navState.municipality && normalizeStr(navState.municipality.nombre) === normalizeStr(name))
-                        return {fillColor:'#7c3aed', fillOpacity:0.38, color:'#a78bfa', weight:2, dashArray:null};
-                    return {
-                        fillColor:   cnt > 0 ? '#4c1d95' : '#1f2937',
-                        fillOpacity: cnt > 0 ? 0.12 + (cnt/8)*0.22 : 0.18,
-                        color:       '#4b5563',
-                        weight:      1,
-                        dashArray:   '4,3',
-                        opacity:     0.7,
-                    };
-                },
+                style: {fillColor:'#0f172a', fillOpacity:0.15, color:'#475569', weight:1, dashArray:'4,3', opacity:0.5},
                 onEachFeature: function(feature, layer) {
-                    var name = feature.properties.nombre || '';
-                    var cnt  = counts[normalizeStr(name)] || 0;
-                    layer.bindTooltip(
-                        name + (cnt ? ' &bull; ' + cnt : ''),
-                        {sticky:true, className:'geo-tooltip', direction:'top'}
-                    );
-                    layer.on({
-                        mouseover: function() {
-                            if (!navState.municipality || normalizeStr(navState.municipality.nombre) !== normalizeStr(name))
-                                layer.setStyle({fillOpacity:0.42, color:'#a78bfa', weight:2, dashArray:null});
-                        },
-                        mouseout: function() {
-                            if (!navState.municipality || normalizeStr(navState.municipality.nombre) !== normalizeStr(name))
-                                municipioGeoLayer.resetStyle(layer);
-                        },
-                        click: function(e) { L.DomEvent.stopPropagation(e); _clickMunicipio(feature, layer); }
+                    var nombre = feature.properties.nombre || '';
+                    layer.bindTooltip(nombre, {sticky:true, className:'geo-tooltip', direction:'top'});
+                    layer.on('click', function(e) {
+                        L.DomEvent.stopPropagation(e);
+                        _clickMunicipio(feature, layer);
                     });
                 }
             }).addTo(map);
-            // Provinces stay on top of municipalities
             if (municipioGeoLayer) municipioGeoLayer.bringToBack();
         })
         .catch(function(){});
@@ -967,20 +801,8 @@ function _clickMunicipio(feature, layer) {
     var nombre = feature.properties.nombre || '';
     navState.level        = 2;
     navState.municipality = {nombre: nombre, id: feature.properties.in1||'', layer: layer};
-    if (municipioGeoLayer) {
-        municipioGeoLayer.eachLayer(function(l) {
-            if (!l.feature) return;
-            var n = l.feature.properties.nombre || '';
-            if (normalizeStr(n) === normalizeStr(nombre))
-                l.setStyle({fillColor:'#7c3aed', fillOpacity:0.38, color:'#a78bfa', weight:2, dashArray:null});
-            else
-                municipioGeoLayer.resetStyle(l);
-        });
-    }
-    map.fitBounds(layer.getBounds(), {padding:[20,20], maxZoom:13, animate:true, duration:0.5});
-    updateBreadcrumb();
-    renderMap();
-    buildNavList(); updateNavBar();
+    try { map.fitBounds(layer.getBounds(), {padding:[20,20], maxZoom:13, animate:false}); } catch(e){}
+    updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
 }
 
 // ── Drill up ──────────────────────────────────────────────────────────────────
@@ -990,21 +812,14 @@ function drillUp(level) {
         closeDetail();
         _clearParcelaLayers();
         if (municipioGeoLayer) { try{map.removeLayer(municipioGeoLayer);}catch(e){} municipioGeoLayer=null; }
-        if (provinceGeoLayer) {
-            provinceGeoLayer.eachLayer(function(l){ provinceGeoLayer.resetStyle(l); });
-        } else {
-            renderProvincePolygons();
-        }
-        map.flyTo([-38,-64], 5, {duration:0.7});
-        updateBreadcrumb(); buildNavList(); updateNavBar();
+        if (!provinceGeoLayer) renderProvincePolygons();
+        map.setView([-38,-64], 5, {animate:false});
+        updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
     } else if (level === 1 && navState.province) {
         navState.level = 1; navState.municipality = null;
         closeDetail();
-        if (municipioGeoLayer) {
-            municipioGeoLayer.eachLayer(function(l){ municipioGeoLayer.resetStyle(l); });
-        }
         if (navState.province.layer) {
-            try{ map.fitBounds(navState.province.layer.getBounds(), {padding:[30,30], maxZoom:9, duration:0.5}); }catch(e){}
+            try{ map.fitBounds(navState.province.layer.getBounds(), {padding:[20,20], maxZoom:9, animate:false}); }catch(e){}
         }
         updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
     }
@@ -1016,37 +831,49 @@ function _clearParcelaLayers() {
     markers = {}; polygons = {}; activeMarker = null;
 }
 
-// ── Breadcrumb ────────────────────────────────────────────────────────────────
+// ── Breadcrumb (writes to status bar) ────────────────────────────────────────
 function updateBreadcrumb() {
-    var bc   = document.getElementById('cat-breadcrumb');
-    var sep1 = document.getElementById('bc-sep1');
-    var bcp  = document.getElementById('bc-province');
-    var sep2 = document.getElementById('bc-sep2');
-    var bcm  = document.getElementById('bc-municipality');
+    var scope = document.getElementById('sb-scope');
+    if (!scope) return;
     if (navState.level === 0) {
-        bc.style.display = 'none'; return;
-    }
-    bc.style.display   = 'flex';
-    sep1.style.display = 'inline';
-    bcp.style.display  = 'inline';
-    bcp.textContent    = navState.province ? navState.province.nombre : '';
-    if (navState.level >= 2 && navState.municipality) {
-        sep2.style.display = 'inline';
-        bcm.style.display  = 'inline';
-        bcm.textContent    = navState.municipality.nombre;
+        scope.innerHTML = 'ARG';
     } else {
-        sep2.style.display = 'none';
-        bcm.style.display  = 'none';
+        var html = '<span class="bc-clickable" onclick="drillUp(0)">ARG</span>';
+        if (navState.province) {
+            html += ' › ';
+            if (navState.level >= 2) {
+                html += '<span class="bc-clickable" onclick="drillUp(1)">'+esc(navState.province.nombre)+'</span>';
+            } else {
+                html += '<span class="bc-active">'+esc(navState.province.nombre)+'</span>';
+            }
+        }
+        if (navState.level >= 2 && navState.municipality) {
+            html += ' › <span class="bc-active">'+esc(navState.municipality.nombre)+'</span>';
+        }
+        scope.innerHTML = html;
     }
+    updateSbCounts();
+}
+
+function updateSbCounts() {
+    var el = document.getElementById('sb-counts');
+    if (!el) return;
+    var list = filterData();
+    var total = list.length;
+    if (!total) { el.textContent = ''; return; }
+    var urgente = list.filter(function(p){ return p.oportunidad && p.oportunidad.prioridad === 'urgente'; }).length;
+    var txt = total + ' OBJETIVO' + (total !== 1 ? 'S' : '');
+    if (urgente) txt += ' · ' + urgente + ' URGENTE' + (urgente !== 1 ? 'S' : '');
+    el.textContent = txt;
 }
 
 // ── GIS layer visibility ──────────────────────────────────────────────────────
 function toggleGisLayer(name) {
     layerVis[name] = !layerVis[name];
-    var el = document.getElementById('gis-' + name);
+    var el = document.getElementById('hud-gis-' + name);
     if (el) {
         el.classList.toggle('on', layerVis[name]);
-        el.querySelector('.prov-chk').innerHTML = layerVis[name] ? '&#10003;' : '';
+        el.querySelector('.hud-chk').innerHTML = layerVis[name] ? '&#10003;' : '';
     }
     if (name === 'provinces') {
         if (layerVis.provinces) {
@@ -1072,19 +899,132 @@ function toggleGisLayer(name) {
 
 // ── Map rendering ─────────────────────────────────────────────────────────────
 function renderMap() {
-    if (navState.level === 0) {
-        _clearParcelaLayers();
-        return;
-    }
-    if (!layerVis.parcelas) return;
     _clearParcelaLayers();
-    filterData().forEach(function(p){ addToMap(p); });
-    if (activeParcela && markers[activeParcela.id]) highlightMarker(activeParcela.id);
-    // Ensure province/municipality polygons stay below parcela markers
+    if (!layerVis.parcelas) return;
+    if      (navState.level === 0) { _renderProvinceDots(); }
+    else if (navState.level === 1) { _renderMunicipalityDots(); }
+    else {
+        filterData().forEach(function(p){ addToMap(p); });
+        if (activeParcela && markers[activeParcela.id]) highlightMarker(activeParcela.id);
+    }
     if (municipioGeoLayer) try{ municipioGeoLayer.bringToBack(); }catch(e){}
     if (provinceGeoLayer)  try{ provinceGeoLayer.bringToBack(); }catch(e){}
 }
 
+// ── Aggregated province dots (country level) ──────────────────────────────────
+function _renderProvinceDots() {
+    var byProv = {};
+    allParcelas.forEach(function(p) {
+        if (provFilter[p.source_provider || 'manual'] === false) return;
+        var key = p.province || '(sin provincia)';
+        if (!byProv[key]) byProv[key] = {list:[], sumLat:0, sumLng:0, n:0};
+        byProv[key].list.push(p);
+        if (p.coordinates_center) {
+            byProv[key].sumLat += p.coordinates_center.lat;
+            byProv[key].sumLng += p.coordinates_center.lng;
+            byProv[key].n++;
+        }
+    });
+    Object.keys(byProv).forEach(function(prov) {
+        var g = byProv[prov], count = g.list.length;
+        var center = _groupCenter(g, prov, provinceGeoLayer);
+        if (!center) return;
+        var color = _groupColor(g.list);
+        var hasUrgente = g.list.some(function(p){ return p.oportunidad && p.oportunidad.prioridad === 'urgente'; });
+        var size  = Math.min(16 + count * 3, 44);
+        var m = L.marker(center, {
+            icon: L.divIcon({
+                html: '<div class="agg-dot'+(hasUrgente?' urgente':'')+'" style="width:'+size+'px;height:'+size+'px;background:'+color+';box-shadow:0 0 14px '+color+'66;font-size:'+Math.max(9,Math.floor(size/3))+'px">'+count+'</div>',
+                className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
+            })
+        }).addTo(map);
+        m.bindTooltip('<strong>'+prov+'</strong> &bull; '+count+' parcela'+(count!==1?'s':''), {direction:'top', offset:[0,-size/2]});
+        m.on('click', function() {
+            navState.level = 1; navState.province = {nombre:prov, id:'', layer:null};
+            navState.municipality = null;
+            var zoomed = false;
+            if (provinceGeoLayer) {
+                provinceGeoLayer.eachLayer(function(l) {
+                    if (l.feature && normalizeStr(l.feature.properties.nombre) === normalizeStr(prov)) {
+                        try { map.fitBounds(l.getBounds(), {padding:[20,20], maxZoom:9, animate:false}); zoomed=true; } catch(e){}
+                    }
+                });
+            }
+            if (!zoomed && center) map.setView(center, 8, {animate:false});
+            updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
+        });
+        markers['prov__' + prov] = m;
+    });
+}
+
+// ── Aggregated municipality dots (province level) ─────────────────────────────
+function _renderMunicipalityDots() {
+    var byMuni = {};
+    filterData().forEach(function(p) {
+        var key = p.municipality || '(sin municipio)';
+        if (!byMuni[key]) byMuni[key] = {list:[], sumLat:0, sumLng:0, n:0};
+        byMuni[key].list.push(p);
+        if (p.coordinates_center) {
+            byMuni[key].sumLat += p.coordinates_center.lat;
+            byMuni[key].sumLng += p.coordinates_center.lng;
+            byMuni[key].n++;
+        }
+    });
+    Object.keys(byMuni).forEach(function(muni) {
+        var g = byMuni[muni], count = g.list.length;
+        var center = _groupCenter(g, muni, municipioGeoLayer);
+        if (!center) return;
+        var color = _groupColor(g.list);
+        var hasUrgente = g.list.some(function(p){ return p.oportunidad && p.oportunidad.prioridad === 'urgente'; });
+        var size  = Math.min(16 + count * 4, 44);
+        var m = L.marker(center, {
+            icon: L.divIcon({
+                html: '<div class="agg-dot'+(hasUrgente?' urgente':'')+'" style="width:'+size+'px;height:'+size+'px;background:'+color+';box-shadow:0 0 14px '+color+'66;font-size:'+Math.max(9,Math.floor(size/3))+'px">'+count+'</div>',
+                className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
+            })
+        }).addTo(map);
+        m.bindTooltip('<strong>'+muni+'</strong> &bull; '+count+' parcela'+(count!==1?'s':''), {direction:'top', offset:[0,-size/2]});
+        m.on('click', function() {
+            navState.level = 2; navState.municipality = {nombre:muni, id:'', layer:null};
+            if (center) map.setView(center, 12, {animate:false});
+            updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
+        });
+        markers['muni__' + muni] = m;
+    });
+}
+
+// Pick center: use polygon layer centroid if available, else average parcel coords
+function _groupCenter(g, name, geoLayer) {
+    if (geoLayer) {
+        var c = null;
+        geoLayer.eachLayer(function(l) {
+            if (l.feature && normalizeStr(l.feature.properties.nombre) === normalizeStr(name)) {
+                try { var b = l.getBounds(); c = [b.getCenter().lat, b.getCenter().lng]; } catch(e) {}
+            }
+        });
+        if (c) return c;
+    }
+    if (g.n > 0) return [g.sumLat / g.n, g.sumLng / g.n];
+    return null;
+}
+
+// Pick color: highest-priority oportunidad in the group, or default blue
+function _groupColor(list) {
+    var pri = ['urgente','alta','media','baja'];
+    for (var i = 0; i < pri.length; i++) {
+        for (var j = 0; j < list.length; j++) {
+            var op = list[j].oportunidad;
+            if (op && op.prioridad === pri[i] && ESTADOS[op.estado]) return ESTADOS[op.estado].color;
+        }
+    }
+    for (var j = 0; j < list.length; j++) {
+        var op = list[j].oportunidad;
+        if (op && ESTADOS[op.estado]) return ESTADOS[op.estado].color;
+    }
+    return '#3b82f6';
+}
+
+// ── Individual parcel rendering (municipality level only) ─────────────────────
 function addToMap(p) {
     var op     = p.oportunidad;
     var estado = op ? op.estado : null;
@@ -1096,27 +1036,28 @@ function addToMap(p) {
     if (p.geojson_geometry) {
         try {
             var poly = L.geoJSON(JSON.parse(p.geojson_geometry), {
-                style: {color:color, weight:2, opacity:0.8, fillColor:color, fillOpacity:0.12}
+                style: {color:color, weight:2.5, opacity:0.9, fillColor:color, fillOpacity:0.15}
             }).addTo(map);
             poly.on('click', function(){ openDetail(p.id); });
-            poly.on('mouseover', function(){ poly.setStyle({fillOpacity:0.28}); });
-            poly.on('mouseout',  function(){ if(!activeParcela||activeParcela.id!==p.id) poly.setStyle({fillOpacity:0.12}); });
+            poly.on('mouseover', function(){ poly.setStyle({fillOpacity:0.38, weight:3}); });
+            poly.on('mouseout',  function(){ if(!activeParcela||activeParcela.id!==p.id) poly.setStyle({fillOpacity:0.15, weight:2.5}); });
+            poly.bindTooltip(tip, {direction:'top'});
             polygons[p.id] = poly;
+            return;
         } catch(e) {}
     }
 
-    if (p.coordinates_center) {
-        var m = L.marker([p.coordinates_center.lat, p.coordinates_center.lng], {
-            icon: L.divIcon({
-                html: '<div class="cat-marker" style="background:'+color+';box-shadow:0 0 8px '+color+'55"></div>',
-                className:'', iconSize:[14,14], iconAnchor:[7,7]
-            })
-        }).addTo(map);
-        m.on('click', function(){ openDetail(p.id); });
-        m.bindTooltip(tip, {direction:'top', offset:[0,-8]});
-        m._catId = p.id;
-        markers[p.id] = m;
-    }
+    if (!p.coordinates_center) return;
+    var m = L.marker([p.coordinates_center.lat, p.coordinates_center.lng], {
+        icon: L.divIcon({
+            html: '<div class="cat-marker" style="background:'+color+';box-shadow:0 0 8px '+color+'55"></div>',
+            className:'', iconSize:[14,14], iconAnchor:[7,7]
+        })
+    }).addTo(map);
+    m.on('click', function(){ openDetail(p.id); });
+    m.bindTooltip(tip, {direction:'top', offset:[0,-8]});
+    m._catId = p.id;
+    markers[p.id] = m;
 }
 
 function highlightMarker(id) {
@@ -1228,12 +1169,16 @@ function onScrollNav(e) {
 // ── View switcher ─────────────────────────────────────────────────────────────
 function setView(v, btn) {
     currentView = v;
-    document.querySelectorAll('.cat-view-btn').forEach(function(b){ b.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
-    document.getElementById('mapa-view').style.display         = v==='mapa'          ? 'block' : 'none';
-    document.getElementById('parcelas-view').style.display     = v==='parcelas'      ? 'block' : 'none';
-    document.getElementById('oportunidades-view').style.display= v==='oportunidades' ? 'block' : 'none';
-    document.getElementById('cat-nav-bar').style.display       = v==='mapa'          ? 'flex'  : 'none';
+    document.querySelectorAll('.sb-view').forEach(function(b){ b.classList.remove('active'); });
+    var idMap = {mapa:'sbv-mapa', parcelas:'sbv-parcelas', oportunidades:'sbv-opor'};
+    var activeEl = document.getElementById(idMap[v]);
+    if (activeEl) activeEl.classList.add('active');
+    document.getElementById('mapa-view').style.display          = v==='mapa'          ? 'block' : 'none';
+    document.getElementById('parcelas-view').style.display      = v==='parcelas'      ? 'block' : 'none';
+    document.getElementById('oportunidades-view').style.display = v==='oportunidades' ? 'block' : 'none';
+    document.getElementById('cat-nav-bar').style.display        = v==='mapa'          ? 'flex'  : 'none';
+    var hud = document.getElementById('cat-hud');
+    if (hud) hud.style.display = v==='mapa' ? 'block' : 'none';
     if (v === 'mapa') { setTimeout(function(){ map.invalidateSize(); }, 10); }
     if (v === 'parcelas') renderParcelasList();
     if (v === 'oportunidades') renderOporList();
@@ -1253,7 +1198,7 @@ function renderParcelasList() {
         var op  = p.oportunidad;
         var est = op ? (ESTADOS[op.estado]||{label:op.estado,color:'#888'}) : null;
         var sp  = p.source_provider || 'manual';
-        return '<tr onclick="openDetail('+p.id+');setView(\'mapa\',document.querySelector(\'.cat-view-btn\'))">' +
+        return '<tr onclick="openDetail('+p.id+');setView(\'mapa\',null)">' +
             '<td style="font-family:monospace;font-size:12px">'+(p.parcel_id||'—')+'</td>' +
             '<td><strong>'+esc(p.municipality||'—')+'</strong>'+(p.province?'<br><span style="font-size:11px;color:var(--muted)">'+esc(p.province)+'</span>':'')+'</td>' +
             '<td>'+esc(p.zone||'—')+'</td>' +
@@ -1280,7 +1225,7 @@ function renderOporList() {
         var loc = [p.municipality,p.province].filter(Boolean).join(', ')||p.parcel_id||'#'+p.id;
         var segStyle = '';
         if (op.proximo_seguimiento) { var d=new Date(op.proximo_seguimiento); if(d<new Date()) segStyle='color:#ef4444;font-weight:600'; }
-        return '<tr onclick="openDetail('+p.id+');setView(\'mapa\',document.querySelector(\'.cat-view-btn\'))">' +
+        return '<tr onclick="openDetail('+p.id+');setView(\'mapa\',null)">' +
             '<td><strong>'+esc(loc)+'</strong>'+(p.surface_area?'<br><span style="font-size:11px;color:var(--muted)">'+p.surface_area+' ha</span>':'')+'</td>' +
             '<td><span class="estado-d" style="background:'+est.color+'22;color:'+est.color+'"><span style="width:6px;height:6px;border-radius:50%;background:'+est.color+'"></span>'+est.label+'</span></td>' +
             '<td><span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:'+pc+'22;color:'+pc+'">'+PRI_LBL[op.prioridad]+'</span></td>' +
@@ -1293,40 +1238,69 @@ function renderOporList() {
 }
 
 // ── Detail panel ──────────────────────────────────────────────────────────────
+
+// Navigate to the correct province/municipality level, then open detail
 function openDetail(id) {
     var p = allParcelas.find(function(x){ return x.id===id; });
     if (!p) return;
-    // Drill into province if needed
-    if (navState.level === 0) {
-        if (p.province && provinceGeoLayer) {
-            var matched = null;
-            provinceGeoLayer.eachLayer(function(l) {
-                if (l.feature && normalizeStr(l.feature.properties.nombre) === normalizeStr(p.province))
-                    matched = {feature: l.feature, layer: l};
-            });
-            if (matched) { _clickProvince(matched.feature, matched.layer); }
-            else {
-                navState.level = 1;
-                navState.province = {nombre: p.province || '', id:'', layer: null};
-                updateBreadcrumb(); renderMap();
-            }
-        } else {
-            navState.level = 1;
-            navState.province = {nombre: p.province || '', id:'', layer: null};
-            updateBreadcrumb(); renderMap();
-        }
+    if (navState.level === 0 && p.province) {
+        _drillToProvince(p, function() { _finalizeOpenDetail(id); });
+        return;
     }
+    if (navState.level === 1 && p.municipality) {
+        _drillToMunicipality(p, function() { _finalizeOpenDetail(id); });
+        return;
+    }
+    _finalizeOpenDetail(id);
+}
+
+// Drill into a province (uses polygon layer if loaded, falls back to navState)
+function _drillToProvince(p, cb) {
+    if (provinceGeoLayer && p.province) {
+        var matched = null;
+        provinceGeoLayer.eachLayer(function(l) {
+            if (l.feature && normalizeStr(l.feature.properties.nombre) === normalizeStr(p.province))
+                matched = {feature: l.feature, layer: l};
+        });
+        if (matched) { _clickProvince(matched.feature, matched.layer); if (cb) cb(); return; }
+    }
+    navState.level = 1;
+    navState.province = {nombre: p.province || '', id:'', layer: null};
+    updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
+    if (cb) cb();
+}
+
+// Drill into a municipality (uses polygon layer if loaded, falls back to navState)
+function _drillToMunicipality(p, cb) {
+    if (municipioGeoLayer && p.municipality) {
+        var matched = null;
+        municipioGeoLayer.eachLayer(function(l) {
+            if (l.feature && normalizeStr(l.feature.properties.nombre) === normalizeStr(p.municipality))
+                matched = {feature: l.feature, layer: l};
+        });
+        if (matched) { _clickMunicipio(matched.feature, matched.layer); if (cb) cb(); return; }
+    }
+    navState.level = 2;
+    navState.municipality = {nombre: p.municipality || '', id:'', layer: null};
+    updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
+    if (cb) cb();
+}
+
+// Open the detail panel for a parcel (assumes nav is already at the right level)
+function _finalizeOpenDetail(id) {
+    var p = allParcelas.find(function(x){ return x.id===id; });
+    if (!p) return;
     activeParcela = p;
     buildNavList();
     navIndex = navList.findIndex(function(x){ return x.id===id; });
     var loc = [p.municipality,p.province].filter(Boolean).join(', ') || p.parcel_id || 'Parcela #'+p.id;
-    document.getElementById('cdh-title').textContent = loc;
-    switchTab(activeTab, null);
+    document.getElementById('cdh-title').textContent = loc.toUpperCase();
+    renderDossier(p);
     document.getElementById('cat-detail').classList.add('open');
     updateNavBar();
     highlightMarker(id);
     if (currentView === 'mapa' && p.coordinates_center) {
-        map.flyTo([p.coordinates_center.lat, p.coordinates_center.lng], Math.max(map.getZoom(),12), {duration:0.7});
+        map.setView([p.coordinates_center.lat, p.coordinates_center.lng], Math.max(map.getZoom(),13), {animate:false});
     }
 }
 
@@ -1349,69 +1323,55 @@ function closeDetail() {
     updateNavBar();
 }
 
-function switchTab(tab, btn) {
-    activeTab = tab;
-    document.querySelectorAll('.cd-tab').forEach(function(b){ b.classList.remove('active'); });
-    if (btn) {
-        btn.classList.add('active');
-    } else {
-        var idx = ['info','propietarios','oportunidad','investigacion','actividad'].indexOf(tab);
-        var tabs = document.querySelectorAll('.cd-tab');
-        if (tabs[idx]) tabs[idx].classList.add('active');
-    }
-    renderTab();
+function renderDossier(p) {
+    if (!p) return;
+    var body = document.getElementById('cd-body');
+    if (!body) return;
+    currentOpPot = (p.oportunidad && p.oportunidad.potencial) || 3;
+    body.innerHTML =
+        '<div class="dos-hdr"><span class="dos-num">01</span> IDENTIFICACIÓN</div>' +
+        '<div class="dos-section" id="dos-ident">' + _dosIdent(p) + '</div>' +
+        '<div class="dos-hdr"><span class="dos-num">02</span> OPORTUNIDAD</div>' +
+        '<div class="dos-section" id="dos-opor">' + _dosOpor(p) + '</div>' +
+        '<div class="dos-hdr"><span class="dos-num">03</span> PROPIETARIO</div>' +
+        '<div class="dos-section" id="dos-prop">' + _dosProp(p) + '</div>' +
+        '<div class="dos-hdr"><span class="dos-num">04</span> INVESTIGACIÓN</div>' +
+        '<div class="dos-section" id="dos-inv">' + _dosInv(p) + '</div>' +
+        '<div class="dos-hdr"><span class="dos-num">05</span> ACTIVIDAD</div>' +
+        '<div class="dos-section" id="dos-act">' + _dosAct(p) + '</div>';
+    loadNeighbors(p);
 }
 
-function renderTab() {
-    if (!activeParcela) return;
-    if      (activeTab === 'info')         renderInfoTab(activeParcela);
-    else if (activeTab === 'propietarios') renderPropietariosTab(activeParcela);
-    else if (activeTab === 'oportunidad')  renderOporTab(activeParcela);
-    else if (activeTab === 'investigacion')renderInvTab(activeParcela);
-    else if (activeTab === 'actividad')    renderActividadTab(activeParcela);
-}
-
-// ── Info tab ──────────────────────────────────────────────────────────────────
-function renderInfoTab(p) {
+// ── Dossier section renderers ─────────────────────────────────────────────────
+function _dosIdent(p) {
     var c = p.coordinates_center;
     var sp = p.source_provider || 'manual';
-    var spColor = {manual:'#94a3b8', geojson:'#3b82f6', api_future:'#a78bfa'}[sp] || '#94a3b8';
-    document.getElementById('cd-body').innerHTML =
-        '<div class="cd-section">' +
-          '<div class="cd-section-ttl">Identificación</div>' +
+    var spColor = {manual:'#94a3b8', geojson:'#22d3ee', api_future:'#a78bfa'}[sp] || '#94a3b8';
+    return '<div class="cd-section">' +
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
-            '<span class="cd-badge" style="background:'+spColor+'22;color:'+spColor+';font-size:10px">'+(PROV_LABELS[sp]||sp)+'</span>' +
+            '<span class="cd-badge" style="background:'+spColor+'22;color:'+spColor+'">'+(PROV_LABELS[sp]||sp).toUpperCase()+'</span>' +
             (c?'<span class="cd-coords" style="flex:1">'+c.lat.toFixed(6)+', '+c.lng.toFixed(6)+'</span>':'') +
           '</div>' +
-          '<div class="cd-row"><div class="cd-label">ID Catastral</div><input class="cd-input" id="ci-pid" value="'+esc(p.parcel_id)+'"/></div>' +
-          '<div class="cd-row"><div class="cd-label">Superficie (ha)</div><input class="cd-input" id="ci-area" type="number" step="any" value="'+(p.surface_area||'')+'"/></div>' +
+          '<div class="cd-row"><div class="cd-label">ID CATASTRAL</div><input class="cd-input" id="ci-pid" value="'+esc(p.parcel_id)+'"/></div>' +
+          '<div class="cd-row"><div class="cd-label">SUPERFICIE (ha)</div><input class="cd-input" id="ci-area" type="number" step="any" value="'+(p.surface_area||'')+'"/></div>' +
           '<div class="cd-row-h">' +
-            '<div class="cd-row"><div class="cd-label">Municipio</div><input class="cd-input" id="ci-muni" value="'+esc(p.municipality)+'"/></div>' +
-            '<div class="cd-row"><div class="cd-label">Provincia</div><input class="cd-input" id="ci-prov" value="'+esc(p.province)+'"/></div>' +
+            '<div class="cd-row"><div class="cd-label">MUNICIPIO</div><input class="cd-input" id="ci-muni" value="'+esc(p.municipality)+'"/></div>' +
+            '<div class="cd-row"><div class="cd-label">PROVINCIA</div><input class="cd-input" id="ci-prov" value="'+esc(p.province)+'"/></div>' +
           '</div>' +
           '<div class="cd-row-h">' +
-            '<div class="cd-row"><div class="cd-label">Zona catastral</div><input class="cd-input" id="ci-zone" value="'+esc(p.zone)+'"/></div>' +
-            '<div class="cd-row"><div class="cd-label">Uso del suelo</div>' +
+            '<div class="cd-row"><div class="cd-label">ZONA</div><input class="cd-input" id="ci-zone" value="'+esc(p.zone)+'"/></div>' +
+            '<div class="cd-row"><div class="cd-label">USO DEL SUELO</div>' +
               '<select class="cd-select" id="ci-uso">'+
                 ['','Agrícola','Ganadero','Mixto','Forestal','Urbano','Industrial','Turístico','Otro'].map(function(u){ return '<option'+(u===p.land_use?' selected':'')+'>'+u+'</option>'; }).join('')+
               '</select></div>' +
           '</div>' +
-          '<div class="cd-row"><div class="cd-label">Notas</div><textarea class="cd-textarea" id="ci-notes">'+esc(p.notes)+'</textarea></div>' +
-          '<button class="cd-save-btn" onclick="saveInfo()">Guardar</button>' +
+          '<div class="cd-row"><div class="cd-label">NOTAS</div><textarea class="cd-textarea" id="ci-notes">'+esc(p.notes)+'</textarea></div>' +
+          '<button class="cd-save-btn" onclick="saveInfo()">GUARDAR</button>' +
         '</div>' +
-        '<div class="cd-section">' +
-          '<div class="cd-section-ttl">Propietario</div>' +
-          renderPropietarioCard(p) +
-          '<div class="prop-search-wrap" id="prop-search-wrap">' +
-            '<input class="cd-input" id="prop-q" placeholder="Buscar cliente..." oninput="searchClientes(this.value)" autocomplete="off"/>' +
-            '<div class="prop-results" id="prop-results"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="cd-section" id="neighbors-section">' +
-          '<div class="cd-section-ttl">Vecinos próximos</div>' +
-          '<div id="neighbor-list-wrap" style="color:rgba(255,255,255,0.2);font-size:11.5px">Cargando...</div>' +
+        '<div class="cd-section" style="margin-top:4px">' +
+          '<div class="cd-section-ttl">VECINOS PRÓXIMOS</div>' +
+          '<div id="neighbor-list-wrap" style="color:var(--c-dim);font-size:11px;font-family:var(--mono)">cargando…</div>' +
         '</div>';
-    loadNeighbors(p);
 }
 
 function loadNeighbors(p) {
@@ -1449,32 +1409,28 @@ function saveInfo() {
         zone:         document.getElementById('ci-zone').value.trim() || null,
         land_use:     document.getElementById('ci-uso').value || null,
         notes:        document.getElementById('ci-notes').value.trim() || null,
-    }, function(){ toast('Guardado'); });
+    }, function(){ toast('Guardado'); renderDossier(activeParcela); });
 }
 
-// ── Oportunidad tab ───────────────────────────────────────────────────────────
 var currentOpPot = 3;
 
-function renderOporTab(p) {
+function _dosOpor(p) {
     var op = p.oportunidad || {};
     var pot = op.potencial || 3;
-    currentOpPot = pot;
     var starsHtml = '';
     for (var i=1;i<=5;i++) starsHtml += '<button class="cd-star'+(i<=pot?' on':'')+'" onclick="setOpPot('+i+')" data-s="'+i+'">&#9733;</button>';
-    document.getElementById('cd-body').innerHTML =
-        '<div class="cd-section">' +
-          '<div class="cd-section-ttl">Estado de adquisición</div>' +
-          '<div class="cd-row"><div class="cd-label">Estado</div>' +
+    return '<div class="cd-section">' +
+          '<div class="cd-row"><div class="cd-label">ESTADO</div>' +
             '<select class="cd-select" id="op-estado">'+Object.keys(ESTADOS).map(function(k){ return '<option value="'+k+'"'+(k===op.estado?' selected':'')+'>'+ESTADOS[k].label+'</option>'; }).join('')+'</select></div>' +
           '<div class="cd-row-h">' +
-            '<div class="cd-row"><div class="cd-label">Prioridad</div>' +
+            '<div class="cd-row"><div class="cd-label">PRIORIDAD</div>' +
               '<select class="cd-select" id="op-pri">'+Object.keys(PRI_LBL).map(function(k){ return '<option value="'+k+'"'+(k===op.prioridad?' selected':'')+'>'+PRI_LBL[k]+'</option>'; }).join('')+'</select></div>' +
-            '<div class="cd-row"><div class="cd-label">Potencial</div><div class="cd-stars" id="op-stars">'+starsHtml+'</div></div>' +
+            '<div class="cd-row"><div class="cd-label">POTENCIAL</div><div class="cd-stars" id="op-stars">'+starsHtml+'</div></div>' +
           '</div>' +
-          '<div class="cd-row"><div class="cd-label">Seguimiento</div><input class="cd-input" id="op-seg" type="date" value="'+(op.proximo_seguimiento||'')+'"/></div>' +
-          '<div class="cd-row"><div class="cd-label">Descripción</div><textarea class="cd-textarea" id="op-desc">'+esc(op.descripcion||'')+'</textarea></div>' +
-          '<div class="cd-row"><div class="cd-label">Observaciones</div><textarea class="cd-textarea" id="op-obs">'+esc(op.observaciones||'')+'</textarea></div>' +
-          '<button class="cd-save-btn" onclick="saveOportunidad()">Guardar</button>' +
+          '<div class="cd-row"><div class="cd-label">SEGUIMIENTO</div><input class="cd-input" id="op-seg" type="date" value="'+(op.proximo_seguimiento||'')+'"/></div>' +
+          '<div class="cd-row"><div class="cd-label">DESCRIPCIÓN</div><textarea class="cd-textarea" id="op-desc">'+esc(op.descripcion||'')+'</textarea></div>' +
+          '<div class="cd-row"><div class="cd-label">OBSERVACIONES</div><textarea class="cd-textarea" id="op-obs">'+esc(op.observaciones||'')+'</textarea></div>' +
+          '<button class="cd-save-btn" onclick="saveOportunidad()">GUARDAR</button>' +
         '</div>';
 }
 
@@ -1492,11 +1448,42 @@ function saveOportunidad() {
         descripcion:         document.getElementById('op-desc').value.trim(),
         observaciones:       document.getElementById('op-obs').value.trim(),
         proximo_seguimiento: document.getElementById('op-seg').value || null,
-    }}, function(){ toast('Oportunidad guardada'); renderMap(); });
+    }}, function(){ toast('Oportunidad guardada'); renderMap(); renderDossier(activeParcela); });
 }
 
-// ── Investigación tab ─────────────────────────────────────────────────────────
-function renderInvTab(p) {
+function _dosProp(p) {
+    var owners = p.owners || [];
+    var ownHtml = owners.length ?
+        owners.map(function(o){
+            var cls = 'conf-'+(o.confidence_level||'unknown');
+            var meta = [o.phone?'&#128222; '+esc(o.phone):'', o.email?'&#9993; '+esc(o.email):'', o.source?'Fuente: '+esc(o.source):''].filter(Boolean).join(' · ');
+            return '<div class="owner-item">' +
+                '<button class="owner-del" onclick="deleteOwner('+o.id+')">&#215;</button>' +
+                '<div class="owner-name">'+(o.full_name?esc(o.full_name):'Sin nombre')+'</div>' +
+                (meta?'<div class="owner-meta">'+meta+'</div>':'') +
+                '<span class="owner-conf '+cls+'">'+(CONF_LABELS[o.confidence_level||'unknown']||o.confidence_level)+'</span>' +
+                (o.notes?'<div style="font-size:10.5px;color:var(--c-muted);margin-top:3px">'+esc(o.notes)+'</div>':'') +
+                '</div>';
+        }).join('') :
+        '<div class="owner-empty">SIN PROPIETARIOS</div>';
+    return '<div class="cd-section">' +
+          '<div class="cd-section-ttl">CLIENTE VINCULADO</div>' +
+          renderPropietarioCard(p) +
+          '<div class="prop-search-wrap" id="prop-search-wrap">' +
+            '<input class="cd-input" id="prop-q" placeholder="buscar cliente..." oninput="searchClientes(this.value)" autocomplete="off"/>' +
+            '<div class="prop-results" id="prop-results"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cd-section" style="margin-top:4px">' +
+          '<div class="cd-section-ttl">PROPIETARIOS REGISTRADOS</div>' +
+          '<div id="owners-list">'+ownHtml+'</div>' +
+          '<div id="owner-form-wrap"></div>' +
+          '<button class="inv-add-btn" onclick="openOwnerForm()">+ AGREGAR</button>' +
+        '</div>';
+}
+
+// ── Investigación ─────────────────────────────────────────────────────────────
+function _dosInv(p) {
     var invHtml = p.investigaciones.length ?
         p.investigaciones.map(function(inv){
             return '<div class="inv-item">' +
@@ -1504,16 +1491,14 @@ function renderInvTab(p) {
                 (inv.nombre?'<div class="inv-name">'+esc(inv.nombre)+'</div>':'') +
                 '<div class="inv-meta">'+[inv.telefono?'&#128222; '+inv.telefono:'',inv.email?'&#9993; '+inv.email:'',inv.fuente_informacion?'Fuente: '+inv.fuente_informacion:''].filter(Boolean).join(' &middot; ')+'</div>' +
                 (inv.notas?'<div class="inv-notes">'+esc(inv.notas)+'</div>':'') +
-                '<div style="font-size:10px;color:rgba(255,255,255,0.2);margin-top:4px">'+inv.fecha+'</div>' +
+                '<div style="font-size:9.5px;color:var(--c-dim);margin-top:3px;font-family:var(--mono)">'+inv.fecha+'</div>' +
                 '</div>';
         }).join('') :
-        '<div class="inv-empty">Sin investigaciones registradas</div>';
-    document.getElementById('cd-body').innerHTML =
-        '<div class="cd-section">' +
-          '<div class="cd-section-ttl">Investigación de propietario</div>' +
+        '<div class="inv-empty">SIN INVESTIGACIONES</div>';
+    return '<div class="cd-section">' +
           '<div id="inv-list">'+invHtml+'</div>' +
           '<div id="inv-form-wrap"></div>' +
-          '<button class="inv-add-btn" onclick="openInvForm()">+ Agregar investigación</button>' +
+          '<button class="inv-add-btn" onclick="openInvForm()">+ AGREGAR</button>' +
         '</div>';
 }
 
@@ -1553,7 +1538,7 @@ function submitInv() {
         activeParcela.investigaciones.unshift(inv);
         var idx=allParcelas.findIndex(function(x){ return x.id===activeParcela.id; });
         if(idx!==-1) allParcelas[idx]=activeParcela;
-        renderInvTab(activeParcela);
+        renderDossier(activeParcela);
         toast('Investigación registrada');
     });
 }
@@ -1564,37 +1549,14 @@ function deleteInv(invId) {
         method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
     }).then(function(){
         activeParcela.investigaciones = activeParcela.investigaciones.filter(function(i){ return i.id!==invId; });
-        renderInvTab(activeParcela);
+        renderDossier(activeParcela);
     });
 }
 
-// ── Propietarios tab (M2M PropietarioCatastral) ────────────────────────────────
-var CONF_LABELS = {unknown:'Sin verificar', inferred:'Inferido', verified:'Verificado'};
+// ── Propietarios ──────────────────────────────────────────────────────────────
+var CONF_LABELS = {unknown:'SIN VERIFICAR', inferred:'INFERIDO', verified:'VERIFICADO'};
 
-function renderPropietariosTab(p) {
-    var owners = p.owners || [];
-    var ownHtml = owners.length ?
-        owners.map(function(o){
-            var cls = 'conf-'+(o.confidence_level||'unknown');
-            var meta = [o.phone?'&#128222; '+esc(o.phone):'', o.email?'&#9993; '+esc(o.email):'', o.source?'Fuente: '+esc(o.source):''].filter(Boolean).join(' &middot; ');
-            return '<div class="owner-item">' +
-                '<button class="owner-del" onclick="deleteOwner('+o.id+')">&#215;</button>' +
-                '<div class="owner-name">'+(o.full_name?esc(o.full_name):'Sin nombre')+'</div>' +
-                (meta?'<div class="owner-meta">'+meta+'</div>':'') +
-                '<span class="owner-conf '+cls+'">'+(CONF_LABELS[o.confidence_level||'unknown']||o.confidence_level)+'</span>' +
-                (o.notes?'<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px">'+esc(o.notes)+'</div>':'') +
-                '</div>';
-        }).join('') :
-        '<div class="owner-empty">Sin propietarios registrados</div>';
-
-    document.getElementById('cd-body').innerHTML =
-        '<div class="cd-section">' +
-          '<div class="cd-section-ttl">Propietarios identificados</div>' +
-          '<div id="owners-list">'+ownHtml+'</div>' +
-          '<div id="owner-form-wrap"></div>' +
-          '<button class="inv-add-btn" style="margin-top:6px" onclick="openOwnerForm()">+ Agregar propietario</button>' +
-        '</div>';
-}
+function renderPropietariosTab(p) { renderDossier(p); }
 
 function openOwnerForm() {
     document.getElementById('owner-form-wrap').innerHTML =
@@ -1636,7 +1598,7 @@ function submitOwner() {
         activeParcela.owners.push(owner);
         var idx=allParcelas.findIndex(function(x){ return x.id===activeParcela.id; });
         if(idx!==-1) allParcelas[idx]=activeParcela;
-        renderPropietariosTab(activeParcela);
+        renderDossier(activeParcela);
         toast('Propietario agregado');
     });
 }
@@ -1647,18 +1609,17 @@ function deleteOwner(oid) {
         method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
     }).then(function(){
         activeParcela.owners = (activeParcela.owners||[]).filter(function(o){ return o.id!==oid; });
-        renderPropietariosTab(activeParcela);
+        renderDossier(activeParcela);
     });
 }
 
-// ── Actividad tab (activity log) ──────────────────────────────────────────────
-var ACT_COLORS = {nota:'#94a3b8', seguimiento:'#3b82f6', contacto:'#f59e0b', visita:'#22c55e'};
-var ACT_LABELS = {nota:'Nota', seguimiento:'Seguimiento', contacto:'Contacto', visita:'Visita'};
+// ── Actividad ─────────────────────────────────────────────────────────────────
+var ACT_COLORS = {nota:'#94a3b8', seguimiento:'#22d3ee', contacto:'#f59e0b', visita:'#22c55e'};
+var ACT_LABELS = {nota:'NOTA', seguimiento:'SEGUIMIENTO', contacto:'CONTACTO', visita:'VISITA'};
 
-function renderActividadTab(p) {
+function _dosAct(p) {
     var acts = p.actividades || [];
     var actHtml = acts.length ?
-        '<div style="padding-top:4px">' +
         acts.map(function(a, i){
             var col = ACT_COLORS[a.tipo] || '#94a3b8';
             return '<div class="act-item">' +
@@ -1673,22 +1634,21 @@ function renderActividadTab(p) {
                 '</div>' +
                 '<button class="act-del" onclick="deleteActividad('+a.id+')" title="Eliminar">&#215;</button>' +
                 '</div>';
-        }).join('') + '</div>' :
-        '<div style="font-size:12px;color:rgba(255,255,255,0.25);text-align:center;padding:20px 0">Sin actividad registrada</div>';
-
-    document.getElementById('cd-body').innerHTML =
-        '<div class="cd-section">' +
-          '<div class="cd-section-ttl">Registro de actividad</div>' +
+        }).join('') :
+        '<div style="font-size:10.5px;color:var(--c-dim);text-align:center;padding:16px 0;font-family:var(--mono)">SIN ACTIVIDAD</div>';
+    return '<div class="cd-section">' +
           '<div id="act-list">'+actHtml+'</div>' +
           '<div class="act-add-form">' +
             '<select class="cd-select" id="act-tipo">' +
               Object.keys(ACT_LABELS).map(function(k){ return '<option value="'+k+'">'+ACT_LABELS[k]+'</option>'; }).join('') +
             '</select>' +
-            '<textarea class="cd-textarea" id="act-texto" placeholder="Descripción de la actividad..." rows="3" style="min-height:56px"></textarea>' +
-            '<button class="cd-save-btn" onclick="submitActividad()">Registrar actividad</button>' +
+            '<textarea class="cd-textarea" id="act-texto" placeholder="descripción..." rows="3" style="min-height:50px"></textarea>' +
+            '<button class="cd-save-btn" onclick="submitActividad()">REGISTRAR</button>' +
           '</div>' +
         '</div>';
 }
+
+function renderActividadTab(p) { renderDossier(p); }
 
 function submitActividad() {
     if (!activeParcela) return;
@@ -1706,7 +1666,7 @@ function submitActividad() {
         activeParcela.actividades.unshift(act);
         var idx=allParcelas.findIndex(function(x){ return x.id===activeParcela.id; });
         if(idx!==-1) allParcelas[idx]=activeParcela;
-        renderActividadTab(activeParcela);
+        renderDossier(activeParcela);
         toast('Actividad registrada');
     });
 }
@@ -1717,7 +1677,7 @@ function deleteActividad(actId) {
         method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':CSRF}
     }).then(function(){
         activeParcela.actividades = (activeParcela.actividades||[]).filter(function(a){ return a.id!==actId; });
-        renderActividadTab(activeParcela);
+        renderDossier(activeParcela);
     });
 }
 
@@ -1760,7 +1720,7 @@ function toggleAddMode() {
     addMode = !addMode;
     var btn  = document.getElementById('add-mode-btn');
     var hint = document.getElementById('add-hint');
-    btn.textContent = addMode ? '&#215; Cancelar' : '+ Nueva';
+    btn.textContent = addMode ? '× CANCELAR' : '+ NUEVO';
     btn.style.background = addMode ? 'rgba(59,130,246,0.25)' : '';
     map.getContainer().style.cursor = addMode ? 'crosshair' : '';
     hint.style.display = addMode ? 'block' : 'none';
@@ -1906,19 +1866,7 @@ function searchClientes(q) {
 function assignPropietario(clienteId) {
     if (!activeParcela) return;
     patchParcela({propietario_id: clienteId}, function(){
-        // clear search UI
-        var q = document.getElementById('prop-q'); if(q) q.value='';
-        var r = document.getElementById('prop-results'); if(r) r.innerHTML='';
-        // re-render propietario card in place
-        var sec = document.querySelector('#cd-body .cd-section:last-of-type');
-        if (sec) {
-            sec.querySelector('.prop-empty') && sec.querySelector('.prop-empty').remove();
-            var existingCard = sec.querySelector('.prop-card');
-            if (existingCard) existingCard.remove();
-            sec.insertAdjacentHTML('afterbegin', '<div class="cd-section-ttl">Propietario</div>');
-            var wrap = document.getElementById('prop-search-wrap');
-            sec.insertBefore(parseFrag(renderPropietarioCard(activeParcela)), wrap);
-        }
+        renderDossier(activeParcela);
         toast('Propietario asignado');
     });
 }
@@ -1926,10 +1874,7 @@ function assignPropietario(clienteId) {
 function unlinkPropietario() {
     if (!activeParcela) return;
     patchParcela({propietario_id: null}, function(){
-        var card = document.querySelector('.prop-card');
-        if (card) {
-            card.outerHTML = '<div class="prop-empty">Sin propietario asignado</div>';
-        }
+        renderDossier(activeParcela);
         toast('Propietario desvinculado');
     });
 }
