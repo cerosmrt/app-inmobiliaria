@@ -41,6 +41,9 @@ class Propiedad(db.Model):
     descripcion = db.Column(db.Text, nullable=True)
     fecha_estado = db.Column(db.DateTime, nullable=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    lat = db.Column(db.Float, nullable=True)
+    lng = db.Column(db.Float, nullable=True)
+    geojson_geometry = db.Column(db.Text, nullable=True)
     propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
     propietario = db.relationship('Cliente', backref='propiedades_legacy', foreign_keys=[propietario_id])
     propietarios = db.relationship('Cliente', secondary=propietarios_propiedades, backref='propiedades_como_propietario')
@@ -78,6 +81,10 @@ class Propiedad(db.Model):
             'propietarios_ids': [c.id for c in self.propietarios],
             'interesados': [{'id': c.id, 'nombre': c.nombre, 'apellido': c.apellido, 'telefono': c.telefono} for c in self.interesados],
             'interesados_ids': [c.id for c in self.interesados],
+            'lat': self.lat,
+            'lng': self.lng,
+            'geojson_geometry': self.geojson_geometry,
+            'tipo_geometria': 'poligono' if self.geojson_geometry else ('punto' if self.lat is not None else None),
         }
 
 class Cliente(db.Model):

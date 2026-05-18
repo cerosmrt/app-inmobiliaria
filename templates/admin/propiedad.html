@@ -13,6 +13,18 @@
 {% endblock %}
 
 {% block head %}
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Draw -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<!-- Turf.js — area calculation -->
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
+<!-- shpjs — Shapefile parsing -->
+<script src="https://cdn.jsdelivr.net/npm/shpjs/dist/shp.js"></script>
+<!-- togeojson — KML parsing -->
+<script src="https://cdn.jsdelivr.net/npm/@mapbox/togeojson/dist/togeojson.umd.js"></script>
 <style>
     .container { max-width: 1060px; margin: 0 auto; padding: 24px; }
 
@@ -129,6 +141,16 @@
     }
     .orden-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
     #btn-guardar-orden { display: none; }
+
+    /* ── Mapa de ubicación ─────────────────────────────────────────────────── */
+    #geo-map { height: 380px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
+    .geo-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+    .geo-import-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .geo-import-btns label { cursor: pointer; }
+    .geo-hint { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+    .geo-hint code { background: var(--bg); border-radius: 3px; padding: 1px 5px; font-size: 11px; }
+    #geo-area-info { font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--text); display: none; }
+    #geo-punto-hint { font-size: 13px; color: var(--muted); display: none; }
 </style>
 {% endblock %}
 
@@ -143,6 +165,49 @@
     <div class="section-card">
         <h2>Datos</h2>
         <div class="campos-grid" id="campos-grid"></div>
+    </div>
+
+    <!-- Ubicación -->
+    <div class="section-card">
+        <h2>
+            Ubicaci&oacute;n
+            <div class="acciones">
+                <span id="geo-status" style="font-size:12px;color:var(--muted)"></span>
+                <button id="btn-clear-geo" class="btn btn-gray" style="font-size:12px;padding:5px 11px;display:none" onclick="clearGeo()">&#x2715; Limpiar</button>
+            </div>
+        </h2>
+
+        <div class="geo-toggle">
+            <button id="btn-modo-punto"    class="btn btn-blue" onclick="setGeoModo('punto')"   style="font-size:13px;padding:6px 16px">&#x1F4CD; Punto</button>
+            <button id="btn-modo-poligono" class="btn btn-gray" onclick="setGeoModo('poligono')" style="font-size:13px;padding:6px 16px">&#x2B21; Pol&iacute;gono</button>
+        </div>
+
+        <div id="geo-map"></div>
+
+        <p id="geo-punto-hint">Hac&eacute; clic en el mapa para marcar la ubicaci&oacute;n exacta. Pod&eacute;s arrastrar el marcador para ajustar.</p>
+
+        <div id="geo-poligono-tools" style="display:none">
+            <div class="geo-import-btns">
+                <label class="btn btn-gray" style="font-size:12px;padding:5px 11px" title="Importar archivo GeoJSON">
+                    &#x1F4C2; GeoJSON
+                    <input type="file" accept=".geojson,.json" style="display:none" onchange="importarGeoJSON(this)">
+                </label>
+                <label class="btn btn-gray" style="font-size:12px;padding:5px 11px" title="Solo .kml, no .kmz">
+                    &#x1F4C2; KML
+                    <input type="file" accept=".kml" style="display:none" onchange="importarKML(this)">
+                </label>
+                <label class="btn btn-gray" style="font-size:12px;padding:5px 11px" title=".zip con .shp/.dbf/.prj en WGS84">
+                    &#x1F4C2; Shapefile (.zip)
+                    <input type="file" accept=".zip" style="display:none" onchange="importarShapefile(this)">
+                </label>
+            </div>
+            <p class="geo-hint">
+                Dibuj&aacute; con la herramienta del mapa, o import&aacute; un archivo.<br>
+                KML: solo <code>.kml</code> (no <code>.kmz</code>). Shapefile: <code>.zip</code> con <code>.shp</code>/<code>.dbf</code>/<code>.prj</code> en proyecci&oacute;n WGS84.
+            </p>
+            <div id="geo-area-info"></div>
+            <button id="btn-confirm-poligono" class="btn btn-green" style="display:none;font-size:13px;padding:6px 16px" onclick="confirmarPoligono()">&#x2713; Confirmar y guardar pol&iacute;gono</button>
+        </div>
     </div>
 
     <!-- Propietarios -->
@@ -228,6 +293,7 @@
                 renderPropietarios();
                 document.getElementById('descripcion').value = data.descripcion || '';
                 renderFotos();
+                initGeoMap(data);
             })
             .catch(function(err) {
                 document.getElementById('prop-titulo').textContent = 'Error: ' + err.message;
@@ -607,6 +673,300 @@
                     toast('Foto eliminada', 'success');
                 }).catch(function(e) { console.error(e); });
         });
+    }
+
+    // ── GEOMETRÍA ─────────────────────────────────────────────────────────────
+    var _geoMap          = null;
+    var _geoModo         = 'punto';
+    var _geoMarker       = null;
+    var _geoPolygon      = null;
+    var _geoPendingGeojson = null;
+    var _drawControl     = null;
+    var _drawnItems      = null;
+
+    var ESRI_SAT = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+    );
+
+    function initGeoMap(data) {
+        _geoMap = L.map('geo-map', { zoomControl: true });
+        ESRI_SAT.addTo(_geoMap);
+
+        var center = [-34.6037, -58.3816]; // Buenos Aires fallback
+        var zoom   = 12;
+
+        if (data.lat != null && data.lng != null) {
+            // Existing point — Leaflet uses [lat, lng]
+            center = [data.lat, data.lng];
+            zoom   = 17;
+            _geoMarker = L.marker(center, { draggable: true }).addTo(_geoMap);
+            _geoMarker.on('dragend', function() {
+                var ll = _geoMarker.getLatLng();
+                guardarPunto(ll.lat, ll.lng);
+            });
+            _mostrarStatusPunto(data.lat, data.lng);
+            document.getElementById('btn-clear-geo').style.display = '';
+            setGeoModo('punto');
+        } else if (data.geojson_geometry) {
+            try {
+                // geojson_geometry stored as string; GeoJSON coords are [lng, lat]
+                var geom = JSON.parse(data.geojson_geometry);
+                _geoPolygon = L.geoJSON(geom, { style: { color: '#C41230', weight: 2, fillOpacity: 0.15 } }).addTo(_geoMap);
+                _geoMap.fitBounds(_geoPolygon.getBounds(), { padding: [20, 20] });
+                zoom = null;
+                var area = _calcArea(geom);
+                if (area) document.getElementById('geo-status').textContent = area.toFixed(2) + ' ha';
+                document.getElementById('btn-clear-geo').style.display = '';
+                setGeoModo('poligono');
+            } catch(e) {}
+        }
+
+        if (zoom !== null) _geoMap.setView(center, zoom);
+
+        if (_geoModo === 'punto') {
+            document.getElementById('geo-punto-hint').style.display = '';
+        }
+
+        // Click → drop point (only in punto mode)
+        _geoMap.on('click', function(e) {
+            if (_geoModo !== 'punto') return;
+            var lat = e.latlng.lat, lng = e.latlng.lng;
+            if (_geoMarker) {
+                _geoMarker.setLatLng([lat, lng]);
+            } else {
+                _geoMarker = L.marker([lat, lng], { draggable: true }).addTo(_geoMap);
+                _geoMarker.on('dragend', function() {
+                    var ll = _geoMarker.getLatLng();
+                    guardarPunto(ll.lat, ll.lng);
+                });
+            }
+            guardarPunto(lat, lng);
+        });
+
+        setTimeout(function() { _geoMap.invalidateSize(); }, 50);
+    }
+
+    function _mostrarStatusPunto(lat, lng) {
+        document.getElementById('geo-status').textContent =
+            'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
+    }
+
+    function setGeoModo(modo) {
+        _geoModo = modo;
+        document.getElementById('btn-modo-punto').className    = 'btn ' + (modo === 'punto'    ? 'btn-blue' : 'btn-gray');
+        document.getElementById('btn-modo-poligono').className = 'btn ' + (modo === 'poligono' ? 'btn-blue' : 'btn-gray');
+        document.getElementById('geo-punto-hint').style.display        = modo === 'punto'    ? '' : 'none';
+        document.getElementById('geo-poligono-tools').style.display    = modo === 'poligono' ? '' : 'none';
+
+        if (!_geoMap) return;
+
+        if (modo === 'poligono') {
+            if (!_drawnItems) {
+                _drawnItems = new L.FeatureGroup().addTo(_geoMap);
+            }
+            if (!_drawControl) {
+                _drawControl = new L.Control.Draw({
+                    draw: {
+                        polygon:      { allowIntersection: false },
+                        polyline:     false,
+                        rectangle:    false,
+                        circle:       false,
+                        circlemarker: false,
+                        marker:       false
+                    },
+                    edit: { featureGroup: _drawnItems }
+                });
+                _geoMap.addControl(_drawControl);
+            }
+            _geoMap.on(L.Draw.Event.CREATED, _onDrawCreated);
+        } else {
+            if (_drawControl) {
+                _geoMap.removeControl(_drawControl);
+                _geoMap.off(L.Draw.Event.CREATED, _onDrawCreated);
+                _drawControl = null;
+            }
+        }
+
+        setTimeout(function() { if (_geoMap) _geoMap.invalidateSize(); }, 10);
+    }
+
+    function _onDrawCreated(e) {
+        if (_drawnItems) _drawnItems.clearLayers();
+        _drawnItems.addLayer(e.layer);
+        // e.layer.toGeoJSON().geometry uses [lng, lat] — correct GeoJSON order
+        var geom = e.layer.toGeoJSON().geometry;
+        _setPendingPoligono(geom);
+    }
+
+    function _setPendingPoligono(geom) {
+        _geoPendingGeojson = geom;
+        var area = _calcArea(geom);
+        var areaEl = document.getElementById('geo-area-info');
+        areaEl.textContent = area ? '&#x2B21; &Aacute;rea: ' + area.toFixed(2) + ' ha' : '';
+        areaEl.style.display = '';
+        document.getElementById('btn-confirm-poligono').style.display = '';
+    }
+
+    function _calcArea(geojson) {
+        if (typeof turf === 'undefined') return null;
+        try {
+            return turf.area({ type: 'Feature', geometry: geojson, properties: {} }) / 10000;
+        } catch(e) { return null; }
+    }
+
+    function _dentroDeArgentina(lat, lng) {
+        return lat >= -55 && lat <= -22 && lng >= -74 && lng <= -53;
+    }
+
+    function _validarCoordsArgentina(geom) {
+        // GeoJSON coordinates: [lng, lat]
+        var ok = true;
+        function check(coords) {
+            if (!Array.isArray(coords)) return;
+            if (typeof coords[0] === 'number') {
+                var lng = coords[0], lat = coords[1];
+                if (!_dentroDeArgentina(lat, lng)) ok = false;
+            } else {
+                coords.forEach(check);
+            }
+        }
+        if (geom.coordinates) check(geom.coordinates);
+        if (geom.geometries) geom.geometries.forEach(function(g) { if (g.coordinates) check(g.coordinates); });
+        return ok;
+    }
+
+    function _mostrarGeojsonEnMapa(geom) {
+        if (_drawnItems) _drawnItems.clearLayers();
+        if (_geoPolygon) { _geoMap.removeLayer(_geoPolygon); _geoPolygon = null; }
+
+        var layer = L.geoJSON(geom, { style: { color: '#C41230', weight: 2, fillOpacity: 0.15 } });
+        if (_drawnItems) {
+            layer.eachLayer(function(l) { _drawnItems.addLayer(l); });
+        } else {
+            _geoPolygon = layer.addTo(_geoMap);
+        }
+        try { _geoMap.fitBounds(layer.getBounds(), { padding: [20, 20] }); } catch(e) {}
+        _setPendingPoligono(geom);
+    }
+
+    function importarGeoJSON(input) {
+        var file = input.files[0];
+        if (!file) return;
+        input.value = '';
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var data = JSON.parse(e.target.result);
+                var geom = null;
+                if      (data.type === 'FeatureCollection') geom = data.features[0] && data.features[0].geometry;
+                else if (data.type === 'Feature')           geom = data.geometry;
+                else if (data.type === 'Polygon' || data.type === 'MultiPolygon') geom = data;
+                if (!geom) { toast('GeoJSON sin geometría de polígono', 'error'); return; }
+                _mostrarGeojsonEnMapa(geom);
+            } catch(ex) {
+                toast('Error al leer el GeoJSON', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function importarKML(input) {
+        var file = input.files[0];
+        if (!file) return;
+        input.value = '';
+        if (typeof toGeoJSON === 'undefined') { toast('Librería KML no cargada', 'error'); return; }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var doc  = new DOMParser().parseFromString(e.target.result, 'text/xml');
+                var gj   = toGeoJSON.kml(doc);
+                var geom = null;
+                if      (gj.type === 'FeatureCollection' && gj.features.length) geom = gj.features[0].geometry;
+                else if (gj.type === 'Feature')                                  geom = gj.geometry;
+                if (!geom || (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon')) {
+                    toast('El KML no contiene un polígono', 'error'); return;
+                }
+                _mostrarGeojsonEnMapa(geom);
+            } catch(ex) {
+                toast('Error al leer el KML', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function importarShapefile(input) {
+        var file = input.files[0];
+        if (!file) return;
+        input.value = '';
+        if (typeof shp === 'undefined') { toast('Librería Shapefile no cargada', 'error'); return; }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            shp(e.target.result).then(function(gj) {
+                var geom = null;
+                if      (gj.type === 'FeatureCollection' && gj.features.length) geom = gj.features[0].geometry;
+                else if (gj.type === 'Feature')                                  geom = gj.geometry;
+                if (!geom) { toast('El archivo no contiene geometría', 'error'); return; }
+                if (!_validarCoordsArgentina(geom)) {
+                    toast('El archivo parece usar una proyección incompatible (POSGAR94/Gauss-Krüger). Convertir a WGS84 antes de importar.', 'error');
+                    return;
+                }
+                _mostrarGeojsonEnMapa(geom);
+            }).catch(function() {
+                toast('Error al leer el Shapefile. Verificá que el .zip contenga .shp/.dbf/.prj', 'error');
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function guardarPunto(lat, lng) {
+        fetch('/api/propiedades/' + propiedadId + '/geometry', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: lat, lng: lng })
+        }).then(function(r) { return r.json(); })
+          .then(function(data) {
+              propData.lat = data.lat;
+              propData.lng = data.lng;
+              _mostrarStatusPunto(lat, lng);
+              document.getElementById('btn-clear-geo').style.display = '';
+              toast('Ubicación guardada', 'success');
+          }).catch(function() { toast('Error al guardar ubicación', 'error'); });
+    }
+
+    function confirmarPoligono() {
+        if (!_geoPendingGeojson) return;
+        fetch('/api/propiedades/' + propiedadId + '/geometry', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ geojson_geometry: JSON.stringify(_geoPendingGeojson) })
+        }).then(function(r) { return r.json(); })
+          .then(function(data) {
+              propData.geojson_geometry = data.geojson_geometry;
+              var area = _calcArea(_geoPendingGeojson);
+              if (area) document.getElementById('geo-status').textContent = area.toFixed(2) + ' ha';
+              document.getElementById('btn-clear-geo').style.display = '';
+              document.getElementById('btn-confirm-poligono').style.display = 'none';
+              _geoPendingGeojson = null;
+              toast('Polígono guardado', 'success');
+          }).catch(function() { toast('Error al guardar polígono', 'error'); });
+    }
+
+    function clearGeo() {
+        fetch('/api/propiedades/' + propiedadId + '/geometry', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clear: true })
+        }).then(function(r) { return r.json(); })
+          .then(function() {
+              if (_geoMarker)  { _geoMap.removeLayer(_geoMarker);  _geoMarker  = null; }
+              if (_geoPolygon) { _geoMap.removeLayer(_geoPolygon); _geoPolygon = null; }
+              if (_drawnItems)   _drawnItems.clearLayers();
+              _geoPendingGeojson = null;
+              propData.lat = null; propData.lng = null; propData.geojson_geometry = null;
+              document.getElementById('geo-status').textContent       = '';
+              document.getElementById('btn-clear-geo').style.display  = 'none';
+              document.getElementById('geo-area-info').style.display  = 'none';
+              document.getElementById('btn-confirm-poligono').style.display = 'none';
+              toast('Ubicación eliminada', 'success');
+          }).catch(function() { toast('Error al limpiar', 'error'); });
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────

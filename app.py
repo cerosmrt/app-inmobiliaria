@@ -634,6 +634,47 @@ def reordenar_fotos(id):
     db.session.commit()
     return jsonify(p.as_dict())
 
+# ── Geometry ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/propiedades/<int:id>/geometry', methods=['POST'])
+@api_login_required
+def set_propiedad_geometry(id):
+    import json as _json
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    data = request.get_json() or {}
+
+    if data.get('clear'):
+        p.lat = None
+        p.lng = None
+        p.geojson_geometry = None
+    elif 'geojson_geometry' in data:
+        geom_str = data['geojson_geometry']
+        if not isinstance(geom_str, str):
+            return jsonify({"message": "geojson_geometry debe ser string JSON"}), 400
+        try:
+            _json.loads(geom_str)
+        except Exception:
+            return jsonify({"message": "geojson_geometry inválido"}), 400
+        p.geojson_geometry = geom_str
+        p.lat = None
+        p.lng = None
+    elif 'lat' in data and 'lng' in data:
+        try:
+            lat = float(data['lat'])
+            lng = float(data['lng'])
+        except (TypeError, ValueError):
+            return jsonify({"message": "lat y lng deben ser números"}), 400
+        p.lat = lat
+        p.lng = lng
+        p.geojson_geometry = None
+    else:
+        return jsonify({"message": "Requerido: lat+lng, geojson_geometry, o clear:true"}), 400
+
+    db.session.commit()
+    return jsonify(p.as_dict())
+
 # ── Interesados M2M ───────────────────────────────────────────────────────────
 
 @app.route('/api/propiedades/<int:id>/interesados/<int:cliente_id>', methods=['POST'])
@@ -1640,6 +1681,9 @@ with app.app_context():
             # v3.0 tables created via db.create_all() but columns guarded here for safety
             "ALTER TABLE propietarios_catastrales ADD COLUMN source VARCHAR",
             "ALTER TABLE propietarios_catastrales ADD COLUMN confidence_level VARCHAR DEFAULT 'unknown'",
+            "ALTER TABLE propiedades ADD COLUMN lat REAL",
+            "ALTER TABLE propiedades ADD COLUMN lng REAL",
+            "ALTER TABLE propiedades ADD COLUMN geojson_geometry TEXT",
         ]:
             try:
                 _conn.execute(db.text(_ddl))
