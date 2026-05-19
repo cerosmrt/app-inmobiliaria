@@ -213,6 +213,10 @@ body { background: var(--c-bg); }
 .cat-marker:hover { transform: scale(1.4); }
 .cat-marker-active { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; cursor: pointer; position: relative; }
 .cat-marker-pulse { animation: active-pulse 1.8s ease-out infinite; }
+/* ── Portfolio markers ───────────────────────────────── */
+.ptf-marker { width: 22px; height: 22px; border-radius: 4px; background: #c084fc; border: 2px solid rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 10px #c084fc66; transition: transform 0.12s; }
+.ptf-marker:hover { transform: scale(1.25); }
+.ptf-marker svg { width: 13px; height: 13px; fill: white; flex-shrink: 0; }
 @keyframes active-pulse { 0%{ box-shadow: 0 0 0 0 currentColor; } 70%{ box-shadow: 0 0 0 8px transparent; } 100%{ box-shadow: 0 0 0 0 transparent; } }
 @keyframes fadeInModal { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
 .estado-d { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 2px; white-space: nowrap; font-family: var(--mono); letter-spacing: 0.3px; }
@@ -329,6 +333,9 @@ body { background: var(--c-bg); }
         </div>
         <div class="hud-row on" id="hud-gis-parcelas"      onclick="toggleGisLayer('parcelas')">
             <div class="hud-chk">&#10003;</div><span>PARCELAS</span>
+        </div>
+        <div class="hud-row on" id="hud-gis-portfolio"    onclick="togglePortfolioLayer()">
+            <div class="hud-chk">&#10003;</div><span>PORTFOLIO</span>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-section">ORIGEN</div>
@@ -616,6 +623,109 @@ map.on('click', function(e) {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 loadParcelas();
+loadPortfolio();
+
+// ── Portfolio layer ───────────────────────────────────────────────────────────
+var PTF_COLOR        = '#c084fc';
+var portfolioVisible = true;
+var portfolioGroup   = L.layerGroup().addTo(map);  // separate from parcelas
+var _geocodeFailed   = (function(){ try{ return JSON.parse(localStorage.getItem('ptf_geocode_failed')||'{}'); }catch(e){ return {}; } })();
+
+var HOUSE_ICON = '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>';
+
+function ptfPopupHtml(props) {
+    var precio = '';
+    if (props.precio_a_consultar) {
+        precio = 'Consultar';
+    } else if (props.precio) {
+        var sym = props.es_usd ? 'USD' : 'ARS';
+        precio = sym + ' ' + Number(props.precio).toLocaleString('es-AR');
+    }
+    return '<div style="font-family:var(--mono,monospace);font-size:12px;min-width:180px;line-height:1.6">' +
+        '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#e2e8f0">' + (props.titulo||'Propiedad') + '</div>' +
+        (props.tipo ? '<div style="color:#94a3b8;text-transform:capitalize">' + props.tipo + (props.operacion ? ' · ' + props.operacion : '') + '</div>' : '') +
+        (precio      ? '<div style="color:' + PTF_COLOR + ';font-weight:600;margin-top:2px">' + precio + '</div>' : '') +
+        '<a href="/admin/propiedad/' + props.id + '" style="display:inline-block;margin-top:8px;font-size:11px;color:' + PTF_COLOR + ';text-decoration:none;border:1px solid ' + PTF_COLOR + '44;padding:2px 8px;border-radius:2px">Ver ficha &rarr;</a>' +
+        '</div>';
+}
+
+function addPortfolioFeature(feature) {
+    var props = feature.properties;
+    var popup = L.popup({closeButton:false, className:'ptf-popup'}).setContent(ptfPopupHtml(props));
+    if (feature.geometry.type === 'Point') {
+        var lng = feature.geometry.coordinates[0];
+        var lat = feature.geometry.coordinates[1];
+        var m = L.marker([lat, lng], {
+            icon: L.divIcon({
+                html: '<div class="ptf-marker">' + HOUSE_ICON + '</div>',
+                className: '', iconSize: [22,22], iconAnchor: [11,11]
+            })
+        }).bindPopup(popup);
+        portfolioGroup.addLayer(m);
+    } else {
+        var poly = L.geoJSON(feature.geometry, {
+            style: {color: PTF_COLOR, weight: 2, opacity: 0.9, fillColor: PTF_COLOR, fillOpacity: 0.08}
+        }).bindPopup(popup);
+        poly.on('mouseover', function(){ poly.setStyle({fillOpacity: 0.22, weight: 3}); });
+        poly.on('mouseout',  function(){ poly.setStyle({fillOpacity: 0.08, weight: 2}); });
+        portfolioGroup.addLayer(poly);
+    }
+}
+
+function loadPortfolio() {
+    fetch('/api/propiedades/geojson', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(fc){ fc.features.forEach(addPortfolioFeature); });
+    // Queue geocoding for properties that have an address but no geometry yet
+    fetch('/api/propiedades', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(props){
+            var toGeocode = props.filter(function(p){
+                return p.direccion && !p.lat && !p.lng && !p.geojson_geometry && !_geocodeFailed[p.id];
+            });
+            if (!toGeocode.length) return;
+            var idx = 0; var geocodedCount = 0;
+            function next() {
+                if (idx >= toGeocode.length) {
+                    if (geocodedCount > 0) toast(geocodedCount + ' ubicación' + (geocodedCount>1?'es':'') + ' geocodificada' + (geocodedCount>1?'s':'') + ' automáticamente', 'success');
+                    return;
+                }
+                var p = toGeocode[idx++];
+                fetch('/api/propiedades/' + p.id + '/geocode', {method:'POST', credentials:'same-origin'})
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                        if (data.success) {
+                            geocodedCount++;
+                            addPortfolioFeature({type:'Feature', geometry:{type:'Point',coordinates:[data.lng,data.lat]},
+                                properties:{id:p.id, titulo:p.direccion||'Propiedad #'+p.id, tipo:p.tipo||'',
+                                    operacion:p.operacion||'', precio:p.rango_max||p.rango_min,
+                                    es_usd:p.es_usd, precio_a_consultar:p.precio_a_consultar,
+                                    estado:p.estado||'', direccion:p.direccion||'', tipo_geometria:'punto'}});
+                        } else {
+                            _geocodeFailed[p.id] = 1;
+                            try{ localStorage.setItem('ptf_geocode_failed', JSON.stringify(_geocodeFailed)); }catch(e){}
+                        }
+                        setTimeout(next, 1200);
+                    })
+                    .catch(function(){ setTimeout(next, 1200); });
+            }
+            next();
+        });
+}
+
+function togglePortfolioLayer() {
+    portfolioVisible = !portfolioVisible;
+    var row = document.getElementById('hud-gis-portfolio');
+    if (portfolioVisible) {
+        portfolioGroup.addTo(map);
+        row.classList.add('on');
+        row.querySelector('.hud-chk').innerHTML = '&#10003;';
+    } else {
+        map.removeLayer(portfolioGroup);
+        row.classList.remove('on');
+        row.querySelector('.hud-chk').innerHTML = '';
+    }
+}
 
 function loadParcelas() {
     fetch('/api/catastro/parcelas', {credentials:'same-origin'})

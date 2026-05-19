@@ -376,7 +376,23 @@
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         }).then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
-          .then(function() { propData[field] = value; renderDatos(); toast('Guardado', 'success'); })
+          .then(function() {
+              propData[field] = value;
+              renderDatos();
+              toast('Guardado', 'success');
+              // When address changes and no geometry exists, geocode in background
+              if ((field === 'direccion' || field === 'barrio') && !propData.lat && !propData.geojson_geometry) {
+                  fetch('/api/propiedades/' + propiedadId + '/geocode', {method:'POST', credentials:'same-origin'})
+                      .then(function(r){ return r.json(); })
+                      .then(function(d){
+                          if (d.success) {
+                              propData.lat = d.lat; propData.lng = d.lng;
+                              toast('Ubicación geocodificada automáticamente', 'success');
+                          }
+                      })
+                      .catch(function(){});
+              }
+          })
           .catch(function() { toast('Error al guardar', 'error'); renderDatos(); });
     }
 

@@ -499,6 +499,46 @@ def get_propiedades_archivadas():
     props = Propiedad.query.filter(Propiedad.deleted_at.isnot(None)).all()
     return jsonify([p.as_dict() for p in props])
 
+@app.route('/api/propiedades/geojson', methods=['GET'])
+@api_login_required
+def get_propiedades_geojson():
+    import json as _json
+    props = Propiedad.query.filter(
+        Propiedad.deleted_at.is_(None),
+        db.or_(Propiedad.lat.isnot(None), Propiedad.geojson_geometry.isnot(None))
+    ).all()
+    features = []
+    for p in props:
+        if p.geojson_geometry:
+            try:
+                geometry = _json.loads(p.geojson_geometry)
+                tipo_geometria = 'poligono'
+            except Exception:
+                continue
+        elif p.lat is not None and p.lng is not None:
+            geometry = {'type': 'Point', 'coordinates': [p.lng, p.lat]}
+            tipo_geometria = 'punto'
+        else:
+            continue
+        precio = p.rango_max or p.rango_min
+        features.append({
+            'type': 'Feature',
+            'geometry': geometry,
+            'properties': {
+                'id': p.id,
+                'titulo': p.direccion or f'Propiedad #{p.id}',
+                'tipo': p.tipo or '',
+                'operacion': p.operacion or '',
+                'precio': precio,
+                'es_usd': p.es_usd,
+                'precio_a_consultar': p.precio_a_consultar,
+                'estado': p.estado or '',
+                'direccion': p.direccion or '',
+                'tipo_geometria': tipo_geometria,
+            }
+        })
+    return jsonify({'type': 'FeatureCollection', 'features': features})
+
 @app.route('/api/propiedades/<int:id>', methods=['GET'])
 @api_login_required
 def get_propiedad(id):
@@ -674,6 +714,39 @@ def set_propiedad_geometry(id):
 
     db.session.commit()
     return jsonify(p.as_dict())
+
+@app.route('/api/propiedades/<int:id>/geocode', methods=['POST'])
+@api_login_required
+def geocode_propiedad(id):
+    import urllib.request as _ureq2
+    import urllib.parse   as _uparse2
+    import json           as _json2
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({'success': False, 'reason': 'Propiedad no encontrada'}), 404
+    if not p.direccion:
+        return jsonify({'success': False, 'reason': 'Sin dirección'})
+    if p.lat is not None or p.geojson_geometry:
+        return jsonify({'success': False, 'reason': 'Ya tiene geometría'})
+    q = p.direccion
+    if p.barrio:
+        q += ', ' + p.barrio
+    q += ', Argentina'
+    url = 'https://nominatim.openstreetmap.org/search?' + _uparse2.urlencode(
+        {'q': q, 'format': 'json', 'limit': 1}
+    )
+    try:
+        req = _ureq2.Request(url, headers={'User-Agent': 'MoretInmobiliaria/1.0'})
+        with _ureq2.urlopen(req, timeout=8) as r:
+            results = _json2.loads(r.read().decode('utf-8'))
+    except Exception as e:
+        return jsonify({'success': False, 'reason': str(e)})
+    if not results:
+        return jsonify({'success': False, 'reason': 'Sin resultados'})
+    p.lat = float(results[0]['lat'])
+    p.lng = float(results[0]['lon'])
+    db.session.commit()
+    return jsonify({'success': True, 'lat': p.lat, 'lng': p.lng})
 
 # ── Interesados M2M ───────────────────────────────────────────────────────────
 
