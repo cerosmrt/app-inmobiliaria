@@ -1714,6 +1714,58 @@ def get_provincia_geo(province_code):
     except Exception as exc:
         return jsonify({'type': 'FeatureCollection', 'features': [], 'error': str(exc)})
 
+_ATER_CACHE     = {}       # key -> (data, timestamp)
+_ATER_CACHE_TTL = 86400    # 24 h
+
+@app.route('/api/catastro/ater/parcelas', methods=['GET'])
+@api_login_required
+def get_ater_parcelas():
+    from flask import Response as _Resp
+    bbox   = request.args.get('bbox', '').strip()
+    count  = min(int(request.args.get('count', 500)), 1000)
+    offset = int(request.args.get('offset', 0))
+
+    cache_key = 'ater_' + (bbox or 'all') + '_' + str(offset)
+    now = time.time()
+    if cache_key in _ATER_CACHE:
+        data, ts = _ATER_CACHE[cache_key]
+        if now - ts < _ATER_CACHE_TTL:
+            return _Resp(_jmod.dumps(data), mimetype='application/json')
+
+    if bbox:
+        parts = bbox.split(',')
+        if len(parts) == 4:
+            try:
+                minlng, minlat, maxlng, maxlat = [float(x) for x in parts]
+                cql = "departamento=11 AND BBOX(geom,%s,%s,%s,%s)" % (minlng, minlat, maxlng, maxlat)
+            except ValueError:
+                cql = 'departamento=11'
+        else:
+            cql = 'departamento=11'
+    else:
+        cql = 'departamento=11'
+
+    params = {
+        'service':      'WFS',
+        'version':      '2.0.0',
+        'request':      'GetFeature',
+        'typeNames':    'sit_catastro:vwm_parcelario_base',
+        'outputFormat': 'application/json',
+        'srsName':      'EPSG:4326',
+        'CQL_FILTER':   cql,
+        'count':        count,
+        'startIndex':   offset,
+    }
+    url = 'https://geoserver.ater.gob.ar/geoserver/sit_catastro/ows?' + _uparse.urlencode(params)
+    try:
+        req = _ureq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with _ureq.urlopen(req, timeout=30, context=_GEO_SSL) as r:
+            data = _jmod.loads(r.read().decode('utf-8'))
+        _ATER_CACHE[cache_key] = (data, now)
+        return _Resp(_jmod.dumps(data), mimetype='application/json')
+    except Exception as exc:
+        return jsonify({'type': 'FeatureCollection', 'features': [], 'error': str(exc)})
+
 # ── Catastro v3.0: PropietarioCatastral (M2M owners) ─────────────────────────
 
 @app.route('/api/catastro/parcelas/<int:id>/propietarios', methods=['POST'])

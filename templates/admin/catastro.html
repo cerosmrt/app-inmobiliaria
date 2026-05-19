@@ -213,6 +213,8 @@ body { background: var(--c-bg); }
 .cat-marker:hover { transform: scale(1.4); }
 .cat-marker-active { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; cursor: pointer; position: relative; }
 .cat-marker-pulse { animation: active-pulse 1.8s ease-out infinite; }
+/* ── ATER zoom hint ──────────────────────────────────── */
+.hud-zoom-hint { font-size:9px; color:rgba(250,204,21,0.7); font-family:var(--mono); padding:3px 8px 1px; letter-spacing:0.3px; line-height:1.4; }
 /* ── Province switcher ───────────────────────────────── */
 .hud-province-sel { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.13); border-radius:3px; color:#e2e8f0; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:0.4px; padding:4px 6px; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none; }
 .hud-province-sel option { background:#1e293b; color:#e2e8f0; }
@@ -344,6 +346,10 @@ body { background: var(--c-bg); }
         <div class="hud-row on" id="hud-gis-portfolio"    onclick="togglePortfolioLayer()">
             <div class="hud-chk">&#10003;</div><span>PORTFOLIO</span>
         </div>
+        <div class="hud-row on" id="hud-gis-ater"         onclick="toggleAterLayer()">
+            <div class="hud-chk">&#10003;</div><span>ATER CATASTRO</span>
+        </div>
+        <div id="hud-ater-hint" class="hud-zoom-hint" style="display:none">Acercate para ver parcelas ATER</div>
         <div class="hud-divider"></div>
         <div class="hud-section">ORIGEN</div>
         <div id="hud-provider-list"></div>
@@ -711,6 +717,7 @@ map.on('click', function(e) {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 loadParcelas();
 loadPortfolio();
+loadAterParcelas();
 
 // ── Portfolio layer ───────────────────────────────────────────────────────────
 var PTF_COLOR        = '#c084fc';
@@ -813,6 +820,123 @@ function togglePortfolioLayer() {
         row.querySelector('.hud-chk').innerHTML = '';
     }
 }
+
+// ── ATER official cadastral layer ────────────────────────────────────────────
+var aterVisible   = true;
+var aterLayer     = null;
+var _aterDebounce = null;
+var _aterFeats    = {};
+var _aterFeatIdx  = 0;
+var ATER_MIN_ZOOM = 13;
+
+var ATER_COLOR = {
+    'Datos validados':                            '#22c55e',
+    'Datos y geometria mayormente validados':      '#60a5fa',
+    'Datos parcialmente validados':               '#facc15',
+    'PAPCUS_98':                                  '#f97316',
+    'Sin validar':                                '#6b7280',
+};
+function _aterColor(estado) { return ATER_COLOR[estado] || '#6b7280'; }
+
+function _aterCentroid(geometry) {
+    var ring;
+    if (geometry.type === 'Polygon')      ring = geometry.coordinates[0];
+    else if (geometry.type === 'MultiPolygon') ring = geometry.coordinates[0][0];
+    else return [0, 0];
+    var sLng = 0, sLat = 0, n = ring.length;
+    ring.forEach(function(pt){ sLng += pt[0]; sLat += pt[1]; });
+    return [sLat / n, sLng / n];
+}
+
+function openParcelaFromAter(idx) {
+    var fd = _aterFeats[idx];
+    if (!fd) return;
+    map.closePopup();
+    var p = fd.props, c = fd.centroid;
+    openParcelaModal(c[0], c[1]);
+    var el;
+    el = document.getElementById('pf-id');   if (el && p.partida)       el.value = String(p.partida);
+    el = document.getElementById('pf-muni'); if (el)                    el.value = p.nombre_departamento || p.departamento || 'Gualeguay';
+    el = document.getElementById('pf-prov'); if (el)                    el.value = 'Entre Ríos';
+    el = document.getElementById('pf-area'); if (el && p.superficie)    el.value = String(p.superficie);
+}
+
+function loadAterParcelas() {
+    if (!aterVisible) return;
+    var zoom   = map.getZoom();
+    var hintEl = document.getElementById('hud-ater-hint');
+    if (zoom < ATER_MIN_ZOOM) {
+        if (hintEl) hintEl.style.display = 'block';
+        return;
+    }
+    if (hintEl) hintEl.style.display = 'none';
+
+    _aterFeats   = {};
+    _aterFeatIdx = 0;
+    var b    = map.getBounds();
+    var bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]
+                   .map(function(v){ return v.toFixed(6); }).join(',');
+
+    showGeoLoading();
+    fetch('/api/catastro/ater/parcelas?bbox=' + bbox, {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            hideGeoLoading();
+            if (aterLayer) { try{ map.removeLayer(aterLayer); }catch(e){} aterLayer = null; }
+            if (!data || !data.features || !data.features.length) return;
+            aterLayer = L.geoJSON(data, {
+                style: function(feature) {
+                    var color = _aterColor(feature.properties && feature.properties.estado);
+                    return {color:color, weight:1, opacity:0.75, fillColor:color, fillOpacity:0.08};
+                },
+                onEachFeature: function(feature, layer) {
+                    var props    = feature.properties || {};
+                    var centroid = _aterCentroid(feature.geometry);
+                    var idx      = _aterFeatIdx++;
+                    _aterFeats[idx] = {props:props, centroid:centroid};
+                    var color = _aterColor(props.estado);
+                    var html =
+                        '<div style="font-family:var(--mono,monospace);font-size:12px;min-width:190px;line-height:1.8">' +
+                        '<div style="font-weight:700;margin-bottom:3px;color:#e2e8f0;font-size:11px;letter-spacing:.5px">PARCELA ATER</div>' +
+                        '<div style="color:#94a3b8"><b>Partida:</b> ' + (props.partida||'—') + '</div>' +
+                        '<div style="color:#94a3b8"><b>Estado:</b> <span style="color:' + color + '">' + (props.estado||'—') + '</span></div>' +
+                        '<div style="color:#94a3b8"><b>Dpto:</b> ' + (props.nombre_departamento||props.departamento||'—') + '</div>' +
+                        '<button onclick="openParcelaFromAter(' + idx + ')" ' +
+                            'style="margin-top:7px;width:100%;padding:3px 0;font-size:11px;cursor:pointer;' +
+                            'border-radius:2px;border:1px solid #22c55e44;background:rgba(34,197,94,0.1);' +
+                            'color:#22c55e;font-family:var(--mono)">+ Crear parcela catastral</button>' +
+                        '</div>';
+                    layer.bindPopup(html, {maxWidth:250, closeButton:false});
+                    layer.on('mouseover', function(){ layer.setStyle({fillOpacity:0.22, weight:2}); });
+                    layer.on('mouseout',  function(){ layer.setStyle({fillOpacity:0.08, weight:1}); });
+                }
+            }).addTo(map);
+            if (aterLayer) aterLayer.bringToBack();
+        })
+        .catch(function(){ hideGeoLoading(); });
+}
+
+function toggleAterLayer() {
+    aterVisible = !aterVisible;
+    var row = document.getElementById('hud-gis-ater');
+    if (aterVisible) {
+        row.classList.add('on');
+        row.querySelector('.hud-chk').innerHTML = '&#10003;';
+        loadAterParcelas();
+    } else {
+        row.classList.remove('on');
+        row.querySelector('.hud-chk').innerHTML = '';
+        if (aterLayer) { try{ map.removeLayer(aterLayer); }catch(e){} aterLayer = null; }
+        var hintEl = document.getElementById('hud-ater-hint');
+        if (hintEl) hintEl.style.display = 'none';
+    }
+}
+
+map.on('moveend zoomend', function() {
+    if (!aterVisible) return;
+    clearTimeout(_aterDebounce);
+    _aterDebounce = setTimeout(loadAterParcelas, 800);
+});
 
 function loadParcelas() {
     fetch('/api/catastro/parcelas', {credentials:'same-origin'})
