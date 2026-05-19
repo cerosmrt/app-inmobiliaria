@@ -213,6 +213,10 @@ body { background: var(--c-bg); }
 .cat-marker:hover { transform: scale(1.4); }
 .cat-marker-active { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; cursor: pointer; position: relative; }
 .cat-marker-pulse { animation: active-pulse 1.8s ease-out infinite; }
+/* ── Province switcher ───────────────────────────────── */
+.hud-province-sel { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.13); border-radius:3px; color:#e2e8f0; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:0.4px; padding:4px 6px; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none; }
+.hud-province-sel option { background:#1e293b; color:#e2e8f0; }
+.hud-province-sel:focus { border-color:rgba(34,211,238,0.4); }
 /* ── Portfolio markers ───────────────────────────────── */
 .ptf-marker { width: 22px; height: 22px; border-radius: 4px; background: #c084fc; border: 2px solid rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 10px #c084fc66; transition: transform 0.12s; }
 .ptf-marker:hover { transform: scale(1.25); }
@@ -323,6 +327,9 @@ body { background: var(--c-bg); }
             <button class="hud-layer-btn"         id="hud-layer-osm"  onclick="switchLayer('osm')">OSM</button>
             <button class="hud-layer-btn"         id="hud-layer-sat"  onclick="switchLayer('sat')">SAT</button>
         </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section">PROVINCIA</div>
+        <select id="hud-province-sel" class="hud-province-sel" onchange="switchProvince(this.value)"></select>
         <div class="hud-divider"></div>
         <div class="hud-section">CAPAS GIS</div>
         <div class="hud-row on" id="hud-gis-provinces"     onclick="toggleGisLayer('provinces')">
@@ -545,6 +552,86 @@ var PROVINCE_CODES = {
     'tierra del fuego':                                      '94',
 };
 
+// ── Province list (for switcher) ─────────────────────────────────────────────
+var PROVINCE_LIST = [
+    {nombre:'Buenos Aires',code:'06'},{nombre:'CABA',code:'02'},
+    {nombre:'Catamarca',code:'10'},{nombre:'Chaco',code:'22'},
+    {nombre:'Chubut',code:'26'},{nombre:'Córdoba',code:'14'},
+    {nombre:'Corrientes',code:'18'},{nombre:'Entre Ríos',code:'30'},
+    {nombre:'Formosa',code:'34'},{nombre:'Jujuy',code:'38'},
+    {nombre:'La Pampa',code:'42'},{nombre:'La Rioja',code:'46'},
+    {nombre:'Mendoza',code:'50'},{nombre:'Misiones',code:'54'},
+    {nombre:'Neuquén',code:'58'},{nombre:'Río Negro',code:'62'},
+    {nombre:'Salta',code:'66'},{nombre:'San Juan',code:'70'},
+    {nombre:'San Luis',code:'74'},{nombre:'Santa Cruz',code:'78'},
+    {nombre:'Santa Fe',code:'82'},{nombre:'Santiago del Estero',code:'86'},
+    {nombre:'Tierra del Fuego',code:'94'},{nombre:'Tucumán',code:'90'},
+];
+var currentProvinceCode = '30';
+
+function initProvinceSwitcher() {
+    var sel = document.getElementById('hud-province-sel');
+    if (!sel) return;
+    PROVINCE_LIST.forEach(function(p){
+        var opt = document.createElement('option');
+        opt.value = p.nombre; opt.text = p.nombre;
+        if (p.code === '30') opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+initProvinceSwitcher();
+
+function _updateProvinceSwitcher(nombre) {
+    var sel = document.getElementById('hud-province-sel');
+    if (!sel) return;
+    for (var i = 0; i < sel.options.length; i++) {
+        if (normalizeStr(sel.options[i].value) === normalizeStr(nombre)) { sel.selectedIndex = i; return; }
+    }
+}
+
+function loadDefaultProvince() {
+    _switchToProvince('Entre Ríos', '30');
+}
+
+function switchProvince(nombre) {
+    var entry = PROVINCE_LIST.find(function(p){ return p.nombre === nombre; });
+    if (!entry) return;
+    if (entry.code === currentProvinceCode && navState.level >= 1) return;
+    _switchToProvince(nombre, entry.code);
+}
+
+function _switchToProvince(nombre, code) {
+    currentProvinceCode = code;
+    navState.level = 1;
+    navState.province = {nombre: nombre, id: code, layer: null};
+    navState.municipality = null;
+    if (typeof closeDetail === 'function') closeDetail();
+    if (typeof _clearParcelaLayers === 'function') _clearParcelaLayers();
+    if (municipioGeoLayer) { try{map.removeLayer(municipioGeoLayer);}catch(e){} municipioGeoLayer = null; }
+    if (provinceGeoLayer)  { try{map.removeLayer(provinceGeoLayer); }catch(e){} provinceGeoLayer  = null; }
+    _updateProvinceSwitcher(nombre);
+    showGeoLoading();
+    fetch('/api/catastro/geo/provincia/' + code, {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            hideGeoLoading();
+            if (!data || !data.features || !data.features.length) {
+                showGeoError(data && data.error ? 'IGN: ' + data.error.slice(0,50) : null);
+                return;
+            }
+            if (layerVis.provinces) {
+                provinceGeoLayer = L.geoJSON(data, {
+                    style: {fillColor:'#1e293b', fillOpacity:0.2, color:'#60a5fa', weight:2, opacity:0.75}
+                }).addTo(map);
+                navState.province.layer = provinceGeoLayer;
+                try { map.fitBounds(provinceGeoLayer.getBounds(), {padding:[30,30], maxZoom:9, animate:false}); } catch(e){}
+            }
+            updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
+            renderMunicipioPolygons();
+        })
+        .catch(function(){ hideGeoLoading(); showGeoError(); });
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 var allParcelas   = [];
 var activeParcela = null;
@@ -599,7 +686,7 @@ var tileLayers = {
     sat:  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         {attribution:'&copy;Esri', maxZoom:18}),
 };
-var map = L.map('cat-map', {center:[-34.6,-64.2], zoom:5, zoomControl:false, attributionControl:false});
+var map = L.map('cat-map', {center:[-32.0,-59.0], zoom:8, zoomControl:false, attributionControl:false});
 tileLayers.dark.addTo(map);
 L.control.zoom({position:'topright'}).addTo(map);
 L.control.attribution({position:'bottomleft', prefix:''}).addTo(map);
@@ -733,9 +820,7 @@ function loadParcelas() {
         .then(function(data){
             allParcelas = data;
             initProviderFilter();
-            updateBreadcrumb();
-            // Level 0: show province polygon layer only
-            renderProvincePolygons();
+            loadDefaultProvince();
             buildNavList(); updateNavBar();
             if (currentView === 'parcelas') renderParcelasList();
             if (currentView === 'oportunidades') renderOporList();
@@ -873,11 +958,15 @@ function renderProvincePolygons() {
 
 function _clickProvince(feature, layer) {
     var nombre = feature.properties.nombre || '';
+    var code   = feature.properties.in1 || '';
+    currentProvinceCode = code;
     navState.level    = 1;
-    navState.province = {nombre: nombre, id: feature.properties.in1 || '', layer: layer};
+    navState.province = {nombre: nombre, id: code, layer: layer};
     navState.municipality = null;
+    _updateProvinceSwitcher(nombre);
     try { map.fitBounds(layer.getBounds(), {padding:[20,20], maxZoom:9, animate:false}); } catch(e){}
     updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
+    renderMunicipioPolygons();
 }
 
 // ── Municipality GeoJSON layer ─────────────────────────────────────────────────
