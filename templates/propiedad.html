@@ -206,40 +206,6 @@
         }
         .btn-gmail:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); border-color: #CCCCCC; }
 
-        .divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; color: #BBBBBB; font-size: 12px; }
-        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #E5E5E5; }
-
-        /* ── FORM ── */
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999999; margin-bottom: 6px; }
-        .form-group input, .form-group textarea {
-            width: 100%; padding: 10px 14px;
-            border: 1.5px solid #E5E5E5; border-radius: 8px;
-            font-size: 13.5px; color: #111111; font-family: inherit;
-            outline: none; background: #FFFFFF;
-            transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .form-group input:focus, .form-group textarea:focus {
-            border-color: #111111;
-            box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
-        }
-        .form-group textarea { resize: vertical; min-height: 90px; }
-        .btn-enviar {
-            width: 100%; padding: 13px; background: var(--red); color: white;
-            border: none; border-radius: 9px; font-size: 14.5px; font-weight: 700;
-            cursor: pointer; transition: all 0.2s; font-family: inherit;
-        }
-        .btn-enviar:hover { background: var(--red-dk); transform: translateY(-1px); }
-        .btn-enviar:disabled { background: #BBBBBB; cursor: not-allowed; transform: none; }
-        .form-success {
-            background: #D1FAE5; color: #065F46; border-radius: 9px;
-            padding: 13px 16px; font-size: 13.5px; font-weight: 600;
-            text-align: center; display: none;
-        }
-        .form-error {
-            background: #FEE2E2; color: #991B1B; border-radius: 8px;
-            padding: 10px 14px; font-size: 12.5px; margin-bottom: 12px; display: none;
-        }
 
         /* ── LIGHTBOX ── */
         .lightbox {
@@ -324,7 +290,7 @@
             #btn-share, #btn-print, .back-btn,
             .gallery-nav, .gallery-expand, .gallery-thumbs, .gallery-count,
             .lightbox, #similares-section,
-            .btn-wa, .btn-tel, .divider, form, .form-success, .form-error,
+            .btn-wa, .btn-gmail,
             .breadcrumb { display: none !important; }
             .container { padding: 16px; }
             .layout { grid-template-columns: 1fr; gap: 16px; }
@@ -517,30 +483,6 @@
                     </a>
                 </div>
                 <div class="print-only">📞 ${TELEFONO} &nbsp;·&nbsp; Roberto Moret Inmobiliaria</div>
-                <div class="divider">o enviá un mensaje</div>
-                <form id="form-consulta" onsubmit="enviarConsulta(event, ${p.id})">
-                    <div class="form-error" id="form-error"></div>
-                    <div class="form-group">
-                        <label>Tu nombre *</label>
-                        <input type="text" name="nombre" placeholder="Juan García" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="tel" name="telefono" placeholder="+54 9 11 xxxx-xxxx">
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email" placeholder="tu@email.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Mensaje *</label>
-                        <textarea name="mensaje" required>${escHtml(msgDefecto)}</textarea>
-                    </div>
-                    <button type="submit" class="btn-enviar" id="btn-enviar">Enviar consulta</button>
-                    <div class="form-success" id="form-success">
-                        ✓ ¡Mensaje enviado! Nos comunicaremos a la brevedad.
-                    </div>
-                </form>
             </div>
         </div>`;
 
@@ -691,39 +633,6 @@
             if (e.key === 'Escape') closeLightbox();
         }
     });
-
-    function enviarConsulta(event, propId) {
-        event.preventDefault();
-        const form   = document.getElementById('form-consulta');
-        const btn    = document.getElementById('btn-enviar');
-        const errDiv = document.getElementById('form-error');
-        const okDiv  = document.getElementById('form-success');
-        const data   = {
-            nombre:       form.nombre.value.trim(),
-            telefono:     form.telefono.value.trim(),
-            email:        form.email.value.trim(),
-            mensaje:      form.mensaje.value.trim(),
-            propiedad_id: propId
-        };
-        if (!data.nombre || !data.mensaje) {
-            errDiv.textContent = 'Completá tu nombre y el mensaje.';
-            errDiv.style.display = 'block'; return;
-        }
-        errDiv.style.display = 'none';
-        btn.disabled = true; btn.textContent = 'Enviando...';
-        fetch('/api/public/consultas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        }).then(r => {
-            if (!r.ok) throw new Error();
-            form.style.display = 'none'; okDiv.style.display = 'block';
-        }).catch(() => {
-            errDiv.textContent = 'Error al enviar. Intentá de nuevo o contactanos por WhatsApp.';
-            errDiv.style.display = 'block';
-            btn.disabled = false; btn.textContent = 'Enviar consulta';
-        });
-    }
 
     function capitalizar(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
     function escHtml(str) {
