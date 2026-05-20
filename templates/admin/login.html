@@ -4,20 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso — Moret Inmobiliaria</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --red:       #C41230;
+            --red-hover: #A50E28;
+            --ink:       #18181B;
+            --text:      #27272A;
+            --text-2:    #52525B;
+            --muted:     #A1A1AA;
+            --bg:        #F9F9F8;
+            --surface:   #FFFFFF;
+            --surface-2: #F4F4F3;
+            --border:    #E5E5E4;
+            --tx:        0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f1f5f9;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-font-smoothing: antialiased;
         }
         .card {
-            background: white;
+            background: var(--surface);
             border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
             padding: 40px;
             width: 100%;
             max-width: 380px;
@@ -26,31 +44,41 @@
             text-align: center;
             margin-bottom: 32px;
         }
-        .brand .roberto { font-size: 11px; letter-spacing: 3px; color: #888; text-transform: uppercase; }
-        .brand .moret { font-size: 36px; font-weight: 800; color: #C41230; letter-spacing: -1px; line-height: 1; }
-        .brand .inmobiliaria { font-size: 11px; letter-spacing: 3px; color: #555; text-transform: uppercase; margin-top: 2px; }
-        .brand .divider { width: 40px; height: 3px; background: #C41230; margin: 14px auto 0; border-radius: 2px; }
-        h2 { font-size: 15px; color: #333; margin-bottom: 20px; text-align: center; font-weight: 500; }
-        label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .brand .roberto    { font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; font-weight: 500; }
+        .brand .moret      { font-size: 36px; font-weight: 800; color: var(--red); letter-spacing: -1px; line-height: 1; }
+        .brand .inmobiliaria { font-size: 10px; letter-spacing: 3px; color: var(--text-2); text-transform: uppercase; margin-top: 3px; font-weight: 500; }
+        .brand .divider    { width: 36px; height: 2px; background: var(--red); margin: 14px auto 0; border-radius: 1px; opacity: 0.4; }
+        h2 { font-size: 14px; color: var(--text-2); margin-bottom: 22px; text-align: center; font-weight: 500; }
+        label {
+            display: block; font-size: 10px; color: var(--muted); margin-bottom: 5px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px;
+        }
         input[type="text"], input[type="password"] {
-            width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
-            border-radius: 7px; font-size: 14px; color: #333;
-            outline: none; transition: border-color 0.2s;
-            margin-bottom: 16px;
+            width: 100%; padding: 10px 13px; border: 1.5px solid var(--border);
+            border-radius: 7px; font-size: 13.5px; color: var(--text);
+            font-family: inherit; outline: none;
+            transition: border-color var(--tx), box-shadow var(--tx);
+            margin-bottom: 14px; background: var(--surface);
         }
-        input:focus { border-color: #C41230; }
+        input:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(196,18,48,0.08);
+        }
         .btn-login {
-            width: 100%; padding: 12px; background: #C41230; color: white;
-            border: none; border-radius: 7px; font-size: 15px; font-weight: 700;
-            cursor: pointer; transition: background 0.2s;
+            width: 100%; padding: 11px; background: var(--red); color: white;
+            border: none; border-radius: 7px; font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: background var(--tx); font-family: inherit;
+            letter-spacing: 0.01em;
         }
-        .btn-login:hover { background: #a50e28; }
+        .btn-login:hover { background: var(--red-hover); }
         .error {
             background: #fee2e2; color: #b91c1c; border-radius: 6px;
-            padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
+            padding: 9px 13px; font-size: 12.5px; margin-bottom: 14px;
+            border: 1px solid #fecaca;
         }
-        .setup-link { text-align: center; margin-top: 16px; font-size: 12px; color: #999; }
-        .setup-link a { color: #C41230; }
+        .setup-link { text-align: center; margin-top: 18px; font-size: 12px; color: var(--muted); }
+        .setup-link a { color: var(--red); font-weight: 500; }
+        .setup-link a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>

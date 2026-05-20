@@ -1,36 +1,75 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Moret Inmobiliaria — Admin Design System
-   Professional operational console aesthetic
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-    --red: #C41230;
-    --red-hover: #a50e28;
-    --red-dim: rgba(196,18,48,0.12);
-    --navy: #1e3a5f;
-    --blue: #2563eb;
-    --bg: #f0f2f5;
-    --surface: #ffffff;
-    --border: #e2e8f0;
-    --border-strong: #cbd5e1;
-    --text: #1e293b;
-    --text-2: #475569;
-    --muted: #94a3b8;
-    --shadow-xs: 0 1px 2px rgba(0,0,0,0.06);
-    --shadow-sm: 0 1px 4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.07);
-    --shadow-lg: 0 20px 60px rgba(0,0,0,0.28);
+    /* ── Brand accent ── */
+    --red:          #C41230;
+    --red-hover:    #A50E28;
+    --red-dim:      rgba(196,18,48,0.08);
+    --accent:       #C41230;
+    --accent-dk:    #A50E28;
+    --accent-lt:    rgba(196,18,48,0.08);
+
+    /* ── Neutrals (warm zinc, not cold slate) ── */
+    --ink:          #18181B;   /* display headings, table header bg */
+    --text:         #27272A;   /* primary body text */
+    --text-2:       #52525B;   /* secondary text */
+    --muted:        #A1A1AA;   /* labels, hints, placeholders */
+
+    /* ── Surfaces ── */
+    --bg:           #F9F9F8;   /* page background — warm off-white */
+    --surface:      #FFFFFF;   /* card / panel surface */
+    --surface-2:    #F4F4F3;   /* recessed: input bg, stat tiles, code */
+
+    /* ── Borders ── */
+    --border:       #E5E5E4;
+    --border-strong:#C4C4C2;
+
+    /* ── Semantic status (separate from brand) ── */
+    --green:        #16A34A;
+    --amber:        #D97706;
+    --blue:         #2563EB;   /* kept for action badges / chip-blue */
+    --navy:         #1e3a5f;   /* kept for legacy stat-navy */
+
+    /* ── Shadows ── */
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.22);
+
+    /* ── Border radius ── */
     --radius-xs: 4px;
     --radius-sm: 6px;
-    --radius: 8px;
+    --radius:    8px;
     --radius-lg: 12px;
+
+    /* ── Motion ── */
     --tx: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Sidebar */
+    /* ── Type scale ── */
+    --text-xs:   10px;    /* uppercase labels, badge text */
+    --text-sm:   12px;    /* meta, timestamps */
+    --text-base: 13.5px;  /* body, table rows, inputs */
+    --text-md:   15px;    /* subheadings, modal titles */
+    --text-lg:   18px;    /* page section titles */
+    --text-xl:   22px;    /* page h1 */
+
+    /* ── Spacing scale ── */
+    --space-1:  4px;
+    --space-2:  8px;
+    --space-3:  12px;
+    --space-4:  16px;
+    --space-5:  20px;
+    --space-6:  24px;
+    --space-8:  32px;
+    --space-10: 40px;
+
+    /* ── Sidebar ── */
     --sb-width: 216px;
     --sb-bg: #0f172a;
     --sb-border: rgba(255,255,255,0.06);
-    --sb-text: rgba(255,255,255,0.52);
+    --sb-text: rgba(255,255,255,0.50);
     --sb-text-active: #ffffff;
     --sb-hover-bg: rgba(255,255,255,0.06);
     --sb-active-bg: rgba(196,18,48,0.14);
@@ -166,13 +205,13 @@ body {
 }
 .topbar-back { color: var(--muted); font-weight: 500; transition: color var(--tx); }
 .topbar-back:hover { color: var(--red); text-decoration: none; }
-.topbar-sep { color: #cbd5e1; font-size: 11px; }
+.topbar-sep { color: var(--border-strong); font-size: 11px; }
 .page-breadcrumb {
     display: flex; align-items: center; gap: 6px; font-size: 13px; flex: 1;
 }
 .page-breadcrumb a { color: var(--muted); font-weight: 500; transition: color var(--tx); }
 .page-breadcrumb a:hover { color: var(--red); text-decoration: none; }
-.bc-sep { color: #cbd5e1; font-size: 12px; }
+.bc-sep { color: var(--border-strong); font-size: 12px; }
 .page-breadcrumb strong { color: var(--text); font-weight: 600; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
@@ -188,7 +227,7 @@ body {
     flex-shrink: 0; cursor: default;
     transition: background var(--tx);
 }
-.stat-chip:hover { background: #fafafa; }
+.stat-chip:hover { background: var(--surface-2); }
 .stat-chip:last-child { border-right: none; }
 .chip-num {
     font-size: 17px; font-weight: 800; line-height: 1;
@@ -226,8 +265,8 @@ button:focus:not(:focus-visible) { outline: none; }
 .btn-green:hover  { background: #166534; }
 .btn-blue   { background: var(--blue); color: white; }
 .btn-print  { background: #0369a1; color: white; }
-.btn-gray   { background: #e2e8f0; color: var(--text-2); }
-.btn-gray:hover   { background: #cbd5e1; box-shadow: none; }
+.btn-gray   { background: var(--surface-2); color: var(--text-2); }
+.btn-gray:hover   { background: var(--border-strong); box-shadow: none; }
 .btn-red    { background: var(--red); color: white; }
 .btn-red:hover    { background: var(--red-hover); }
 
@@ -261,8 +300,8 @@ button:focus:not(:focus-visible) { outline: none; }
 }
 table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
 thead th {
-    background: #1e293b; color: rgba(255,255,255,0.85); padding: 9px 12px;
-    text-align: left; font-weight: 600; font-size: 10px;
+    background: var(--ink); color: rgba(255,255,255,0.85); padding: 9px 12px;
+    text-align: left; font-weight: 600; font-size: var(--text-xs);
     letter-spacing: 0.8px; text-transform: uppercase;
     position: sticky; top: 0; z-index: 5; white-space: nowrap;
 }
@@ -289,11 +328,11 @@ td input:focus, td select:focus { outline: none; border-color: var(--red); }
 .badge-reservada    { background: #fef9c3; color: #92400e; }
 .badge-vendida      { background: #fee2e2; color: #b91c1c; }
 .badge-rentada      { background: #fff7ed; color: #c2410c; }
-.badge-cerrada      { background: #f1f5f9; color: #64748b; }
+.badge-cerrada      { background: var(--surface-2); color: var(--text-2); }
 .badge-propietario  { background: #dbeafe; color: #1d4ed8; }
 .badge-interesado   { background: #f3e8ff; color: #7c3aed; }
 .badge-publicada    { background: #dcfce7; color: #15803d; cursor: pointer; }
-.badge-no-publicada { background: #f1f5f9; color: var(--muted); cursor: pointer; }
+.badge-no-publicada { background: var(--surface-2); color: var(--muted); cursor: pointer; }
 .badge-unread       { background: var(--red); color: white; font-size: 10px; font-weight: 700;
                       padding: 1px 7px; border-radius: 10px; margin-left: 6px; }
 
@@ -336,9 +375,9 @@ a:hover { text-decoration: underline; }
     display: flex; justify-content: space-between; align-items: flex-start;
     margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
 }
-.modal-header h3 { margin: 0; font-size: 15.5px; color: #0f172a; font-weight: 700; }
+.modal-header h3 { margin: 0; font-size: var(--text-md); color: var(--ink); font-weight: 700; }
 .modal-close {
-    background: #f1f5f9; border: none; width: 28px; height: 28px;
+    background: var(--surface-2); border: none; width: 28px; height: 28px;
     border-radius: 50%; font-size: 14px; cursor: pointer;
     color: var(--muted); display: flex; align-items: center; justify-content: center;
     transition: all var(--tx);
@@ -348,15 +387,15 @@ a:hover { text-decoration: underline; }
 .modal-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 .modal-meta span { margin-right: 16px; }
 .modal-msg {
-    font-size: 13.5px; line-height: 1.7; white-space: pre-wrap;
-    background: #f8fafc; padding: 14px; border-radius: var(--radius-sm);
+    font-size: var(--text-base); line-height: 1.7; white-space: pre-wrap;
+    background: var(--surface-2); padding: 14px; border-radius: var(--radius-sm);
     border: 1px solid var(--border);
 }
 
 /* ── Photo Modal ─────────────────────────────────────────────────────────── */
 .upload-zone {
     display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
-    padding: 14px 16px; background: #f8fafc; border: 2px dashed var(--border);
+    padding: 14px 16px; background: var(--surface-2); border: 2px dashed var(--border);
     border-radius: var(--radius); transition: all var(--tx); cursor: pointer;
 }
 .upload-zone:hover { border-color: var(--red); background: #fff5f6; }
@@ -450,7 +489,7 @@ a:hover { text-decoration: underline; }
     .main-area { margin-left: 0; }
     body { background: white; font-size: 11px; }
     .table-wrap { box-shadow: none; border: 1px solid #ccc; border-radius: 0; }
-    thead th { background: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static; }
+    thead th { background: var(--ink) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static; }
     .badge { border: 1px solid currentColor; }
 }
 
