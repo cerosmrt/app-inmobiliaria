@@ -634,7 +634,7 @@
         const card = document.getElementById('card-' + propId);
         if (!card) return;
         const img = card.querySelector('.photo-main');
-        if (img) { img.style.opacity = '0'; setTimeout(() => { img.src = '/' + thumbUrl(fotos[idx]); img.style.opacity = '1'; }, 100); }
+        if (img) img.src = '/' + thumbUrl(fotos[idx]);
         card.querySelectorAll('.c-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
     }
 
@@ -669,6 +669,7 @@
 
         sorted.forEach(p => {
             if (!p.fotos || p.fotos.length <= 1) return;
+            p.fotos.slice(1).forEach(f => { const i = new Image(); i.src = '/' + thumbUrl(f); });
             const card = document.getElementById('card-' + p.id);
             if (!card) return;
             const photo = card.querySelector('.card-photo');
