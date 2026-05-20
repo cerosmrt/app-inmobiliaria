@@ -1612,33 +1612,6 @@ import ssl            as _ssl
 _GEO_CACHE: dict = {}
 _GEO_SSL = _ssl._create_unverified_context()
 
-def _warm_geo_cache():
-    """Pre-fetch Entre Ríos province boundary + departments into memory cache at startup."""
-    import time as _time
-    _time.sleep(3)
-    for _cache_key, _params in [
-        ('prov_30', {'service':'WFS','version':'1.0.0','request':'GetFeature',
-                     'typeName':'ign:provincia','outputFormat':'application/json',
-                     'CQL_FILTER':"in1 = '30'"}),
-        ('dep_30',  {'service':'WFS','version':'1.0.0','request':'GetFeature',
-                     'typeName':'ign:departamento','outputFormat':'application/json',
-                     'CQL_FILTER':"in1 LIKE '30%'"}),
-    ]:
-        if _cache_key in _GEO_CACHE:
-            continue
-        try:
-            _url = 'https://wms.ign.gob.ar/geoserver/ows?' + _uparse.urlencode(_params)
-            _req = _ureq.Request(_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with _ureq.urlopen(_req, timeout=25, context=_GEO_SSL) as _r:
-                _data = _jmod.loads(_r.read().decode('utf-8'))
-            for _f in _data.get('features', []):
-                _p = _f.get('properties', {})
-                _p['nombre'] = _p.get('nam') or _p.get('nombre') or ''
-            _GEO_CACHE[_cache_key] = _data
-        except Exception:
-            pass
-
-threading.Thread(target=_warm_geo_cache, daemon=True).start()
 
 @app.route('/api/catastro/geo/provincias', methods=['GET'])
 @api_login_required

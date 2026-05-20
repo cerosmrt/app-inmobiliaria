@@ -597,6 +597,7 @@ function _updateProvinceSwitcher(nombre) {
 
 function loadDefaultProvince() {
     _switchToProvince('Entre Ríos', '30');
+    renderMunicipioPolygons();
 }
 
 function switchProvince(nombre) {
@@ -617,7 +618,8 @@ function _switchToProvince(nombre, code) {
     if (provinceGeoLayer)  { try{map.removeLayer(provinceGeoLayer); }catch(e){} provinceGeoLayer  = null; }
     _updateProvinceSwitcher(nombre);
     showGeoLoading();
-    fetch('/api/catastro/geo/provincia/' + code, {credentials:'same-origin'})
+    var _provUrl = code === '30' ? '/static/geo/ign/provincia_entre_rios.geojson' : '/api/catastro/geo/provincia/' + code;
+    fetch(_provUrl, {credentials:'same-origin'})
         .then(function(r){ return r.json(); })
         .then(function(data){
             hideGeoLoading();
@@ -718,6 +720,7 @@ map.on('click', function(e) {
 loadParcelas();
 loadPortfolio();
 loadAterParcelas();
+loadGualeguayParcelas();
 
 // ── Portfolio layer ───────────────────────────────────────────────────────────
 var PTF_COLOR        = '#c084fc';
@@ -938,6 +941,20 @@ map.on('moveend zoomend', function() {
     _aterDebounce = setTimeout(loadAterParcelas, 800);
 });
 
+// ── Gualeguay ATER static layer ───────────────────────────────────────────────
+var gualeguayParcelas = null;
+
+function loadGualeguayParcelas() {
+    fetch('/static/geo/ater/parcelas_gualeguay.geojson')
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            gualeguayParcelas = L.geoJSON(data).addTo(map);
+            console.log('[gualeguay] features added:', gualeguayParcelas.getLayers().length);
+        })
+        .catch(function(err){ console.error('[gualeguay] error:', err); });
+}
+
+
 function loadParcelas() {
     fetch('/api/catastro/parcelas', {credentials:'same-origin'})
         .then(function(r){ return r.json(); })
@@ -993,10 +1010,10 @@ function filterData() {
         var sp = p.source_provider || 'manual';
         if (provFilter[sp] === false) return false;
         if (navState.level >= 1 && navState.province) {
-            if (normalizeStr(p.province) !== normalizeStr(navState.province.nombre)) return false;
+            if (p.province && normalizeStr(p.province) !== normalizeStr(navState.province.nombre)) return false;
         }
         if (navState.level >= 2 && navState.municipality) {
-            if (normalizeStr(p.municipality) !== normalizeStr(navState.municipality.nombre)) return false;
+            if (p.municipality && normalizeStr(p.municipality) !== normalizeStr(navState.municipality.nombre)) return false;
         }
         if (!q) return true;
         return (p.municipality + ' ' + p.province + ' ' + p.zone + ' ' + p.parcel_id).toLowerCase().includes(q);
@@ -1095,19 +1112,33 @@ function _clickProvince(feature, layer) {
 
 // ── Municipality GeoJSON layer ─────────────────────────────────────────────────
 function renderMunicipioPolygons() {
+    console.log('[dept] renderMunicipioPolygons called', {province: navState.province, layerVis: layerVis.municipalities});
     if (municipioGeoLayer) { try{ map.removeLayer(municipioGeoLayer); }catch(e){} }
     municipioGeoLayer = null;
-    if (!navState.province || !layerVis.municipalities) return;
+    if (!navState.province || !layerVis.municipalities) {
+        console.log('[dept] BAIL: no province or municipalities hidden', navState.province, layerVis.municipalities);
+        return;
+    }
     var code = PROVINCE_CODES[normalizeStr(navState.province.nombre)];
-    if (!code) return;
-    fetch('/api/catastro/geo/departamentos/' + code, {credentials:'same-origin'})
-        .then(function(r){ return r.json(); })
+    console.log('[dept] province nombre=', navState.province.nombre, '-> code=', code);
+    if (!code) {
+        console.log('[dept] BAIL: no code found for province');
+        return;
+    }
+    var _deptUrl = code === '30' ? '/static/geo/ign/departamentos_entre_rios.geojson' : '/api/catastro/geo/departamentos/' + code;
+    console.log('[dept] fetching', _deptUrl);
+    fetch(_deptUrl, {credentials:'same-origin'})
+        .then(function(r){ console.log('[dept] fetch status', r.status); return r.json(); })
         .then(function(data) {
-            if (!data || !data.features || !data.features.length) return;
+            console.log('[dept] data received, features:', data && data.features && data.features.length);
+            if (!data || !data.features || !data.features.length) {
+                console.log('[dept] BAIL: empty features');
+                return;
+            }
             municipioGeoLayer = L.geoJSON(data, {
                 style: {fillColor:'#0f172a', fillOpacity:0.15, color:'#475569', weight:1, dashArray:'4,3', opacity:0.5},
                 onEachFeature: function(feature, layer) {
-                    var nombre = feature.properties.nombre || '';
+                    var nombre = feature.properties.nombre || feature.properties.nam || '';
                     layer.bindTooltip(nombre, {sticky:true, className:'geo-tooltip', direction:'top'});
                     layer.on('click', function(e) {
                         L.DomEvent.stopPropagation(e);
@@ -1115,9 +1146,10 @@ function renderMunicipioPolygons() {
                     });
                 }
             }).addTo(map);
+            console.log('[dept] layer added to map, features rendered:', municipioGeoLayer.getLayers().length);
             if (municipioGeoLayer) municipioGeoLayer.bringToBack();
         })
-        .catch(function(){});
+        .catch(function(err){ console.error('[dept] CATCH error:', err); });
 }
 
 function _clickMunicipio(feature, layer) {
@@ -1215,8 +1247,13 @@ function toggleGisLayer(name) {
         }
     }
     if (name === 'parcelas') {
-        if (layerVis.parcelas) renderMap();
-        else _clearParcelaLayers();
+        if (layerVis.parcelas) {
+            renderMap();
+            if (gualeguayParcelas) gualeguayParcelas.addTo(map);
+        } else {
+            _clearParcelaLayers();
+            if (gualeguayParcelas) map.removeLayer(gualeguayParcelas);
+        }
     }
 }
 
