@@ -12,14 +12,14 @@
         :root {
             --red:       #C41230;
             --red-hover: #A50E28;
-            --ink:       #18181B;
-            --text:      #27272A;
-            --text-2:    #52525B;
-            --muted:     #A1A1AA;
-            --bg:        #F9F9F8;
+            --ink:       #0A0A0A;
+            --text:      #171717;
+            --text-2:    #525252;
+            --muted:     #A3A3A3;
+            --bg:        #FAFAFA;
             --surface:   #FFFFFF;
-            --surface-2: #F4F4F3;
-            --border:    #E5E5E4;
+            --surface-2: #F5F5F5;
+            --border:    #E5E5E5;
             --tx:        0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,12 +57,11 @@
             width: 100%; padding: 10px 13px; border: 1.5px solid var(--border);
             border-radius: 7px; font-size: 13.5px; color: var(--text);
             font-family: inherit; outline: none;
-            transition: border-color var(--tx), box-shadow var(--tx);
+            transition: border-color var(--tx);
             margin-bottom: 14px; background: var(--surface);
         }
         input:focus {
             border-color: var(--red);
-            box-shadow: 0 0 0 3px rgba(196,18,48,0.08);
         }
         .btn-login {
             width: 100%; padding: 11px; background: var(--red); color: white;

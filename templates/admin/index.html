@@ -11,32 +11,31 @@
 
     /* ── Filter box ── */
     .filterbox {
-        background: white; padding: 9px 14px; border-radius: var(--radius);
+        background: var(--surface); padding: 9px 14px; border-radius: var(--radius);
         border: 1px solid var(--border); margin-bottom: 12px;
         display: flex; gap: 9px; align-items: center; flex-wrap: wrap;
-        box-shadow: var(--shadow-xs);
     }
     .filterbox input[type="text"],
     .filterbox input[type="number"],
     .filterbox select {
         font-size: 13px; padding: 5px 9px; border: 1.5px solid var(--border);
         border-radius: var(--radius-sm); width: auto; color: var(--text);
-        font-family: inherit; transition: border-color var(--tx); background: white;
+        font-family: inherit; transition: border-color var(--tx); background: var(--surface);
     }
-    .filterbox input:focus, .filterbox select:focus { outline: none; border-color: var(--red); }
+    .filterbox input:focus, .filterbox select:focus { outline: none; border-color: var(--accent); }
     .filterbox label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; cursor: pointer; }
     .filterbox .sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
 
     /* ── Sortable headers ── */
     thead th.sortable { cursor: pointer; }
-    thead th.sortable:hover { background: #2d3e52; }
-    thead th.sorted { background: var(--red); }
+    thead th.sortable:hover { background: var(--surface-3); }
+    thead th.sorted { background: var(--accent); }
     .sort-icon { font-size: 10px; margin-left: 2px; opacity: 0.9; }
 
     /* ── Inline editing highlight ── */
     .editable-text:not(:has(input)):hover,
     .editable-select:not(:has(select)):hover,
-    .editable-select-prop:not(:has(select)):hover { background: #fef9c3 !important; cursor: text; }
+    .editable-select-prop:not(:has(select)):hover { background: var(--surface-3) !important; cursor: text; }
 
     /* ── Stat colors (referenced in JS, checked by tests) ── */
     .stat-reservada { border-top-color: #a16207; }
@@ -47,16 +46,16 @@
     /* ── Bulk action toolbar ── */
     .bulk-toolbar {
         display: none; position: fixed; bottom: 0; left: var(--sb-width); right: 0; z-index: 60;
-        background: var(--dark); color: white; padding: 11px 24px;
+        background: var(--sb-bg); color: white; padding: 11px 24px;
         align-items: center; gap: 12px; box-shadow: 0 -4px 24px rgba(0,0,0,0.28);
-        border-top: 2px solid var(--red);
+        border-top: 2px solid var(--accent);
     }
     .bulk-toolbar select {
         font-size: 13px; padding: 5px 10px; border-radius: 6px;
         border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
         color: white; font-family: inherit;
     }
-    .bulk-toolbar select option { background: #1e293b; color: white; }
+    .bulk-toolbar select option { background: #111111; color: white; }
     #bulk-count { font-size: 13px; font-weight: 600; white-space: nowrap; }
 
     @media (max-width: 768px) { .bulk-toolbar { left: 0; } }
@@ -66,12 +65,12 @@
     #tablaPropiedades td:first-child { width: 36px; text-align: center; padding: 0 8px; }
 
     /* ── Inline assignment list ── */
-    .disp-list { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: white; }
+    .disp-list { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
     .disp-list::-webkit-scrollbar { width: 5px; }
-    .disp-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .disp-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     .disp-item { padding: 7px 10px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); transition: background var(--tx); display: flex; align-items: center; gap: 6px; }
     .disp-item:last-child { border-bottom: none; }
-    .disp-item:hover { background: #fef2f4; }
+    .disp-item:hover { background: var(--accent-lt); }
     .disp-empty { padding: 10px; font-size: 12px; color: var(--muted); text-align: center; }
 </style>
 {% endblock %}
@@ -977,7 +976,7 @@
                 filtroEl.style.display = data.length ? '' : 'none';
                 renderArchivados(tipo, data);
             })
-            .catch(function() { contenido.innerHTML = '<p style="color:#dc2626">Error al cargar.</p>'; });
+            .catch(function() { contenido.innerHTML = '<p style="color:var(--accent)">Error al cargar.</p>'; });
     }
 
     function filtrarArchivados() {

@@ -19,14 +19,14 @@
     .layout { display: flex; gap: 24px; align-items: flex-start; }
 
     .info-card {
-        width: 240px; flex-shrink: 0; background: white;
+        width: 240px; flex-shrink: 0; background: var(--surface);
         border-radius: 10px; padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.09);
-        border-top: 4px solid var(--navy);
+        border: 1px solid var(--border);
+        border-top: 4px solid var(--accent);
     }
     .info-card .avatar {
         width: 56px; height: 56px; border-radius: 50%;
-        background: var(--navy); color: white;
+        background: var(--accent); color: white;
         display: flex; align-items: center; justify-content: center;
         font-size: 22px; font-weight: 700; margin: 0 auto 14px;
     }
@@ -46,11 +46,11 @@
     .detail { flex: 1; min-width: 0; }
 
     .section-card {
-        background: white; border-radius: 10px; padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.09); margin-bottom: 20px;
+        background: var(--surface); border-radius: 10px; padding: 20px;
+        border: 1px solid var(--border); margin-bottom: 20px;
     }
     .section-card h2 {
-        margin: 0 0 14px; font-size: 15px; color: var(--navy);
+        margin: 0 0 14px; font-size: 15px; color: var(--text);
         border-bottom: 1px solid var(--border); padding-bottom: 10px;
         display: flex; align-items: center; gap: 7px;
     }
@@ -61,13 +61,13 @@
     .pref-item .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
 
     .table-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); box-shadow: none; }
-    thead th { background: #334155; position: static; padding: 9px 10px; font-size: 11px; }
+    thead th { background: var(--surface); color: var(--text-2); border-bottom: 2px solid var(--border-strong); position: static; padding: 9px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
     td { padding: 8px 10px; }
-    tbody tr:hover td { background: #dbeafe; }
+    tbody tr:hover td { background: var(--surface-3); }
 
     .notes-textarea { min-height: 100px; }
     .notes-textarea:focus { outline: 2px solid var(--blue); }
-    .save-confirm { font-size: 12px; color: #16a34a; margin-left: 10px; display: none; }
+    .save-confirm { font-size: 12px; color: var(--green); margin-left: 10px; display: none; }
 
     .buscar-wrap { position: relative; margin-top: 12px; }
     .buscar-wrap input {
@@ -136,7 +136,7 @@
                 renderDetalle(data);
             })
             .catch(function(err) {
-                document.getElementById('cliente-info').innerHTML = '<p style="color:#dc2626">' + esc(err.message) + '</p>';
+                document.getElementById('cliente-info').innerHTML = '<p style="color:var(--accent)">' + esc(err.message) + '</p>';
             });
     }
 
@@ -218,7 +218,7 @@
         list.innerHTML = '<p class="disp-empty">Cargando...</p>';
         function doRender(propiedades) {
             if (!propiedades) {
-                list.innerHTML = '<p class="disp-empty" style="color:#dc2626">Error al cargar propiedades.</p>';
+                list.innerHTML = '<p class="disp-empty" style="color:var(--accent)">Error al cargar propiedades.</p>';
                 return;
             }
             var disponibles = propiedades.filter(function(p) { return !vinculadas[p.id]; });

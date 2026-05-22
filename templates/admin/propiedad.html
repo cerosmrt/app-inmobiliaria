@@ -29,14 +29,14 @@
     .container { max-width: 1060px; margin: 0 auto; padding: 24px; }
 
     .prop-header { margin-bottom: 20px; }
-    .prop-header h1 { margin: 0; font-size: 22px; font-weight: 800; color: #1a1a1a; }
+    .prop-header h1 { margin: 0; font-size: 22px; font-weight: 800; color: var(--text); }
 
     .section-card {
-        background: white; border-radius: 10px; padding: 22px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.09); margin-bottom: 20px;
+        background: var(--surface); border-radius: 10px; padding: 22px;
+        border: 1px solid var(--border); margin-bottom: 20px;
     }
     .section-card h2 {
-        margin: 0 0 16px; font-size: 15px; color: #1a1a1a; font-weight: 700;
+        margin: 0 0 16px; font-size: 15px; color: var(--text); font-weight: 700;
         border-bottom: 1px solid var(--border); padding-bottom: 10px;
         display: flex; align-items: center; justify-content: space-between;
     }
@@ -53,7 +53,7 @@
         cursor: pointer; transition: background 0.12s; user-select: none;
         min-width: 0;
     }
-    .campo-item:hover { background: #fef9c3; }
+    .campo-item:hover { background: var(--surface-3); }
     .campo-item.campo-bool { cursor: default; }
     .campo-item.campo-bool:hover { background: var(--bg); }
     .campo-item.span2 { grid-column: span 2; }
@@ -64,12 +64,12 @@
     .campo-valor { font-size: 15px; font-weight: 700; word-break: break-word; }
     .campo-input {
         width: 100%; font-size: 14px; font-weight: 600; padding: 4px 7px;
-        border: 2px solid var(--red); border-radius: 4px; background: white;
+        border: 2px solid var(--accent); border-radius: 4px; background: var(--surface);
         margin-top: 2px; box-sizing: border-box;
     }
     .campo-bool-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
     .campo-bool-row input[type="checkbox"] {
-        width: 17px; height: 17px; cursor: pointer; accent-color: var(--red);
+        width: 17px; height: 17px; cursor: pointer; accent-color: var(--accent);
     }
     .campo-bool-row label { font-size: 14px; font-weight: 700; cursor: pointer; }
 
@@ -93,7 +93,7 @@
         width: 100%; font-size: 14px; padding: 8px 12px;
         border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;
     }
-    .buscar-wrap input:focus { outline: 2px solid var(--red); border-color: transparent; }
+    .buscar-wrap input:focus { outline: 2px solid var(--accent); border-color: transparent; }
     #buscar-resultados,
     #buscar-prop-resultados {
         max-height: 260px; overflow-y: auto;
@@ -112,7 +112,7 @@
         font-size: 13px; cursor: pointer;
         transition: border-color 0.15s, background 0.15s; margin-bottom: 14px;
     }
-    .upload-drop:hover { border-color: var(--red); background: #fff8f8; }
+    .upload-drop:hover { border-color: var(--accent); background: var(--accent-lt); }
     .upload-drop input { display: none; }
 
     .fotos-admin-grid { display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px; }
@@ -122,7 +122,7 @@
         cursor: grab; user-select: none;
     }
     .foto-admin-item:active { cursor: grabbing; }
-    .foto-admin-item.drag-sobre { border-color: var(--red); opacity: 0.55; }
+    .foto-admin-item.drag-sobre { border-color: var(--accent); opacity: 0.55; }
     .foto-admin-item img {
         width: 150px; height: 115px; object-fit: cover; display: block;
         transition: opacity 0.15s;
@@ -135,7 +135,7 @@
     }
     .foto-admin-item .btn-del-foto {
         position: absolute; top: 4px; right: 4px;
-        background: rgba(220,38,38,0.88); color: white; border: none;
+        background: rgba(196,18,48,0.88); color: white; border: none;
         border-radius: 3px; font-size: 11px; font-weight: 700;
         padding: 1px 5px; cursor: pointer; line-height: 1.4;
     }
@@ -421,7 +421,7 @@
         list.innerHTML = '<p class="disp-empty">Cargando...</p>';
         ensureClientesCache(function(clientes) {
             if (!clientes) {
-                list.innerHTML = '<p class="disp-empty" style="color:#dc2626">Error al cargar clientes.</p>';
+                list.innerHTML = '<p class="disp-empty" style="color:var(--accent)">Error al cargar clientes.</p>';
                 return;
             }
             var disponibles = clientes.filter(function(c) { return !excludeSet[c.id]; });
