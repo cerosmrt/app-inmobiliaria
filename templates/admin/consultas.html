@@ -22,7 +22,7 @@
     thead th { position: static; }
     td { padding: 10px 12px; }
     .msg-preview { max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
-    .prop-link { color: var(--blue); text-decoration: none; font-size: 12px; }
+    .prop-link { color: var(--text-2); text-decoration: none; font-size: 12px; }
     .prop-link:hover { text-decoration: underline; }
     tbody tr.no-leida td { background: var(--accent-lt); font-weight: 500; }
     tbody tr.no-leida td:first-child::before { content: '\25CF'; color: var(--accent); margin-right: 6px; font-size: 10px; }
@@ -38,8 +38,8 @@
     }
     .reply-group input:focus, .reply-group textarea:focus { border-color: var(--accent); }
     .reply-group textarea { resize: vertical; min-height: 130px; }
-    .btn-responder { font-size: 12px; padding: 4px 10px; background: #FFFFFF; color: #171717; border: 1px solid #D4D4D4; border-radius: 5px; cursor: pointer; font-family: inherit; }
-    .btn-responder:hover { background: #171717; color: white; }
+    .btn-responder { font-size: 12px; padding: 4px 10px; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-family: inherit; }
+    .btn-responder:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
 </style>
 {% endblock %}
 
@@ -165,7 +165,7 @@
                 '<td>' + esc(c.nombre) + '</td>' +
                 '<td>' +
                     (c.telefono ? esc(c.telefono) + ' <a href="' + waLink(c.telefono) + '" target="_blank" class="wa-link">&#x1F4AC;</a>' : '') +
-                    (c.email ? '<br><a href="mailto:' + esc(c.email) + '" style="font-size:12px;color:var(--blue)">' + esc(c.email) + '</a>' : '') +
+                    (c.email ? '<br><a href="mailto:' + esc(c.email) + '" style="font-size:12px;color:var(--text-2)">' + esc(c.email) + '</a>' : '') +
                 '</td>' +
                 '<td>' +
                     (c.propiedad_id
