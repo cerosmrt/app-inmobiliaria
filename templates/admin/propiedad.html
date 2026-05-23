@@ -535,9 +535,54 @@
                 '<input id="buscar-propietario" type="text" placeholder="Filtrar clientes..." ' +
                     'oninput="filtrarDisp(this,\'buscar-prop-resultados\')" autocomplete="off">' +
             '</div>' +
-            '<div id="buscar-prop-resultados" class="disp-list"></div>';
+            '<div id="buscar-prop-resultados" class="disp-list"></div>' +
+            '<hr class="inter-sep">' +
+            '<button onclick="toggleNuevoPropietario()" id="btn-toggle-nuevo-prop" ' +
+                'style="background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--muted);padding:0;text-decoration:underline">' +
+                '+ Crear propietario nuevo' +
+            '</button>' +
+            '<div id="nuevo-prop-form" style="display:none;margin-top:10px">' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+                    '<div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Nombre *</label>' +
+                        '<input id="np2-nombre" type="text" placeholder="Juan" style="width:100%;box-sizing:border-box;padding:6px 9px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit"></div>' +
+                    '<div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Apellido *</label>' +
+                        '<input id="np2-apellido" type="text" placeholder="García" style="width:100%;box-sizing:border-box;padding:6px 9px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit"></div>' +
+                    '<div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Teléfono *</label>' +
+                        '<input id="np2-telefono" type="text" placeholder="2235551234" style="width:100%;box-sizing:border-box;padding:6px 9px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit"></div>' +
+                '</div>' +
+                '<div style="margin-top:10px;display:flex;gap:8px">' +
+                    '<button class="btn btn-green" style="font-size:13px;padding:5px 16px" onclick="crearYAsignarPropietario()">Guardar y asignar</button>' +
+                    '<button class="btn btn-gray"  style="font-size:13px;padding:5px 14px" onclick="toggleNuevoPropietario()">Cancelar</button>' +
+                '</div>' +
+            '</div>';
         document.getElementById('propietarios-container').innerHTML = html;
         renderDispList('buscar-prop-resultados', asigSet, 'asignarPropietario');
+    }
+
+    function toggleNuevoPropietario() {
+        var form = document.getElementById('nuevo-prop-form');
+        var btn  = document.getElementById('btn-toggle-nuevo-prop');
+        var open = form.style.display === 'none';
+        form.style.display = open ? '' : 'none';
+        btn.textContent = open ? '← Cancelar' : '+ Crear propietario nuevo';
+        if (open) document.getElementById('np2-nombre').focus();
+    }
+
+    function crearYAsignarPropietario() {
+        var nombre   = (document.getElementById('np2-nombre').value   || '').trim();
+        var apellido = (document.getElementById('np2-apellido').value  || '').trim();
+        var telefono = (document.getElementById('np2-telefono').value  || '').trim();
+        if (!nombre || !apellido || !telefono) { toast('Nombre, apellido y teléfono son requeridos.', 'error'); return; }
+        fetch('/api/clientes', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nombre, apellido: apellido, telefono: telefono, tipo: 'propietario' })
+        }).then(function(r) { return r.json(); })
+          .then(function(c) {
+              return fetch('/api/propiedades/' + propiedadId + '/propietarios/' + c.id, { method: 'POST' });
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) { propData = data; renderPropietarios(); toast('Propietario creado y asignado', 'success'); })
+          .catch(function() { toast('Error al crear propietario', 'error'); });
     }
 
     function asignarPropietario(clienteId) {
