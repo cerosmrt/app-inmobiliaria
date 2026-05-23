@@ -340,12 +340,7 @@
         });
         actualizarBulkToolbar();
     }
-    function actualizarBulkToolbar() {
-        const bar = document.getElementById('bulk-toolbar');
-        const n = selectedPropIds.size;
-        bar.style.display = n > 0 ? 'flex' : 'none';
-        document.getElementById('bulk-count').textContent = n + ' seleccionada' + (n !== 1 ? 's' : '');
-    }
+    function actualizarBulkToolbar() { /* bulk toolbar removed */ }
     function deseleccionarTodo() {
         selectedPropIds.clear();
         document.querySelectorAll('#tablaPropiedades .chk-prop').forEach(function(c) { c.checked = false; });
@@ -353,23 +348,7 @@
         if (chkAll) chkAll.checked = false;
         actualizarBulkToolbar();
     }
-    function aplicarBulkEstado() {
-        var estado = document.getElementById('bulk-estado').value;
-        if (!estado) { toast('Seleccioná un estado', 'error'); return; }
-        var ids = Array.from(selectedPropIds);
-        fetch('/api/propiedades/bulk-estado', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: ids, estado: estado })
-        }).then(function(r) { return r.json(); })
-          .then(function(d) {
-              toast(d.updated + ' propiedad' + (d.updated !== 1 ? 'es' : '') + ' actualizadas', 'success');
-              deseleccionarTodo();
-              document.getElementById('bulk-estado').value = '';
-              cargarPropiedades();
-              cargarStats();
-          }).catch(function() { toast('Error al actualizar', 'error'); });
-    }
+    function aplicarBulkEstado() { /* bulk toolbar removed */ }
 
     // ── URL filter persistence ─────────────────────────────────────────────────
     function guardarFiltrosEnURL() {
