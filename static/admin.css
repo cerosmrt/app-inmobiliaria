@@ -287,6 +287,7 @@ body.sb-collapsed .sb-reopen { display: flex; }
 .btn:focus:not(:focus-visible),
 .btn-action:focus:not(:focus-visible),
 button:focus:not(:focus-visible) { outline: none; }
+.btn, .btn-action, button { user-select: none; }
 
 /* Primary */
 .btn-red  { background: var(--accent); color: white; border-color: var(--accent); }
