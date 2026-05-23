@@ -596,7 +596,7 @@ function _updateProvinceSwitcher(nombre) {
 }
 
 function loadDefaultProvince() {
-    _switchToProvince('Entre Ríos', '30');
+    _switchToProvince('Entre Ríos', '30', true);
     renderMunicipioPolygons();
 }
 
@@ -607,7 +607,7 @@ function switchProvince(nombre) {
     _switchToProvince(nombre, entry.code);
 }
 
-function _switchToProvince(nombre, code) {
+function _switchToProvince(nombre, code, noFit) {
     currentProvinceCode = code;
     navState.level = 1;
     navState.province = {nombre: nombre, id: code, layer: null};
@@ -632,7 +632,7 @@ function _switchToProvince(nombre, code) {
                     style: {fillColor:'#1e293b', fillOpacity:0.2, color:'#60a5fa', weight:2, opacity:0.75}
                 }).addTo(map);
                 navState.province.layer = provinceGeoLayer;
-                try { map.fitBounds(provinceGeoLayer.getBounds(), {padding:[30,30], maxZoom:9, animate:false}); } catch(e){}
+                if (!noFit) { try { map.fitBounds(provinceGeoLayer.getBounds(), {padding:[30,30], maxZoom:9, animate:false}); } catch(e){} }
             }
             updateBreadcrumb(); renderMap(); buildNavList(); updateNavBar();
             renderMunicipioPolygons();
