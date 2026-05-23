@@ -103,6 +103,7 @@ body {
     border-right: 1px solid var(--sb-border);
     overflow: hidden;
     transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
 /* Desktop collapse — full hide */
@@ -157,25 +158,25 @@ body.sb-collapsed .sb-reopen { display: flex; }
     padding: 16px 16px 6px 16px; margin-top: 0;
 }
 
-.sb-link {
+.sb-link, .sb-link:visited {
     display: flex; align-items: center; gap: 9px;
     padding: 10px 16px;
     border-left: 2px solid transparent;
-    color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 400;
+    color: #ffffff; opacity: 0.65; font-size: 13px; font-weight: 400;
     text-decoration: none !important; transition: all var(--tx);
     cursor: pointer;
 }
-.sb-link:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
+.sb-link:hover { background: rgba(255,255,255,0.08); opacity: 0.85; }
 .sb-link.sb-active {
     border-left: 2px solid #C41230;
-    background: rgba(255,255,255,0.04);
-    color: #ffffff; font-weight: 500;
+    background: rgba(255,255,255,0.1);
+    font-weight: 600; opacity: 1;
 }
-.sb-link.sb-link-external { color: rgba(255,255,255,0.45); font-size: 12px; }
-.sb-link.sb-link-external:hover { color: rgba(255,255,255,0.75); }
+.sb-link.sb-link-external { color: rgba(255,255,255,0.5); font-size: 12px; }
+.sb-link.sb-link-external:hover { background: rgba(255,255,255,0.08); color: #ffffff; }
 
 .sb-icon {
-    width: 15px; height: 15px; flex-shrink: 0; opacity: 0.6;
+    width: 15px; height: 15px; flex-shrink: 0; opacity: 0.75;
 }
 .sb-link.sb-active .sb-icon { opacity: 1; }
 
