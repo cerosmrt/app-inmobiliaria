@@ -153,7 +153,7 @@ body.sb-collapsed .sb-reopen { display: flex; }
 
 .sb-section {
     font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: rgba(255,255,255,0.25);
+    text-transform: uppercase; color: rgba(255,255,255,0.38);
     padding: 16px 16px 6px 16px; margin-top: 0;
 }
 
@@ -161,18 +161,18 @@ body.sb-collapsed .sb-reopen { display: flex; }
     display: flex; align-items: center; gap: 9px;
     padding: 10px 16px;
     border-left: 2px solid transparent;
-    color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 400;
+    color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 400;
     text-decoration: none !important; transition: all var(--tx);
     cursor: pointer;
 }
-.sb-link:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
+.sb-link:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
 .sb-link.sb-active {
     border-left: 2px solid #C41230;
     background: rgba(255,255,255,0.04);
     color: #ffffff; font-weight: 500;
 }
-.sb-link.sb-link-external { color: rgba(255,255,255,0.3); font-size: 12px; }
-.sb-link.sb-link-external:hover { color: rgba(255,255,255,0.6); }
+.sb-link.sb-link-external { color: rgba(255,255,255,0.45); font-size: 12px; }
+.sb-link.sb-link-external:hover { color: rgba(255,255,255,0.75); }
 
 .sb-icon {
     width: 15px; height: 15px; flex-shrink: 0; opacity: 0.6;
