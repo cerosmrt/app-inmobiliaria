@@ -60,6 +60,11 @@
 
     @media (max-width: 768px) { .bulk-toolbar { left: 0; } }
 
+    /* ── Modal form inputs ── */
+    .form-label { display:block;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px }
+    .form-input  { width:100%;box-sizing:border-box;padding:6px 10px;font-size:13.5px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;transition:border-color var(--tx) }
+    .form-input:focus { outline:none;border-color:var(--accent) }
+
     /* ── Row delete (hover only) ── */
     .row-delete { opacity: 0; transition: opacity var(--tx); }
     tr:hover .row-delete { opacity: 1; }
@@ -159,7 +164,7 @@
     <!-- ═══ TAB PROPIEDADES ═══ -->
     <div id="tab-propiedades" style="display:none">
         <div class="toolbar no-print">
-            <button class="btn btn-green" onclick="agregarFilaPropiedad()">+ Agregar propiedad</button>
+            <button class="btn btn-green" onclick="abrirModalNuevaPropiedad()">+ Agregar propiedad</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('propiedades')">↑ Importar CSV</button>
             <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">Imprimir</button>
             <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
@@ -313,6 +318,90 @@
         <div class="modal-footer" style="margin-top:16px">
             <button class="btn btn-gray" onclick="cerrarImportModal()">Cancelar</button>
             <button class="btn btn-green" id="import-submit-btn" onclick="ejecutarImport()" disabled>Importar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nueva propiedad -->
+<div id="modal-nueva-prop" class="modal-overlay">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-header">
+            <h3>Nueva propiedad</h3>
+            <button class="modal-close" onclick="cerrarModal('modal-nueva-prop')">&#x2715;</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div style="grid-column:1/-1">
+                <label class="form-label">Dirección *</label>
+                <input id="np-direccion" type="text" class="form-input" placeholder="Av. Siempreviva 742">
+            </div>
+            <div>
+                <label class="form-label">Tipo</label>
+                <select id="np-tipo" class="form-input">
+                    <option value="casa">Casa</option>
+                    <option value="departamento">Departamento</option>
+                    <option value="local">Local</option>
+                    <option value="terreno">Terreno</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Estado</label>
+                <select id="np-estado" class="form-input">
+                    <option value="disponible">Disponible</option>
+                    <option value="reservada">Reservada</option>
+                    <option value="vendida">Vendida</option>
+                    <option value="cerrada">Cerrada</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Precio USD</label>
+                <input id="np-precio" type="number" class="form-input" placeholder="0">
+            </div>
+            <div>
+                <label class="form-label">Ambientes</label>
+                <input id="np-ambientes" type="number" class="form-input" placeholder="—">
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:2px">
+            <p style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px">Propietario</p>
+
+            <!-- Search existing -->
+            <div id="np-prop-buscar-bloque">
+                <input id="np-prop-buscar" type="text" class="form-input" placeholder="Buscar por nombre o teléfono..."
+                       oninput="npBuscarPropietario(this.value)" autocomplete="off">
+                <div id="np-prop-resultados" style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface);max-height:160px;overflow-y:auto;display:none"></div>
+                <div id="np-prop-seleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--surface-2);border-radius:var(--radius-sm);font-size:13px;display:flex;align-items:center;gap:8px">
+                    <span id="np-prop-nombre"></span>
+                    <button onclick="npLimpiarPropietario()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px">&#x2715;</button>
+                </div>
+            </div>
+
+            <button id="np-toggle-nuevo" onclick="npToggleNuevo()" style="margin-top:8px;background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--muted);padding:0;text-decoration:underline">
+                + Crear propietario nuevo
+            </button>
+
+            <!-- Create new -->
+            <div id="np-nuevo-bloque" style="display:none;margin-top:10px;display:none;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                    <label class="form-label">Nombre *</label>
+                    <input id="np-nombre" type="text" class="form-input" placeholder="Juan">
+                </div>
+                <div>
+                    <label class="form-label">Apellido *</label>
+                    <input id="np-apellido" type="text" class="form-input" placeholder="García">
+                </div>
+                <div style="grid-column:1/-1">
+                    <label class="form-label">Teléfono *</label>
+                    <input id="np-telefono" type="text" class="form-input" placeholder="2235551234">
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top:16px">
+            <button class="btn btn-gray" onclick="cerrarModal('modal-nueva-prop')">Cancelar</button>
+            <button class="btn btn-green" onclick="guardarNuevaPropiedad()">Guardar</button>
         </div>
     </div>
 </div>
@@ -783,40 +872,107 @@
         filtrarPropiedades();
     }
 
-    function agregarFilaPropiedad() {
-        const tbody = document.querySelector('#tablaPropiedades tbody');
-        const row = document.createElement('tr');
-        row.classList.add('new-row');
-        row.innerHTML =
-            '<td><span style="color:var(--muted);font-size:12px">— asignar después —</span></td>' +
-            '<td><input type="text" placeholder="Dirección *" style="min-width:160px"></td>' +
-            '<td><select><option value="casa">Casa</option><option value="departamento">Depto</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>' +
-            '<td><select><option value="disponible">Disponible</option><option value="reservada">Reservada</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option><option value="cerrada">Cerrada</option></select></td>' +
-            '<td><input type="number" placeholder="Precio USD" style="width:110px"></td>' +
-            '<td>—</td>' +
-            '<td>' +
-                '<button class="btn-action btn-save" onclick="guardarNuevaPropiedad(this)">&#x2714;</button>' +
-                '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
-            '</td>';
-        tbody.insertBefore(row, tbody.firstChild);
+    // ── MODAL: NUEVA PROPIEDAD ────────────────────────────────────────────────
+    var _npPropietarioId = null;
+    var _npModoNuevo = false;
+
+    function abrirModalNuevaPropiedad() {
+        _npPropietarioId = null;
+        _npModoNuevo = false;
+        ['np-direccion','np-precio','np-ambientes','np-prop-buscar','np-nombre','np-apellido','np-telefono'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('np-tipo').value = 'casa';
+        document.getElementById('np-estado').value = 'disponible';
+        document.getElementById('np-prop-resultados').style.display = 'none';
+        document.getElementById('np-prop-seleccionado').style.display = 'none';
+        document.getElementById('np-nuevo-bloque').style.display = 'none';
+        document.getElementById('np-prop-buscar-bloque').style.display = '';
+        document.getElementById('np-toggle-nuevo').textContent = '+ Crear propietario nuevo';
+        document.getElementById('modal-nueva-prop').classList.add('active');
+        setTimeout(function() { document.getElementById('np-direccion').focus(); }, 80);
     }
 
-    function guardarNuevaPropiedad(btn) {
-        const tds = btn.closest('tr').querySelectorAll('td');
-        const propiedad = {
-            direccion: tds[1].querySelector('input').value,
-            tipo:      tds[2].querySelector('select').value,
-            estado:    tds[3].querySelector('select').value,
-            rango_min: parseFloat(tds[4].querySelector('input').value) || null,
+    function npToggleNuevo() {
+        _npModoNuevo = !_npModoNuevo;
+        document.getElementById('np-nuevo-bloque').style.display = _npModoNuevo ? 'grid' : 'none';
+        document.getElementById('np-prop-buscar-bloque').style.display = _npModoNuevo ? 'none' : '';
+        document.getElementById('np-toggle-nuevo').textContent = _npModoNuevo ? '← Buscar existente' : '+ Crear propietario nuevo';
+        if (_npModoNuevo) { _npPropietarioId = null; document.getElementById('np-prop-seleccionado').style.display = 'none'; }
+    }
+
+    function npBuscarPropietario(q) {
+        var res = document.getElementById('np-prop-resultados');
+        if (!q.trim()) { res.style.display = 'none'; return; }
+        var matches = clientes.filter(function(c) {
+            var full = (c.nombre + ' ' + c.apellido + ' ' + (c.telefono || '')).toLowerCase();
+            return full.includes(q.toLowerCase());
+        }).slice(0, 8);
+        if (!matches.length) { res.innerHTML = '<div style="padding:8px 12px;font-size:13px;color:var(--muted)">Sin resultados</div>'; res.style.display = 'block'; return; }
+        res.innerHTML = matches.map(function(c) {
+            return '<div class="disp-item" onclick="npSeleccionarPropietario(' + c.id + ',\'' + esc(c.nombre + ' ' + c.apellido).replace(/'/g,"\\'") + '\')">' +
+                '<span>' + esc(c.nombre + ' ' + c.apellido) + '</span>' +
+                '<span style="color:var(--muted);font-size:12px;margin-left:auto">' + esc(c.telefono || '') + '</span>' +
+                '</div>';
+        }).join('');
+        res.style.display = 'block';
+    }
+
+    function npSeleccionarPropietario(id, nombre) {
+        _npPropietarioId = id;
+        document.getElementById('np-prop-buscar').value = '';
+        document.getElementById('np-prop-resultados').style.display = 'none';
+        document.getElementById('np-prop-nombre').textContent = nombre;
+        document.getElementById('np-prop-seleccionado').style.display = 'flex';
+    }
+
+    function npLimpiarPropietario() {
+        _npPropietarioId = null;
+        document.getElementById('np-prop-seleccionado').style.display = 'none';
+    }
+
+    function guardarNuevaPropiedad() {
+        var direccion = document.getElementById('np-direccion').value.trim();
+        if (!direccion) { toast('Ingresá la dirección.', 'error'); return; }
+
+        var propData = {
+            direccion: direccion,
+            tipo:      document.getElementById('np-tipo').value,
+            estado:    document.getElementById('np-estado').value,
+            rango_min: parseFloat(document.getElementById('np-precio').value) || null,
+            ambientes: parseInt(document.getElementById('np-ambientes').value) || null,
             es_usd:    true,
         };
-        if (!propiedad.direccion) { toast('Ingresá la dirección.', 'error'); return; }
-        fetch('/api/propiedades', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(propiedad)
-        }).then(function(r) { return r.json(); })
-          .then(function() { toast('Propiedad agregada', 'success'); cargarPropiedades(); })
-          .catch(function(e) { console.error('Error al guardar propiedad', e); });
+
+        function crearPropiedad(propietarioId) {
+            if (propietarioId) propData.propietarios_ids = [propietarioId];
+            fetch('/api/propiedades', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(propData)
+            }).then(function(r) { return r.json(); })
+              .then(function() {
+                  cerrarModal('modal-nueva-prop');
+                  toast('Propiedad guardada', 'success');
+                  cargarPropiedades();
+                  cargarClientes();
+              }).catch(function() { toast('Error al guardar', 'error'); });
+        }
+
+        if (_npModoNuevo) {
+            var nombre   = document.getElementById('np-nombre').value.trim();
+            var apellido = document.getElementById('np-apellido').value.trim();
+            var telefono = document.getElementById('np-telefono').value.trim();
+            if (!nombre || !apellido || !telefono) { toast('Nombre, apellido y teléfono son requeridos.', 'error'); return; }
+            fetch('/api/clientes', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre: nombre, apellido: apellido, telefono: telefono, tipo: 'propietario' })
+            }).then(function(r) { return r.json(); })
+              .then(function(c) { crearPropiedad(c.id); })
+              .catch(function() { toast('Error al crear propietario', 'error'); });
+        } else {
+            crearPropiedad(_npPropietarioId);
+        }
     }
 
     function eliminarPropiedad(id) {
