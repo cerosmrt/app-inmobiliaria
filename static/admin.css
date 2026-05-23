@@ -336,14 +336,14 @@ button:focus:not(:focus-visible) { outline: none; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); }
 thead th {
     background: var(--surface); color: var(--muted); padding: 10px 14px;
-    text-align: left; font-weight: 600; font-size: 11px;
+    text-align: center; font-weight: 600; font-size: 11px;
     letter-spacing: 0.06em; text-transform: uppercase;
     border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 5; white-space: nowrap;
 }
 td {
     padding: 10px 14px; border-bottom: 1px solid var(--border-subtle);
-    vertical-align: middle;
+    vertical-align: middle; text-align: center;
 }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: var(--surface-2); transition: background var(--tx); }
