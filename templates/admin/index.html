@@ -633,7 +633,7 @@
             row.innerHTML =
                 '<td><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></td>' +
                 '<td class="editable-text" data-field="telefono" data-id="' + c.id + '">' +
-                    esc(c.telefono || '') + '&nbsp;' + waIcon(c.telefono) +
+                    waIcon(c.telefono) +
                 '</td>' +
                 '<td class="editable-text" data-field="email" data-id="' + c.id + '">' + esc(c.email || '') + '</td>' +
                 '<td style="font-size:12px;color:var(--muted);cursor:pointer" onclick="abrirPropiedadesModal(' + c.id + ')" title="Asignar / quitar propiedades">' + propIds + '</td>' +
@@ -1054,7 +1054,7 @@
                     '<tbody>' + matches.map(function(m) {
                         return '<tr>' +
                             '<td><a href="/cliente/' + m.id + '">' + esc(m.nombre) + ' ' + esc(m.apellido) + '</a></td>' +
-                            '<td>' + esc(m.telefono || '') + '&nbsp;' + waIcon(m.telefono) + '</td>' +
+                            '<td>' + waIcon(m.telefono) + '</td>' +
                             '<td>' + esc(m.email || '-') + '</td>' +
                             '<td>' + (m.rango_min || '-') + '</td>' +
                             '<td>' + (m.rango_max || '-') + '</td>' +
