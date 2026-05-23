@@ -60,10 +60,6 @@
 
     @media (max-width: 768px) { .bulk-toolbar { left: 0; } }
 
-    /* ── Checkbox column ── */
-    #tablaPropiedades th:first-child,
-    #tablaPropiedades td:first-child { width: 36px; text-align: center; padding: 0 8px; }
-
     /* ── Row delete (hover only) ── */
     .row-delete { opacity: 0; transition: opacity var(--tx); }
     tr:hover .row-delete { opacity: 1; }
@@ -194,7 +190,6 @@
         <div class="table-wrap">
             <table id="tablaPropiedades">
                 <thead><tr>
-                    <th><input type="checkbox" id="chk-all-props" onchange="toggleSelectAll(this.checked)" title="Seleccionar todos"></th>
                     <th class="sortable" data-sort="propiedades" data-field="propietario"  onclick="sortBy(this)">Propietario <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Ubicación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="tipo"         onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
@@ -221,21 +216,6 @@
             <p style="color:var(--muted);padding:8px 0">Seleccioná qué querés ver arriba.</p>
         </div>
     </div>
-</div>
-
-<!-- Bulk action toolbar -->
-<div id="bulk-toolbar" class="bulk-toolbar">
-    <span id="bulk-count">0 seleccionadas</span>
-    <select id="bulk-estado">
-        <option value="">Cambiar estado a…</option>
-        <option value="disponible">Disponible</option>
-        <option value="reservada">Reservada</option>
-        <option value="vendida">Vendida</option>
-        <option value="rentada">Rentada</option>
-        <option value="cerrada">Cerrada</option>
-    </select>
-    <button class="btn btn-green" style="padding:5px 16px;font-size:13px" onclick="aplicarBulkEstado()">Aplicar</button>
-    <button class="btn btn-gray"  style="padding:5px 14px;font-size:13px;margin-left:auto" onclick="deseleccionarTodo()">✕ Deseleccionar</button>
 </div>
 
 <!-- Modal: compradores compatibles -->
@@ -782,23 +762,18 @@
                 return '<a href="/cliente/' + c.id + '">' + esc(c.nombre + ' ' + c.apellido) + '</a>';
             }).join(', ') || (p.propietario_id ? '<a href="/cliente/' + p.propietario_id + '">' + esc(p.propietario || '') + '</a>' : '—');
             row.innerHTML =
-                '<td><input type="checkbox" class="chk-prop" value="' + p.id + '" onclick="event.stopPropagation()" onchange="toggleSelectProp(' + p.id + ', this.checked)"></td>' +
                 '<td style="cursor:pointer" onclick="abrirPropietariosModal(' + p.id + ')" title="Asignar / quitar propietarios">' + (propNames || '<span style="color:var(--muted);font-size:12px">+ agregar</span>') + '</td>' +
                 '<td>' +
-                    '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + (p.barrio ? ' <span style="color:var(--muted);font-size:11px">· ' + esc(p.barrio) + '</span>' : '') + '</a>' +
-                    ' <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((p.direccion || '') + (p.barrio ? ', ' + p.barrio : '')) + '" target="_blank" title="Ver en mapa" class="btn-action btn-map" style="font-size:11px;padding:2px 6px;text-decoration:none;vertical-align:middle">&#x1F4CD;</a>' +
+                    '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + '</a>' +
+                    ' <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.direccion || '') + '" target="_blank" title="Ver en mapa" class="btn-action btn-map" style="font-size:11px;padding:2px 6px;text-decoration:none;vertical-align:middle">&#x1F4CD;</a>' +
                 '</td>' +
                 '<td class="editable-select-prop" data-field="tipo" data-id="' + p.id + '">' + esc(p.tipo || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="estado" data-id="' + p.id + '">' +
                     '<span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado || '') + '</span>' +
                 '</td>' +
                 '<td class="editable-text" data-field="rango_min" data-id="' + p.id + '" title="' + (p.rango_max ? 'Max: ' + p.rango_max : '') + '">' + esc(precioStr) + '</td>' +
-                '<td>' +
-                    '<span class="badge ' + (p.publicada ? 'badge-publicada' : 'badge-no-publicada') + '"' +
-                    ' onclick="togglePublicada(' + p.id + ', ' + p.publicada + ')"' +
-                    ' title="' + (p.publicada ? 'Click para despublicar' : 'Click para publicar') + '">' +
-                    (p.publicada ? '&#x2713; Pub' : '&mdash;') +
-                    '</span>' +
+                '<td style="text-align:center;font-size:15px;cursor:pointer" onclick="togglePublicada(' + p.id + ', ' + p.publicada + ')" title="' + (p.publicada ? 'Click para despublicar' : 'Click para publicar') + '">' +
+                    (p.publicada ? '<span style="color:var(--accent)">&#x2713;</span>' : '<span style="color:var(--muted)">&#x2715;</span>') +
                 '</td>' +
                 '<td class="notas-col">' +
                     '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '">' +
@@ -834,7 +809,6 @@
         const row = document.createElement('tr');
         row.classList.add('new-row');
         row.innerHTML =
-            '<td></td>' +
             '<td><span style="color:var(--muted);font-size:12px">— asignar después —</span></td>' +
             '<td><input type="text" placeholder="Dirección *" style="min-width:160px"></td>' +
             '<td><select><option value="casa">Casa</option><option value="departamento">Depto</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>' +
@@ -851,10 +825,10 @@
     function guardarNuevaPropiedad(btn) {
         const tds = btn.closest('tr').querySelectorAll('td');
         const propiedad = {
-            direccion: tds[2].querySelector('input').value,
-            tipo:      tds[3].querySelector('select').value,
-            estado:    tds[4].querySelector('select').value,
-            rango_min: parseFloat(tds[5].querySelector('input').value) || null,
+            direccion: tds[1].querySelector('input').value,
+            tipo:      tds[2].querySelector('select').value,
+            estado:    tds[3].querySelector('select').value,
+            rango_min: parseFloat(tds[4].querySelector('input').value) || null,
             es_usd:    true,
         };
         if (!propiedad.direccion) { toast('Ingresá la dirección.', 'error'); return; }
