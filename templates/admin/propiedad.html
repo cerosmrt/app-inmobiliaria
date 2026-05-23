@@ -401,7 +401,7 @@
         return '<div class="inter-row">' +
             '<span class="inter-nombre"><a href="/cliente/' + c.id + '">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></span>' +
             '<span class="inter-tel">' + esc(c.telefono || '') + '</span>' +
-            '<a href="' + waLink(c.telefono) + '" target="_blank" class="btn-action btn-save" title="WhatsApp" style="font-size:13px">&#x1F4AC;</a>' +
+            waIcon(c.telefono) +
             botones + '</div>';
     }
 
