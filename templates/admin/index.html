@@ -514,8 +514,14 @@
     function applySort(arr, s) {
         if (!s.field) return arr;
         return arr.slice().sort(function(a, b) {
-            const va = a[s.field] != null ? a[s.field] : '';
-            const vb = b[s.field] != null ? b[s.field] : '';
+            var va, vb;
+            if (s.field === 'propietario') {
+                va = a.propietarios && a.propietarios.length ? a.propietarios[0].apellido + ' ' + a.propietarios[0].nombre : (a.propietario || '');
+                vb = b.propietarios && b.propietarios.length ? b.propietarios[0].apellido + ' ' + b.propietarios[0].nombre : (b.propietario || '');
+            } else {
+                va = a[s.field] != null ? a[s.field] : '';
+                vb = b[s.field] != null ? b[s.field] : '';
+            }
             if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * s.dir;
             return String(va).localeCompare(String(vb), 'es', { numeric: true }) * s.dir;
         });
