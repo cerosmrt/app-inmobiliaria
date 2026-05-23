@@ -694,7 +694,7 @@ var tileLayers = {
     sat:  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         {attribution:'&copy;Esri', maxZoom:18}),
 };
-var map = L.map('cat-map', {center:[-32.0,-59.0], zoom:8, zoomControl:false, attributionControl:false});
+var map = L.map('cat-map', {center:[-33.156,-59.309], zoom:13, zoomControl:false, attributionControl:false});
 tileLayers.sat.addTo(map);
 L.control.zoom({position:'topright'}).addTo(map);
 L.control.attribution({position:'bottomleft', prefix:''}).addTo(map);
