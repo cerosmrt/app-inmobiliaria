@@ -134,6 +134,7 @@
     <div id="tab-propietarios" style="display:none">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaPropietario()">+ Agregar propietario</button>
+            <button class="btn btn-gray"  onclick="abrirImportModal('clientes')">↑ Importar CSV</button>
             <button class="btn btn-print" onclick="imprimirTabla('tablaPropietarios', 'Propietarios')">Imprimir</button>
             <button class="btn btn-gray"  onclick="resetFiltrosPropietarios()">Limpiar filtros</button>
         </div>
@@ -158,6 +159,7 @@
     <div id="tab-propiedades" style="display:none">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaPropiedad()">+ Agregar propiedad</button>
+            <button class="btn btn-gray"  onclick="abrirImportModal('propiedades')">↑ Importar CSV</button>
             <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">Imprimir</button>
             <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
         </div>
@@ -300,6 +302,41 @@
         <div class="modal-footer">
             <button class="btn btn-gray"  onclick="cerrarModal('modal-notes')">Cancelar</button>
             <button class="btn btn-green" onclick="guardarNotas()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Importar CSV -->
+<div id="modal-import" class="modal-overlay">
+    <div class="modal-box" style="max-width:540px">
+        <div class="modal-header">
+            <h3 id="import-titulo">Importar CSV</h3>
+            <button class="modal-close" onclick="cerrarImportModal()">&#x2715;</button>
+        </div>
+        <input type="hidden" id="import-tipo">
+        <p style="font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.5">
+            Descargá la plantilla, completá las filas y subí el archivo.
+            La primera fila debe ser el encabezado tal cual está en la plantilla.
+        </p>
+        <a id="import-template-link" href="#" style="font-size:13px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:5px;margin-bottom:16px">
+            ↓ Descargar plantilla CSV
+        </a>
+        <div id="import-drop-zone" style="
+            border:2px dashed var(--border);border-radius:var(--radius);
+            padding:28px;text-align:center;cursor:pointer;
+            background:var(--surface);transition:border-color var(--tx);
+        " onclick="document.getElementById('import-file-input').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+           ondragleave="this.style.borderColor=''"
+           ondrop="importHandleDrop(event)">
+            <p style="font-size:13.5px;color:var(--muted);margin:0">Arrastrá un CSV o hacé click para seleccionar</p>
+            <p id="import-file-name" style="font-size:13px;font-weight:600;color:var(--text);margin:6px 0 0"></p>
+        </div>
+        <input type="file" id="import-file-input" accept=".csv" style="display:none" onchange="importFileSelected(this)">
+        <div id="import-result" style="margin-top:14px;font-size:13px;display:none"></div>
+        <div class="modal-footer" style="margin-top:16px">
+            <button class="btn btn-gray" onclick="cerrarImportModal()">Cancelar</button>
+            <button class="btn btn-green" id="import-submit-btn" onclick="ejecutarImport()" disabled>Importar</button>
         </div>
     </div>
 </div>
@@ -1214,5 +1251,89 @@
         cargarBadgeConsultas();
         cargarStats();
     });
+
+    // ── IMPORT CSV ────────────────────────────────────────────────────────────
+    var _importFile = null;
+
+    function abrirImportModal(tipo) {
+        _importFile = null;
+        document.getElementById('import-tipo').value = tipo;
+        document.getElementById('import-file-input').value = '';
+        document.getElementById('import-file-name').textContent = '';
+        document.getElementById('import-result').style.display = 'none';
+        document.getElementById('import-result').innerHTML = '';
+        document.getElementById('import-submit-btn').disabled = true;
+        document.getElementById('import-drop-zone').style.borderColor = '';
+        var titulo = tipo === 'propiedades' ? 'Importar Propiedades' : 'Importar Propietarios / Clientes';
+        document.getElementById('import-titulo').textContent = titulo;
+        var templateUrl = tipo === 'propiedades'
+            ? '/api/propiedades/import/template'
+            : '/api/clientes/import/template';
+        document.getElementById('import-template-link').href = templateUrl;
+        document.getElementById('modal-import').classList.add('active');
+    }
+
+    function cerrarImportModal() {
+        document.getElementById('modal-import').classList.remove('active');
+    }
+
+    function importFileSelected(input) {
+        if (input.files.length) {
+            _importFile = input.files[0];
+            document.getElementById('import-file-name').textContent = _importFile.name;
+            document.getElementById('import-submit-btn').disabled = false;
+            document.getElementById('import-drop-zone').style.borderColor = 'var(--accent)';
+        }
+    }
+
+    function importHandleDrop(event) {
+        event.preventDefault();
+        document.getElementById('import-drop-zone').style.borderColor = '';
+        var file = event.dataTransfer.files[0];
+        if (file) {
+            _importFile = file;
+            document.getElementById('import-file-name').textContent = file.name;
+            document.getElementById('import-submit-btn').disabled = false;
+            document.getElementById('import-drop-zone').style.borderColor = 'var(--accent)';
+        }
+    }
+
+    function ejecutarImport() {
+        if (!_importFile) return;
+        var tipo = document.getElementById('import-tipo').value;
+        var url  = tipo === 'propiedades' ? '/api/propiedades/import' : '/api/clientes/import';
+        var btn  = document.getElementById('import-submit-btn');
+        var resDiv = document.getElementById('import-result');
+        btn.disabled = true;
+        btn.textContent = 'Importando...';
+        var fd = new FormData();
+        fd.append('file', _importFile);
+        fetch(url, { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.textContent = 'Importar';
+                resDiv.style.display = 'block';
+                var html = '<p style="color:var(--text);font-weight:600;margin:0 0 6px">'
+                    + data.created + ' registros importados.</p>';
+                if (data.errors && data.errors.length) {
+                    html += '<p style="color:#b91c1c;margin:0 0 4px">Errores (' + data.errors.length + '):</p>'
+                         + '<ul style="margin:0;padding-left:18px;color:#b91c1c">'
+                         + data.errors.slice(0, 20).map(function(e) { return '<li>' + e + '</li>'; }).join('')
+                         + '</ul>';
+                    if (data.errors.length > 20) html += '<p style="color:var(--muted);margin:4px 0 0">...y ' + (data.errors.length - 20) + ' más.</p>';
+                }
+                resDiv.innerHTML = html;
+                if (data.created > 0) {
+                    if (tipo === 'propiedades') cargarPropiedades();
+                    else cargarClientes();
+                }
+            })
+            .catch(function() {
+                btn.textContent = 'Importar';
+                btn.disabled = false;
+                resDiv.style.display = 'block';
+                resDiv.innerHTML = '<p style="color:#b91c1c">Error al enviar el archivo.</p>';
+            });
+    }
 </script>
 {% endblock %}

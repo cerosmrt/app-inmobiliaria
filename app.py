@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 from flask_migrate import Migrate
 from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela
 from config import config as app_config
@@ -1245,6 +1245,136 @@ def import_leads():
                     email=row.get('propietario_email', '').strip() or None,
                     whatsapp=row.get('propietario_whatsapp', '').strip() or None,
                 ))
+            created += 1
+        except Exception as e:
+            errors.append(f"Fila {i+2}: {e}")
+    db.session.commit()
+    return jsonify({"created": created, "errors": errors})
+
+# ── Propiedades: Bulk Import CSV ──────────────────────────────────────────────
+
+@app.route('/api/propiedades/import/template')
+@login_required
+def propiedades_import_template():
+    csv_content = (
+        "direccion,barrio,tipo,operacion,estado,rango_min,rango_max,es_usd,"
+        "ambientes,superficie_terreno,superficie_cubierta,codigo,descripcion,publicada\n"
+        "Av. Ejemplo 123,Centro,casa,venta,disponible,50000,70000,true,3,200,150,P001,Descripcion,false\n"
+    )
+    return Response(
+        csv_content,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=template_propiedades.csv'},
+    )
+
+@app.route('/api/propiedades/import', methods=['POST'])
+@api_login_required
+def import_propiedades():
+    if 'file' not in request.files:
+        return jsonify({"error": "No se envió archivo"}), 400
+    import csv as _csv, io as _io2
+
+    def _bool(val, default=False):
+        return str(val).strip().lower() in ('true', '1', 'si', 'sí', 'yes')
+
+    def _float(val):
+        v = str(val).strip().replace(',', '.')
+        return float(v) if v else None
+
+    def _int(val):
+        v = str(val).strip()
+        return int(v) if v else None
+
+    content = request.files['file'].read().decode('utf-8-sig')
+    reader  = _csv.DictReader(_io2.StringIO(content))
+    created, errors = 0, []
+    for i, row in enumerate(reader):
+        try:
+            direccion = row.get('direccion', '').strip()
+            if not direccion:
+                errors.append(f"Fila {i+2}: dirección requerida")
+                continue
+            prop = Propiedad(
+                direccion=direccion,
+                barrio=row.get('barrio', '').strip() or None,
+                tipo=row.get('tipo', '').strip() or 'otro',
+                operacion=row.get('operacion', '').strip() or None,
+                estado=row.get('estado', '').strip() or 'disponible',
+                rango_min=_float(row.get('rango_min', '')),
+                rango_max=_float(row.get('rango_max', '')),
+                es_usd=_bool(row.get('es_usd', 'true')),
+                ambientes=_int(row.get('ambientes', '')),
+                superficie_terreno=_float(row.get('superficie_terreno', '')),
+                superficie_cubierta=_float(row.get('superficie_cubierta', '')),
+                codigo=row.get('codigo', '').strip() or None,
+                descripcion=row.get('descripcion', '').strip() or None,
+                publicada=_bool(row.get('publicada', 'false')),
+            )
+            db.session.add(prop)
+            created += 1
+        except Exception as e:
+            errors.append(f"Fila {i+2}: {e}")
+    db.session.commit()
+    return jsonify({"created": created, "errors": errors})
+
+# ── Clientes: Bulk Import CSV ─────────────────────────────────────────────────
+
+@app.route('/api/clientes/import/template')
+@login_required
+def clientes_import_template():
+    csv_content = (
+        "nombre,apellido,telefono,email,tipo,rango_min,rango_max,es_usd,ambientes,operacion,descripcion\n"
+        "Juan,García,2235551234,juan@ejemplo.com,propietario,,,false,,,\n"
+    )
+    return Response(
+        csv_content,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=template_clientes.csv'},
+    )
+
+@app.route('/api/clientes/import', methods=['POST'])
+@api_login_required
+def import_clientes():
+    if 'file' not in request.files:
+        return jsonify({"error": "No se envió archivo"}), 400
+    import csv as _csv, io as _io2
+
+    def _bool(val, default=False):
+        return str(val).strip().lower() in ('true', '1', 'si', 'sí', 'yes')
+
+    def _float(val):
+        v = str(val).strip().replace(',', '.')
+        return float(v) if v else None
+
+    def _int(val):
+        v = str(val).strip()
+        return int(v) if v else None
+
+    content = request.files['file'].read().decode('utf-8-sig')
+    reader  = _csv.DictReader(_io2.StringIO(content))
+    created, errors = 0, []
+    for i, row in enumerate(reader):
+        try:
+            nombre   = row.get('nombre', '').strip()
+            apellido = row.get('apellido', '').strip()
+            telefono = row.get('telefono', '').strip()
+            if not nombre or not apellido or not telefono:
+                errors.append(f"Fila {i+2}: nombre, apellido y teléfono son requeridos")
+                continue
+            cliente = Cliente(
+                nombre=nombre,
+                apellido=apellido,
+                telefono=telefono,
+                email=row.get('email', '').strip() or None,
+                tipo=row.get('tipo', '').strip() or 'propietario',
+                rango_min=_float(row.get('rango_min', '')),
+                rango_max=_float(row.get('rango_max', '')),
+                es_usd=_bool(row.get('es_usd', 'false')),
+                ambientes=_int(row.get('ambientes', '')),
+                operacion=row.get('operacion', '').strip() or None,
+                descripcion=row.get('descripcion', '').strip() or None,
+            )
+            db.session.add(cliente)
             created += 1
         except Exception as e:
             errors.append(f"Fila {i+2}: {e}")
