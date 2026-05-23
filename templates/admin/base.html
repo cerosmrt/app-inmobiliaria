@@ -13,6 +13,7 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+<script>if(localStorage.getItem('sb-collapsed')==='true')document.body.classList.add('sb-collapsed');</script>
 <div class="admin-shell">
 
     <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
@@ -23,6 +24,9 @@
                 <span class="sb-tagline">Inmobiliaria · Admin</span>
             </a>
         </div>
+        <button class="sb-toggle-desktop" onclick="toggleSidebar()" title="Contraer / expandir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
 
         <nav class="sb-nav">
             <div class="sb-section">Portfolio</div>
@@ -89,11 +93,17 @@
 
 </div><!-- .admin-shell -->
 
+<!-- Sidebar reopen (desktop, overlays content) -->
+<button class="sb-reopen" onclick="toggleSidebar()" title="Expandir menú">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+</button>
+
 <!-- Mobile sidebar toggle -->
 <button class="sb-toggle" id="sb-toggle" onclick="document.getElementById('sidebar').classList.toggle('sb-open'); document.getElementById('sb-overlay').classList.toggle('active')" aria-label="Menú">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </button>
 <div class="sb-overlay" id="sb-overlay" onclick="document.getElementById('sidebar').classList.remove('sb-open'); this.classList.remove('active')"></div>
+
 
 <div id="toast-container"></div>
 
@@ -127,6 +137,12 @@
 
 <script src="{{ url_for('static', filename='admin.js') }}"></script>
 <script>
+// ── Sidebar collapse (desktop) ─────────────────────────────────────────────
+function toggleSidebar() {
+    var collapsed = document.body.classList.toggle('sb-collapsed');
+    localStorage.setItem('sb-collapsed', collapsed);
+}
+
 // ── Sidebar active-state marking ───────────────────────────────────────────
 (function() {
     var path = window.location.pathname;

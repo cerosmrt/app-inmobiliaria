@@ -91,6 +91,7 @@ body {
     flex: 1; min-width: 0;
     display: flex; flex-direction: column;
     min-height: 100vh;
+    transition: margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -101,7 +102,33 @@ body {
     display: flex; flex-direction: column;
     border-right: 1px solid var(--sb-border);
     overflow: hidden;
+    transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Desktop collapse — full hide */
+body.sb-collapsed .sidebar { left: calc(-1 * var(--sb-width)); }
+body.sb-collapsed .main-area { margin-left: 0; }
+
+/* Collapse button — inside sidebar, vertically centered on right edge */
+.sb-toggle-desktop {
+    display: flex; align-items: center; justify-content: center;
+    position: absolute; top: 50%; right: -1px; transform: translateY(-50%);
+    width: 20px; height: 36px;
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.25); transition: color var(--tx); z-index: 1;
+}
+.sb-toggle-desktop:hover { color: rgba(255,255,255,0.8); }
+
+/* Reopen button — overlays content, vertically centered */
+.sb-reopen {
+    display: none; position: fixed; top: 50%; left: 12px; transform: translateY(-50%); z-index: 70;
+    width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
+    background: var(--sb-bg); border: 1px solid var(--sb-border);
+    color: rgba(255,255,255,0.5); align-items: center; justify-content: center;
+    transition: color var(--tx);
+}
+.sb-reopen:hover { color: rgba(255,255,255,0.9); }
+body.sb-collapsed .sb-reopen { display: flex; }
 
 /* Brand */
 .sb-brand { padding: 18px 16px 14px; border-bottom: 1px solid var(--sb-border); }
