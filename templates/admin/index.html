@@ -64,6 +64,11 @@
     #tablaPropiedades th:first-child,
     #tablaPropiedades td:first-child { width: 36px; text-align: center; padding: 0 8px; }
 
+    /* ── Row delete (hover only) ── */
+    .row-delete { opacity: 0; transition: opacity var(--tx); }
+    tr:hover .row-delete { opacity: 1; }
+    .notas-col { white-space: nowrap; }
+
     /* ── Inline assignment list ── */
     .disp-list { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
     .disp-list::-webkit-scrollbar { width: 5px; }
@@ -174,11 +179,6 @@
                 <option value="terreno">Terreno</option>
                 <option value="otro">Otro</option>
             </select>
-            <select id="filtroOperacion2" onchange="filtrarPropiedades()">
-                <option value="">Venta y alquiler</option>
-                <option value="venta">Venta</option>
-                <option value="alquiler">Alquiler</option>
-            </select>
             <select id="filtroEstado" onchange="filtrarPropiedades()">
                 <option value="">Todos los estados</option>
                 <option value="disponible">Disponible</option>
@@ -195,17 +195,13 @@
             <table id="tablaPropiedades">
                 <thead><tr>
                     <th><input type="checkbox" id="chk-all-props" onchange="toggleSelectAll(this.checked)" title="Seleccionar todos"></th>
-                    <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">Código <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="propiedades" data-field="propietario"  onclick="sortBy(this)">Propietario <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Ubicación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="tipo"         onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="operacion"    onclick="sortBy(this)">Operación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="estado"       onclick="sortBy(this)">Estado <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="rango_min"    onclick="sortBy(this)">Precio <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="propiedades" data-field="ambientes"    onclick="sortBy(this)">Amb <span class="sort-icon"></span></th>
-                    <th>Propietario</th>
-                    <th class="sortable" data-sort="propiedades" data-field="fecha_estado" onclick="sortBy(this)">Fecha estado <span class="sort-icon"></span></th>
                     <th>Publicada</th>
-                    <th class="no-print">Acciones</th>
+                    <th>Notas</th>
                 </tr></thead>
                 <tbody></tbody>
             </table>
@@ -410,12 +406,10 @@
         if (textoEl && textoEl.value) p.set('texto', textoEl.value);
         var dir    = document.getElementById('filtroDireccion').value;
         var tipo   = document.getElementById('filtroTipo').value;
-        var op     = document.getElementById('filtroOperacion2').value;
         var estado = document.getElementById('filtroEstado').value;
         var amb    = document.getElementById('filtroAmbientesProp').value;
         if (dir)    p.set('dir', dir);
         if (tipo)   p.set('tipo', tipo);
-        if (op)     p.set('op', op);
         if (estado) p.set('estado', estado);
         if (amb)    p.set('amb', amb);
         if (document.getElementById('filtroPublicadas').checked) p.set('pub', 'true');
@@ -429,7 +423,6 @@
         if (textoEl && p.get('texto')) textoEl.value = p.get('texto');
         if (p.get('dir'))    document.getElementById('filtroDireccion').value = p.get('dir');
         if (p.get('tipo'))   document.getElementById('filtroTipo').value = p.get('tipo');
-        if (p.get('op'))     document.getElementById('filtroOperacion2').value = p.get('op');
         if (p.get('estado')) document.getElementById('filtroEstado').value = p.get('estado');
         if (p.get('amb'))    document.getElementById('filtroAmbientesProp').value = p.get('amb');
         if (p.get('pub') === 'true') document.getElementById('filtroPublicadas').checked = true;
@@ -757,7 +750,6 @@
     function filtrarPropiedades() {
         const dir     = document.getElementById('filtroDireccion').value.toLowerCase();
         const tipo    = document.getElementById('filtroTipo').value;
-        const op      = document.getElementById('filtroOperacion2').value;
         const estado  = document.getElementById('filtroEstado').value;
         const amb     = document.getElementById('filtroAmbientesProp').value;
         const soloPub = document.getElementById('filtroPublicadas').checked;
@@ -768,7 +760,6 @@
                 || (p.codigo || '').toLowerCase().includes(dir);
             return matchDir
                 && (!tipo   || p.tipo === tipo)
-                && (!op     || p.operacion === op)
                 && (!estado || p.estado === estado)
                 && (!amb    || p.ambientes == amb)
                 && (!soloPub || p.publicada);
@@ -792,31 +783,28 @@
             }).join(', ') || (p.propietario_id ? '<a href="/cliente/' + p.propietario_id + '">' + esc(p.propietario || '') + '</a>' : '—');
             row.innerHTML =
                 '<td><input type="checkbox" class="chk-prop" value="' + p.id + '" onclick="event.stopPropagation()" onchange="toggleSelectProp(' + p.id + ', this.checked)"></td>' +
-                '<td class="editable-text" data-field="codigo" data-id="' + p.id + '" style="font-size:11px;color:var(--muted);font-weight:700">' + esc(p.codigo || '') + '</td>' +
+                '<td style="cursor:pointer" onclick="abrirPropietariosModal(' + p.id + ')" title="Asignar / quitar propietarios">' + (propNames || '<span style="color:var(--muted);font-size:12px">+ agregar</span>') + '</td>' +
                 '<td>' +
-                    '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + '</a>' +
+                    '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + (p.barrio ? ' <span style="color:var(--muted);font-size:11px">· ' + esc(p.barrio) + '</span>' : '') + '</a>' +
                     ' <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((p.direccion || '') + (p.barrio ? ', ' + p.barrio : '')) + '" target="_blank" title="Ver en mapa" class="btn-action btn-map" style="font-size:11px;padding:2px 6px;text-decoration:none;vertical-align:middle">&#x1F4CD;</a>' +
                 '</td>' +
                 '<td class="editable-select-prop" data-field="tipo" data-id="' + p.id + '">' + esc(p.tipo || '') + '</td>' +
-                '<td class="editable-select-prop" data-field="operacion" data-id="' + p.id + '">' + esc(p.operacion || '') + '</td>' +
                 '<td class="editable-select-prop" data-field="estado" data-id="' + p.id + '">' +
                     '<span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado || '') + '</span>' +
                 '</td>' +
                 '<td class="editable-text" data-field="rango_min" data-id="' + p.id + '" title="' + (p.rango_max ? 'Max: ' + p.rango_max : '') + '">' + esc(precioStr) + '</td>' +
-                '<td class="editable-text" data-field="ambientes" data-id="' + p.id + '">' + (p.ambientes || '') + '</td>' +
-                '<td style="cursor:pointer" onclick="abrirPropietariosModal(' + p.id + ')" title="Asignar / quitar propietarios">' + (propNames || '<span style="color:var(--muted);font-size:12px">+ agregar</span>') + '</td>' +
-                '<td>' + esc(p.fecha_estado || '-') + '</td>' +
                 '<td>' +
                     '<span class="badge ' + (p.publicada ? 'badge-publicada' : 'badge-no-publicada') + '"' +
                     ' onclick="togglePublicada(' + p.id + ', ' + p.publicada + ')"' +
                     ' title="' + (p.publicada ? 'Click para despublicar' : 'Click para publicar') + '">' +
-                    (p.publicada ? '&#x2713; Publicada' : '&mdash; Borrador') +
+                    (p.publicada ? '&#x2713; Pub' : '&mdash;') +
                     '</span>' +
                 '</td>' +
-                '<td class="no-print">' +
-                    '<button class="btn-action btn-match" onclick="verMatches(' + p.id + ', \'' + esc(p.direccion).replace(/'/g,"\\'") + '\')" title="Compradores compatibles">&#x26A1;</button>' +
-                    '<button class="btn-action btn-note"  onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '" >&#x1F4DD;</button>' +
-                    '<button class="btn-action btn-cancel" onclick="eliminarPropiedad(' + p.id + ')">&#x2715;</button>' +
+                '<td class="notas-col">' +
+                    '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '">' +
+                        (hasNotes ? '&#x1F4DD;' : '<span style="opacity:0.2">&#x1F4DD;</span>') +
+                    '</button>' +
+                    '<button class="btn-action btn-cancel row-delete" onclick="eliminarPropiedad(' + p.id + ')" title="Eliminar">&#x2715;</button>' +
                 '</td>';
             tbody.appendChild(row);
         });
@@ -834,7 +822,7 @@
     }
 
     function resetFiltrosPropiedades() {
-        ['filtroDireccion','filtroTipo','filtroOperacion2','filtroEstado','filtroAmbientesProp'].forEach(function(id) {
+        ['filtroDireccion','filtroTipo','filtroEstado','filtroAmbientesProp'].forEach(function(id) {
             document.getElementById(id).value = '';
         });
         document.getElementById('filtroPublicadas').checked = false;
@@ -846,15 +834,14 @@
         const row = document.createElement('tr');
         row.classList.add('new-row');
         row.innerHTML =
-            '<td><input type="text" placeholder="ID" style="width:80px"></td>' +
-            '<td><input type="text" placeholder="Ubicación"></td>' +
-            '<td><select><option value="casa">Casa</option><option value="departamento">Departamento</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>' +
-            '<td><select><option value="venta">Venta</option><option value="alquiler">Alquiler</option></select></td>' +
+            '<td></td>' +
+            '<td><span style="color:var(--muted);font-size:12px">— asignar después —</span></td>' +
+            '<td><input type="text" placeholder="Dirección *" style="min-width:160px"></td>' +
+            '<td><select><option value="casa">Casa</option><option value="departamento">Depto</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></td>' +
             '<td><select><option value="disponible">Disponible</option><option value="reservada">Reservada</option><option value="vendida">Vendida</option><option value="rentada">Rentada</option><option value="cerrada">Cerrada</option></select></td>' +
-            '<td><input type="number" placeholder="Precio USD"></td>' +
-            '<td><input type="number" placeholder="Amb"></td>' +
-            '<td>-</td><td>-</td><td>-</td>' +
-            '<td class="no-print">' +
+            '<td><input type="number" placeholder="Precio USD" style="width:110px"></td>' +
+            '<td>—</td>' +
+            '<td>' +
                 '<button class="btn-action btn-save" onclick="guardarNuevaPropiedad(this)">&#x2714;</button>' +
                 '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
             '</td>';
@@ -864,14 +851,11 @@
     function guardarNuevaPropiedad(btn) {
         const tds = btn.closest('tr').querySelectorAll('td');
         const propiedad = {
-            codigo:    tds[0].querySelector('input').value || null,
-            direccion: tds[1].querySelector('input').value,
-            tipo:      tds[2].querySelector('select').value,
-            operacion: tds[3].querySelector('select').value,
+            direccion: tds[2].querySelector('input').value,
+            tipo:      tds[3].querySelector('select').value,
             estado:    tds[4].querySelector('select').value,
             rango_min: parseFloat(tds[5].querySelector('input').value) || null,
             es_usd:    true,
-            ambientes: parseInt(tds[6].querySelector('input').value) || null
         };
         if (!propiedad.direccion) { toast('Ingresá la dirección.', 'error'); return; }
         fetch('/api/propiedades', {
