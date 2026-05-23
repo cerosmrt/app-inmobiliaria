@@ -325,9 +325,9 @@ body { background: var(--c-bg); }
     <div class="cat-hud" id="cat-hud">
         <div class="hud-section">BASE</div>
         <div class="hud-layer-row">
-            <button class="hud-layer-btn active" id="hud-layer-dark"  onclick="switchLayer('dark')">OSC</button>
+            <button class="hud-layer-btn" id="hud-layer-dark"  onclick="switchLayer('dark')">OSC</button>
             <button class="hud-layer-btn"         id="hud-layer-osm"  onclick="switchLayer('osm')">OSM</button>
-            <button class="hud-layer-btn"         id="hud-layer-sat"  onclick="switchLayer('sat')">SAT</button>
+            <button class="hud-layer-btn active"   id="hud-layer-sat"  onclick="switchLayer('sat')">SAT</button>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-section">PROVINCIA</div>
@@ -695,10 +695,10 @@ var tileLayers = {
         {attribution:'&copy;Esri', maxZoom:18}),
 };
 var map = L.map('cat-map', {center:[-32.0,-59.0], zoom:8, zoomControl:false, attributionControl:false});
-tileLayers.dark.addTo(map);
+tileLayers.sat.addTo(map);
 L.control.zoom({position:'topright'}).addTo(map);
 L.control.attribution({position:'bottomleft', prefix:''}).addTo(map);
-var currentLayer = 'dark';
+var currentLayer = 'sat';
 
 function switchLayer(name) {
     if (name === currentLayer) return;
