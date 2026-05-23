@@ -195,6 +195,7 @@
         <div class="table-wrap">
             <table id="tablaPropiedades">
                 <thead><tr>
+                    <th class="sortable" data-sort="propiedades" data-field="codigo"       onclick="sortBy(this)">N° <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="propietario"  onclick="sortBy(this)">Propietario <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="direccion"    onclick="sortBy(this)">Ubicación <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="tipo"         onclick="sortBy(this)">Tipo <span class="sort-icon"></span></th>
@@ -836,6 +837,7 @@
                 return '<a href="/cliente/' + c.id + '">' + esc(c.nombre + ' ' + c.apellido) + '</a>';
             }).join(', ') || (p.propietario_id ? '<a href="/cliente/' + p.propietario_id + '">' + esc(p.propietario || '') + '</a>' : '—');
             row.innerHTML =
+                '<td style="font-size:11px;color:var(--muted);font-weight:700">' + esc(p.codigo || ('#' + p.id)) + '</td>' +
                 '<td style="cursor:pointer" onclick="abrirPropietariosModal(' + p.id + ')" title="Asignar / quitar propietarios">' + (propNames || '<span style="color:var(--muted);font-size:12px">+ agregar</span>') + '</td>' +
                 '<td>' +
                     '<a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion) + '</a>' +
