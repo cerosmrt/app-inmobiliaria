@@ -114,21 +114,21 @@ body.sb-collapsed .main-area { margin-left: 0; }
 .sb-toggle-desktop {
     display: flex; align-items: center; justify-content: center;
     position: absolute; top: 50%; right: -1px; transform: translateY(-50%);
-    width: 20px; height: 36px;
+    width: 30px; height: 30px;
     background: none; border: none; cursor: pointer;
-    color: rgba(255,255,255,0.25); transition: color var(--tx); z-index: 1;
+    color: rgba(255,255,255,0.85); transition: color var(--tx); z-index: 1;
 }
-.sb-toggle-desktop:hover { color: rgba(255,255,255,0.8); }
+.sb-toggle-desktop:hover { color: #ffffff; }
 
 /* Reopen button — overlays content, vertically centered */
 .sb-reopen {
     display: none; position: fixed; top: 50%; left: 12px; transform: translateY(-50%); z-index: 70;
     width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
     background: var(--sb-bg); border: 1px solid var(--sb-border);
-    color: rgba(255,255,255,0.5); align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.85); align-items: center; justify-content: center;
     transition: color var(--tx);
 }
-.sb-reopen:hover { color: rgba(255,255,255,0.9); }
+.sb-reopen:hover { color: #ffffff; }
 body.sb-collapsed .sb-reopen { display: flex; }
 
 /* Brand */
