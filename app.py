@@ -462,7 +462,10 @@ def add_propiedad():
         estado=data['estado'],
         publicada=data.get('publicada', False),
         destacada=data.get('destacada', False),
-        propietario_id=data.get('propietario_id')
+        propietario_id=data.get('propietario_id'),
+        hectareas=data.get('hectareas'),
+        subdivisible=data.get('subdivisible'),
+        uso_suelo=data.get('uso_suelo'),
     )
     if 'interesados_ids' in data:
         nueva.interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
@@ -574,6 +577,9 @@ def update_propiedad(id):
         p.fecha_estado = datetime.utcnow()
     p.estado           = nuevo_estado
     p.propietario_id   = data.get('propietario_id', p.propietario_id)
+    p.hectareas        = data.get('hectareas', p.hectareas)
+    p.subdivisible     = data.get('subdivisible', p.subdivisible)
+    p.uso_suelo        = data.get('uso_suelo', p.uso_suelo)
     if 'interesados_ids' in data:
         p.interesados = Cliente.query.filter(Cliente.id.in_(data['interesados_ids'])).all()
     if 'propietarios_ids' in data:

@@ -263,22 +263,33 @@
     let _descTimer   = null;
     let _clientesCache = null;
 
-    const _CAMPOS = [
+    const _CAMPOS_BASE = [
         { label: 'Código',         field: 'codigo',             type: 'text' },
         { label: 'Dirección', field: 'direccion',          type: 'text',   span2: true },
         { label: 'Barrio',         field: 'barrio',             type: 'text' },
-        { label: 'Tipo',           field: 'tipo',               type: 'select', opts: ['casa','departamento','local','terreno','otro'] },
+        { label: 'Tipo',           field: 'tipo',               type: 'select', opts: ['casa','departamento','local','terreno','campo','otro'] },
         { label: 'Operación', field: 'operacion',          type: 'select', opts: ['venta','alquiler'] },
         { label: 'Estado',         field: 'estado',             type: 'select', opts: ['disponible','reservada','vendida','rentada','cerrada'], badge: true },
-        { label: 'Ambientes',      field: 'ambientes',          type: 'number' },
-        { label: 'Terreno m²',    field: 'superficie_terreno',  type: 'number' },
-        { label: 'Cubierto m²',   field: 'superficie_cubierta', type: 'number' },
+        { label: 'Ambientes',      field: 'ambientes',          type: 'number',  hideFor: ['campo'] },
+        { label: 'Terreno m²',    field: 'superficie_terreno',  type: 'number',  hideFor: ['campo'] },
+        { label: 'Cubierto m²',   field: 'superficie_cubierta', type: 'number',  hideFor: ['campo'] },
+        { label: 'Hectáreas',      field: 'hectareas',           type: 'number',  showFor: ['campo'] },
+        { label: 'Subdivisible',   field: 'subdivisible',        type: 'bool',    showFor: ['campo'] },
+        { label: 'Uso del suelo',  field: 'uso_suelo',           type: 'select',  opts: ['','agricola','ganadero','mixto'], showFor: ['campo'] },
         { label: 'Precio',         field: 'rango_min',          type: 'number' },
         { label: 'USD',            field: 'es_usd',             type: 'bool' },
         { label: 'A consultar',    field: 'precio_a_consultar', type: 'bool' },
         { label: 'Publicada',      field: 'publicada',          type: 'bool' },
         { label: 'Destacada',      field: 'destacada',          type: 'bool' },
     ];
+
+    function _getCamposForTipo(tipo) {
+        return _CAMPOS_BASE.filter(function(c) {
+            if (c.showFor && !c.showFor.includes(tipo)) return false;
+            if (c.hideFor && c.hideFor.includes(tipo)) return false;
+            return true;
+        });
+    }
 
     // ── Carga inicial ─────────────────────────────────────────────────────────
     function cargarPropiedad() {
@@ -306,7 +317,7 @@
         document.getElementById('prop-titulo').textContent = titulo;
         var tb = document.getElementById('topbar-prop-titulo');
         if (tb) tb.textContent = titulo;
-        document.getElementById('campos-grid').innerHTML = _CAMPOS.map(buildCampo).join('');
+        document.getElementById('campos-grid').innerHTML = _getCamposForTipo(propData.tipo).map(buildCampo).join('');
         attachCampoEvents();
     }
 

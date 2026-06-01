@@ -44,6 +44,9 @@ class Propiedad(db.Model):
     lat = db.Column(db.Float, nullable=True)
     lng = db.Column(db.Float, nullable=True)
     geojson_geometry = db.Column(db.Text, nullable=True)
+    hectareas = db.Column(db.Float, nullable=True)
+    subdivisible = db.Column(db.Boolean, nullable=True)
+    uso_suelo = db.Column(db.String, nullable=True)
     propietario_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True)
     propietario = db.relationship('Cliente', backref='propiedades_legacy', foreign_keys=[propietario_id])
     propietarios = db.relationship('Cliente', secondary=propietarios_propiedades, backref='propiedades_como_propietario')
@@ -85,6 +88,9 @@ class Propiedad(db.Model):
             'lng': self.lng,
             'geojson_geometry': self.geojson_geometry,
             'tipo_geometria': 'poligono' if self.geojson_geometry else ('punto' if self.lat is not None else None),
+            'hectareas': self.hectareas,
+            'subdivisible': self.subdivisible,
+            'uso_suelo': self.uso_suelo or '',
         }
 
 class Cliente(db.Model):

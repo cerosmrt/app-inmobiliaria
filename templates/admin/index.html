@@ -178,6 +178,7 @@
                 <option value="departamento">Departamento</option>
                 <option value="local">Local</option>
                 <option value="terreno">Terreno</option>
+                <option value="campo">Campo</option>
                 <option value="otro">Otro</option>
             </select>
             <select id="filtroEstado" onchange="filtrarPropiedades()">
@@ -332,17 +333,14 @@
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div style="grid-column:1/-1">
-                <label class="form-label">Dirección *</label>
-                <input id="np-direccion" type="text" class="form-input" placeholder="Av. Siempreviva 742">
-            </div>
             <div>
-                <label class="form-label">Tipo</label>
-                <select id="np-tipo" class="form-input">
+                <label class="form-label">Tipo *</label>
+                <select id="np-tipo" class="form-input" onchange="npUpdateFieldsByTipo()">
                     <option value="casa">Casa</option>
                     <option value="departamento">Departamento</option>
                     <option value="local">Local</option>
                     <option value="terreno">Terreno</option>
+                    <option value="campo">Campo</option>
                     <option value="otro">Otro</option>
                 </select>
             </div>
@@ -355,13 +353,36 @@
                     <option value="cerrada">Cerrada</option>
                 </select>
             </div>
+            <div style="grid-column:1/-1">
+                <label class="form-label">Dirección / Nombre *</label>
+                <input id="np-direccion" type="text" class="form-input" placeholder="Av. Siempreviva 742">
+            </div>
             <div>
                 <label class="form-label">Precio USD</label>
                 <input id="np-precio" type="number" class="form-input" placeholder="0">
             </div>
-            <div>
+            <!-- Campos comunes (no campo) -->
+            <div id="np-bloque-ambientes">
                 <label class="form-label">Ambientes</label>
                 <input id="np-ambientes" type="number" class="form-input" placeholder="—">
+            </div>
+            <!-- Campos específicos campo -->
+            <div id="np-bloque-hectareas" style="display:none">
+                <label class="form-label">Hectáreas</label>
+                <input id="np-hectareas" type="number" step="0.01" class="form-input" placeholder="0.00">
+            </div>
+            <div id="np-bloque-uso-suelo" style="display:none">
+                <label class="form-label">Uso del suelo</label>
+                <select id="np-uso-suelo" class="form-input">
+                    <option value="">—</option>
+                    <option value="agricola">Agrícola</option>
+                    <option value="ganadero">Ganadero</option>
+                    <option value="mixto">Mixto</option>
+                </select>
+            </div>
+            <div id="np-bloque-subdivisible" style="display:none;align-items:center;padding-top:18px">
+                <label class="form-label" style="margin-bottom:0;margin-right:8px">Subdivisible</label>
+                <input id="np-subdivisible" type="checkbox" style="width:17px;height:17px;accent-color:var(--accent)">
             </div>
         </div>
 
@@ -887,10 +908,12 @@
     function abrirModalNuevaPropiedad() {
         _npPropietarioId = null;
         _npModoNuevo = false;
-        ['np-direccion','np-precio','np-ambientes','np-prop-buscar','np-nombre','np-apellido','np-telefono'].forEach(function(id) {
+        ['np-direccion','np-precio','np-ambientes','np-hectareas','np-prop-buscar','np-nombre','np-apellido','np-telefono'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
+        document.getElementById('np-subdivisible').checked = false;
+        document.getElementById('np-uso-suelo').value = '';
         document.getElementById('np-tipo').value = 'casa';
         document.getElementById('np-estado').value = 'disponible';
         document.getElementById('np-prop-resultados').style.display = 'none';
@@ -898,8 +921,18 @@
         document.getElementById('np-nuevo-bloque').style.display = 'none';
         document.getElementById('np-prop-buscar-bloque').style.display = '';
         document.getElementById('np-toggle-nuevo').textContent = '+ Crear propietario nuevo';
+        npUpdateFieldsByTipo();
         document.getElementById('modal-nueva-prop').classList.add('active');
-        setTimeout(function() { document.getElementById('np-direccion').focus(); }, 80);
+        setTimeout(function() { document.getElementById('np-tipo').focus(); }, 80);
+    }
+
+    function npUpdateFieldsByTipo() {
+        var tipo = document.getElementById('np-tipo').value;
+        var esCampo = tipo === 'campo';
+        document.getElementById('np-bloque-ambientes').style.display = esCampo ? 'none' : '';
+        document.getElementById('np-bloque-hectareas').style.display = esCampo ? '' : 'none';
+        document.getElementById('np-bloque-uso-suelo').style.display = esCampo ? '' : 'none';
+        document.getElementById('np-bloque-subdivisible').style.display = esCampo ? 'flex' : 'none';
     }
 
     function npToggleNuevo() {
@@ -944,12 +977,17 @@
         var direccion = document.getElementById('np-direccion').value.trim();
         if (!direccion) { toast('Ingresá la dirección.', 'error'); return; }
 
+        var tipo = document.getElementById('np-tipo').value;
+        var esCampo = tipo === 'campo';
         var propData = {
             direccion: direccion,
-            tipo:      document.getElementById('np-tipo').value,
+            tipo:      tipo,
             estado:    document.getElementById('np-estado').value,
             rango_min: parseFloat(document.getElementById('np-precio').value) || null,
-            ambientes: parseInt(document.getElementById('np-ambientes').value) || null,
+            ambientes: esCampo ? null : (parseInt(document.getElementById('np-ambientes').value) || null),
+            hectareas: esCampo ? (parseFloat(document.getElementById('np-hectareas').value) || null) : null,
+            uso_suelo: esCampo ? (document.getElementById('np-uso-suelo').value || null) : null,
+            subdivisible: esCampo ? document.getElementById('np-subdivisible').checked : null,
             es_usd:    true,
         };
 
