@@ -353,9 +353,17 @@
                     <option value="cerrada">Cerrada</option>
                 </select>
             </div>
+            <!-- Nombre campo (solo campo) -->
+            <div id="np-bloque-nombre-campo" style="display:none;grid-column:1/-1">
+                <label class="form-label">Nombre de la estancia / campo</label>
+                <input id="np-nombre-campo" type="text" class="form-input" placeholder="La Esperanza">
+            </div>
             <div style="grid-column:1/-1">
-                <label class="form-label">Dirección / Nombre *</label>
+                <label class="form-label" id="np-label-direccion">Dirección *</label>
                 <input id="np-direccion" type="text" class="form-input" placeholder="Av. Siempreviva 742">
+                <p id="np-mapa-hint" style="display:none;margin:5px 0 0;font-size:11.5px;color:var(--muted)">
+                    📍 Guardá la propiedad y podrás marcar la ubicación exacta en el mapa.
+                </p>
             </div>
             <div>
                 <label class="form-label">Precio USD</label>
@@ -423,7 +431,8 @@
 
         <div class="modal-footer" style="margin-top:16px">
             <button class="btn btn-gray" onclick="cerrarModal('modal-nueva-prop')">Cancelar</button>
-            <button class="btn btn-green" onclick="guardarNuevaPropiedad()">Guardar</button>
+            <button class="btn btn-gray" onclick="guardarNuevaPropiedad(false)">Guardar</button>
+            <button class="btn btn-green" onclick="guardarNuevaPropiedad(true)">Guardar y marcar en mapa →</button>
         </div>
     </div>
 </div>
@@ -908,7 +917,7 @@
     function abrirModalNuevaPropiedad() {
         _npPropietarioId = null;
         _npModoNuevo = false;
-        ['np-direccion','np-precio','np-ambientes','np-hectareas','np-prop-buscar','np-nombre','np-apellido','np-telefono'].forEach(function(id) {
+        ['np-direccion','np-nombre-campo','np-precio','np-ambientes','np-hectareas','np-prop-buscar','np-nombre','np-apellido','np-telefono'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -929,6 +938,9 @@
     function npUpdateFieldsByTipo() {
         var tipo = document.getElementById('np-tipo').value;
         var esCampo = tipo === 'campo';
+        document.getElementById('np-bloque-nombre-campo').style.display = esCampo ? '' : 'none';
+        document.getElementById('np-label-direccion').textContent = esCampo ? 'Ubicación / Referencia' : 'Dirección *';
+        document.getElementById('np-mapa-hint').style.display = esCampo ? '' : 'none';
         document.getElementById('np-bloque-ambientes').style.display = esCampo ? 'none' : '';
         document.getElementById('np-bloque-hectareas').style.display = esCampo ? '' : 'none';
         document.getElementById('np-bloque-uso-suelo').style.display = esCampo ? '' : 'none';
@@ -950,14 +962,28 @@
             var full = (c.nombre + ' ' + c.apellido + ' ' + (c.telefono || '')).toLowerCase();
             return full.includes(q.toLowerCase());
         }).slice(0, 8);
-        if (!matches.length) { res.innerHTML = '<div style="padding:8px 12px;font-size:13px;color:var(--muted)">Sin resultados</div>'; res.style.display = 'block'; return; }
-        res.innerHTML = matches.map(function(c) {
+        var html = matches.map(function(c) {
             return '<div class="disp-item" onclick="npSeleccionarPropietario(' + c.id + ',\'' + esc(c.nombre + ' ' + c.apellido).replace(/'/g,"\\'") + '\')">' +
                 '<span>' + esc(c.nombre + ' ' + c.apellido) + '</span>' +
                 '<span style="color:var(--muted);font-size:12px;margin-left:auto">' + esc(c.telefono || '') + '</span>' +
                 '</div>';
         }).join('');
+        html += '<div class="disp-item" style="color:var(--accent);border-top:1px solid var(--border)" onclick="npPreCrear(\'' + q.replace(/'/g,"\\'") + '\')">' +
+            '+ Crear &ldquo;' + esc(q) + '&rdquo;</div>';
+        res.innerHTML = html;
         res.style.display = 'block';
+    }
+
+    function npPreCrear(nombre) {
+        var parts = nombre.trim().split(/\s+/);
+        _npModoNuevo = true;
+        document.getElementById('np-nuevo-bloque').style.display = 'grid';
+        document.getElementById('np-prop-buscar-bloque').style.display = 'none';
+        document.getElementById('np-toggle-nuevo').textContent = '← Buscar existente';
+        document.getElementById('np-nombre').value = parts[0] || '';
+        document.getElementById('np-apellido').value = parts.slice(1).join(' ') || '';
+        document.getElementById('np-prop-resultados').style.display = 'none';
+        document.getElementById('np-telefono').focus();
     }
 
     function npSeleccionarPropietario(id, nombre) {
@@ -973,22 +999,23 @@
         document.getElementById('np-prop-seleccionado').style.display = 'none';
     }
 
-    function guardarNuevaPropiedad() {
+    function guardarNuevaPropiedad(irAlMapa) {
         var direccion = document.getElementById('np-direccion').value.trim();
         if (!direccion) { toast('Ingresá la dirección.', 'error'); return; }
 
         var tipo = document.getElementById('np-tipo').value;
         var esCampo = tipo === 'campo';
         var propData = {
-            direccion: direccion,
-            tipo:      tipo,
-            estado:    document.getElementById('np-estado').value,
-            rango_min: parseFloat(document.getElementById('np-precio').value) || null,
-            ambientes: esCampo ? null : (parseInt(document.getElementById('np-ambientes').value) || null),
-            hectareas: esCampo ? (parseFloat(document.getElementById('np-hectareas').value) || null) : null,
-            uso_suelo: esCampo ? (document.getElementById('np-uso-suelo').value || null) : null,
+            direccion:    direccion,
+            nombre_campo: esCampo ? (document.getElementById('np-nombre-campo').value.trim() || null) : null,
+            tipo:         tipo,
+            estado:       document.getElementById('np-estado').value,
+            rango_min:    parseFloat(document.getElementById('np-precio').value) || null,
+            ambientes:    esCampo ? null : (parseInt(document.getElementById('np-ambientes').value) || null),
+            hectareas:    esCampo ? (parseFloat(document.getElementById('np-hectareas').value) || null) : null,
+            uso_suelo:    esCampo ? (document.getElementById('np-uso-suelo').value || null) : null,
             subdivisible: esCampo ? document.getElementById('np-subdivisible').checked : null,
-            es_usd:    true,
+            es_usd:       true,
         };
 
         function crearPropiedad(propietarioId) {
@@ -997,11 +1024,15 @@
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(propData)
             }).then(function(r) { return r.json(); })
-              .then(function() {
+              .then(function(nueva) {
                   cerrarModal('modal-nueva-prop');
-                  toast('Propiedad guardada', 'success');
-                  cargarPropiedades();
-                  cargarClientes();
+                  if (irAlMapa) {
+                      window.location.href = '/admin/propiedad/' + nueva.id + '#geo-map';
+                  } else {
+                      toast('Propiedad guardada', 'success');
+                      cargarPropiedades();
+                      cargarClientes();
+                  }
               }).catch(function() { toast('Error al guardar', 'error'); });
         }
 

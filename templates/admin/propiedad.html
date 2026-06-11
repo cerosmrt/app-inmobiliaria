@@ -265,7 +265,8 @@
 
     const _CAMPOS_BASE = [
         { label: 'Código',         field: 'codigo',             type: 'text' },
-        { label: 'Dirección', field: 'direccion',          type: 'text',   span2: true },
+        { label: 'Nombre del campo', field: 'nombre_campo',    type: 'text',   span2: true, showFor: ['campo'] },
+        { label: 'Dirección', field: 'direccion',          type: 'text',   span2: true, mapLink: true },
         { label: 'Barrio',         field: 'barrio',             type: 'text' },
         { label: 'Tipo',           field: 'tipo',               type: 'select', opts: ['casa','departamento','local','terreno','campo','otro'] },
         { label: 'Operación', field: 'operacion',          type: 'select', opts: ['venta','alquiler'] },
@@ -339,8 +340,12 @@
         var attrs = c.type !== 'bool'
             ? ' data-field="' + c.field + '" data-type="' + c.type + '"' + (c.opts ? ' data-opts=\'' + JSON.stringify(c.opts) + '\'' : '')
             : '';
+        var labelExtra = c.mapLink
+            ? ' <a href="#geo-map" onclick="document.getElementById(\'geo-map\').scrollIntoView({behavior:\'smooth\'});return false;" ' +
+              'style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:600;margin-left:6px">📍 marcar en mapa</a>'
+            : '';
         return '<div class="' + cls + '"' + attrs + '>' +
-            '<div class="campo-label">' + esc(c.label) + '</div>' + inner + '</div>';
+            '<div class="campo-label">' + esc(c.label) + labelExtra + '</div>' + inner + '</div>';
     }
 
     function attachCampoEvents() {

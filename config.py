@@ -29,9 +29,9 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = (
-        os.environ.get('DATABASE_URL') or 'sqlite:///inmobiliaria.db'
-    )
+    # Railway injects DATABASE_URL as postgres://, SQLAlchemy needs postgresql://
+    _db_url = os.environ.get('DATABASE_URL') or 'sqlite:///inmobiliaria.db'
+    SQLALCHEMY_DATABASE_URI = _db_url.replace('postgres://', 'postgresql://', 1)
     SESSION_COOKIE_SECURE   = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'

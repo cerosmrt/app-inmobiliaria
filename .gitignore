@@ -5,3 +5,6 @@ __pycache__/
 .env
 static/uploads/
 all_code.txt
+flask_out.log
+flask_err.log
+*.db

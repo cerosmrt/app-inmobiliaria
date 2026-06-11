@@ -463,6 +463,7 @@ def add_propiedad():
         publicada=data.get('publicada', False),
         destacada=data.get('destacada', False),
         propietario_id=data.get('propietario_id'),
+        nombre_campo=data.get('nombre_campo'),
         hectareas=data.get('hectareas'),
         subdivisible=data.get('subdivisible'),
         uso_suelo=data.get('uso_suelo'),
@@ -577,6 +578,7 @@ def update_propiedad(id):
         p.fecha_estado = datetime.utcnow()
     p.estado           = nuevo_estado
     p.propietario_id   = data.get('propietario_id', p.propietario_id)
+    p.nombre_campo     = data.get('nombre_campo', p.nombre_campo)
     p.hectareas        = data.get('hectareas', p.hectareas)
     p.subdivisible     = data.get('subdivisible', p.subdivisible)
     p.uso_suelo        = data.get('uso_suelo', p.uso_suelo)
