@@ -9,6 +9,13 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ## ✅ Hecho
 
+### Seguridad, datos e IA (reciente)
+- **Config segura de prod:** `SECRET_KEY` obligatoria en producción (falla al arrancar si falta, no más clave efímera que rompe sesiones); warning si corre en DEBUG sin `FLASK_ENV`. Credenciales hardcodeadas de `load_demo.py` eliminadas.
+- **Guards de entrada:** helpers `_json_body()`/`_missing()`; `add_propiedad` y `bulk-estado` devuelven 400 limpio en vez de 500.
+- **F1 · Instrumentación de eventos:** modelo `Evento` + beacon público `/api/public/track` + `/api/stats/eventos` (funnel: visitantes únicos, vistas, contactos, tasas, top propiedades). Front público trackea view_ficha, contacto_wa/email, view_listado, buscar.
+- **C1 · Descripciones con IA:** endpoint que genera descripciones vía API de Claude (degrada limpio sin key) + botón "✨ Generar con IA" en la ficha admin.
+
+
 ### Propiedades
 - CRUD completo de propiedades con **soft-delete** (`deleted_at`) y archivado/restaurar/borrado permanente.
 - Campos dinámicos según tipo de propiedad (urbano vs. **campo**: hectáreas, subdivisible, uso de suelo, nombre del campo).
@@ -40,10 +47,10 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
 ### 🔴 Crítico — estabilidad y seguridad de producción
-1. **Config peligrosa en prod.** Si falta `FLASK_ENV`, la app cae a `DevelopmentConfig` con `DEBUG=True` (`config.py:43`) → debugger de Werkzeug expuesto. Además `SECRET_KEY` es aleatoria por arranque si falta la env var (`config.py:6`) → con varios workers de gunicorn cada uno tiene su key y **el login se rompe**. *Por qué importa: es la diferencia entre un prod seguro y uno con la puerta abierta.* **← próxima modificación**
-2. **Credenciales hardcodeadas** `roberto` / `moret2024` en `load_demo.py`. *Por qué importa: si el script corre en prod deja una cuenta con password conocida.*
+1. ~~Config peligrosa en prod (SECRET_KEY efímera / DEBUG por defecto).~~ ✅ **Hecho.** *Nota de deploy: asegurarse de que PythonAnywhere tenga `FLASK_ENV=production` y `SECRET_KEY` seteadas en el WSGI/panel.*
+2. ~~Credenciales hardcodeadas en `load_demo.py`.~~ ✅ **Hecho.**
 3. **Doble sistema de esquema.** Alembic (`migrations/`) conviviendo con un bloque de `ALTER TABLE` crudos + `db.create_all()` en cada arranque (`app.py:1960-2012`), todo en `try/except: pass`. *Por qué importa: el esquema depende del orden de arranque, hay carreras entre workers y los errores se silencian. Requiere backup de la DB de prod antes de tocar.*
-4. **Validación de entrada casi nula.** Endpoints de escritura acceden a `data['direccion']` directo → **KeyError 500**; `request.get_json()` sin guard. *Por qué importa: cualquier request mal formado tira 500 en vez de un 400 limpio.*
+4. **Validación de entrada — parcial.** ✅ Guards aplicados a `add_propiedad` y `bulk-estado`. Falta extender el patrón `_json_body()`/`_missing()` al resto de endpoints de escritura (clientes, captación, catastro). *Por qué importa: todavía quedan rutas que pueden tirar 500 por body ausente.*
 5. **Posible path traversal** al borrar fotos por `<path:filename>` sin validar que el path resuelto quede dentro de `static/uploads/` (`app.py:642`). *Por qué importa: un nombre con `../` podría borrar fuera de la carpeta.*
 
 ### 🟠 Alto — experiencia y performance
@@ -63,10 +70,10 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 > Tesis: no copiar a Zillow — ganar con lo que es único de Gualeguay (catastro ATER + dueños, WhatsApp nativo, campos rurales). Las "features de IA" se hacen llamando a la API de Claude, no entrenando modelos.
 
 Los 6 primeros por impacto/esfuerzo (arrancar por acá):
-- **F1 · Instrumentar eventos de comportamiento + KPIs del funnel.** Cimiento de todo lo demás; hoy no se mide nada. *Por qué importa: sin datos, todo es opinión.*
+- ~~F1 · Instrumentar eventos + KPIs del funnel.~~ ✅ **Hecho** (base). Falta el **dashboard visual** en el admin que consuma `/api/stats/eventos` (E3).
 - **A1 · Radar de captación catastral** (parcela → lead priorizado). *Por qué importa: genera inventario, el cuello de botella real; usa tu moat catastral.*
-- **C1 · Descripciones de propiedad generadas por IA.** *Por qué importa: quick win de días; listings completos venden más.*
-- **B1 · Buyer Intent Score** (priorizar leads por temperatura). *Por qué importa: más ventas por lead con el mismo esfuerzo.*
+- ~~C1 · Descripciones de propiedad generadas por IA.~~ ✅ **Hecho.** Requiere setear `ANTHROPIC_API_KEY` para activarse.
+- **B1 · Buyer Intent Score** (priorizar leads por temperatura). *Por qué importa: más ventas por lead con el mismo esfuerzo — ahora es posible porque ya se registran eventos.*
 - **F2 · Búsqueda server-side + URLs por filtro + búsquedas guardadas.** *Por qué importa: escala el listado y hace la búsqueda compartible por WhatsApp.*
 - **B2+D2 · Guardados + alertas de price-drop / "nuevo parecido".** *Por qué importa: convierte anónimos en leads y los reactiva sin pauta.*
 
