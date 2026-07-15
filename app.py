@@ -29,6 +29,23 @@ app = Flask(__name__)
 env = os.environ.get('FLASK_ENV', 'default')
 app.config.from_object(app_config[env])
 
+# SECRET_KEY: obligatoria en producción (una clave efímera rompe las sesiones entre
+# workers de gunicorn). En dev se genera una efímera si falta, solo por comodidad.
+if not app.config.get('SECRET_KEY'):
+    if env == 'production':
+        raise RuntimeError(
+            "SECRET_KEY es obligatoria en producción. Seteá la env var SECRET_KEY "
+            "(generá una con: python -c \"import secrets; print(secrets.token_hex(32))\")."
+        )
+    app.config['SECRET_KEY'] = secrets.token_hex(32)  # dev only — efímera
+    app.logger.warning("SECRET_KEY no seteada: usando clave efímera de desarrollo.")
+
+# Aviso si arranca en modo debug sin declararse dev (típico olvido de FLASK_ENV en prod).
+if app.config.get('DEBUG') and env == 'default':
+    app.logger.warning(
+        "Corriendo con DEBUG=True y FLASK_ENV sin setear. En producción seteá FLASK_ENV=production."
+    )
+
 for folder in [app.config['UPLOAD_FOLDER'], 'static/uploads/properties', 'static/uploads/properties/thumbs', 'templates', 'static']:
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -174,6 +191,16 @@ def _fotos_from_str(raw: str):
 
 def _fotos_to_str(fotos: list) -> str:
     return ','.join(_normalize_foto(f) for f in fotos if f)
+
+def _json_body() -> dict:
+    """Devuelve el body JSON como dict, o {} si no es JSON válido.
+    Evita los 500 por KeyError/None cuando el request llega sin body o mal formado."""
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
+
+def _missing(data: dict, *keys):
+    """Lista de claves requeridas que faltan o vienen vacías."""
+    return [k for k in keys if not data.get(k)]
 
 # ── Auth decorators ───────────────────────────────────────────────────────────
 
@@ -445,10 +472,13 @@ def get_propiedades():
 @app.route('/api/propiedades', methods=['POST'])
 @api_login_required
 def add_propiedad():
-    data = request.get_json()
+    data = _json_body()
+    faltan = _missing(data, 'direccion', 'tipo', 'estado')
+    if faltan:
+        return jsonify({'error': f'Faltan campos requeridos: {", ".join(faltan)}'}), 400
     nueva = Propiedad(
         codigo=data.get('codigo'),
-        direccion=data['direccion'],
+        direccion=data.get('direccion'),
         barrio=data.get('barrio'),
         rango_min=data.get('rango_min'),
         rango_max=data.get('rango_max'),
@@ -457,9 +487,9 @@ def add_propiedad():
         ambientes=data.get('ambientes'),
         superficie_terreno=data.get('superficie_terreno'),
         superficie_cubierta=data.get('superficie_cubierta'),
-        tipo=data['tipo'],
+        tipo=data.get('tipo'),
         operacion=data.get('operacion'),
-        estado=data['estado'],
+        estado=data.get('estado'),
         publicada=data.get('publicada', False),
         destacada=data.get('destacada', False),
         propietario_id=data.get('propietario_id'),
@@ -479,7 +509,7 @@ def add_propiedad():
 @app.route('/api/propiedades/bulk-estado', methods=['PATCH'])
 @api_login_required
 def bulk_estado_propiedades():
-    data   = request.get_json()
+    data   = _json_body()
     ids    = data.get('ids', [])
     estado = data.get('estado', '')
     if not ids or not estado:

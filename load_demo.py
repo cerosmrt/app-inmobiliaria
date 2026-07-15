@@ -2,16 +2,25 @@
 Carga datos demo: 1 admin + propiedades publicadas con datos realistas de CABA.
 Uso: venv\Scripts\python load_demo.py
 """
+import os
 from app import app, db
 from models import Admin, Propiedad, Cliente
 
 with app.app_context():
     # ── Admin ──────────────────────────────────────────────────────────────────
+    # Sin credenciales hardcodeadas. Se leen de env vars; si no están, no se crea
+    # admin (usar /admin/setup para el primer usuario).
     if Admin.query.count() == 0:
-        admin = Admin(username='roberto')
-        admin.set_password('moret2024')
-        db.session.add(admin)
-        print("Admin creado: roberto / moret2024")
+        admin_user = os.environ.get('DEMO_ADMIN_USER')
+        admin_pass = os.environ.get('DEMO_ADMIN_PASS')
+        if admin_user and admin_pass:
+            admin = Admin(username=admin_user)
+            admin.set_password(admin_pass)
+            db.session.add(admin)
+            print(f"Admin creado: {admin_user}")
+        else:
+            print("⚠ No se creó admin: seteá DEMO_ADMIN_USER y DEMO_ADMIN_PASS, "
+                  "o creá el primer admin desde /admin/setup.")
     else:
         print("Admin ya existe, se omite.")
 
@@ -141,5 +150,3 @@ with app.app_context():
     print(f"{creadas} propiedades demo cargadas y publicadas.")
     print("\nListo! Abrí http://localhost:5000 para ver el sitio.")
     print("Admin panel: http://localhost:5000/admin")
-    print("  usuario: roberto")
-    print("  contraseña: moret2024")

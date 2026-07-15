@@ -1,9 +1,10 @@
 import os
-import secrets
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+    # Sin fallback acá a propósito: en prod debe venir de la env var (se valida en app.py).
+    # En dev, app.py genera una clave efímera si falta.
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'static/uploads'
     ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
