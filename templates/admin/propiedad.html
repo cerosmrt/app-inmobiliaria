@@ -228,6 +228,7 @@
             Descripci&oacute;n
             <div class="acciones">
                 <span id="desc-estado" style="display:none"></span>
+                <button class="btn" id="btn-ia-desc" onclick="generarDescripcionIA()" style="font-size:12px;padding:5px 14px" title="Generar descripci&oacute;n con IA a partir de los datos">&#x2728; Generar con IA</button>
                 <button class="btn btn-green" onclick="guardarDescripcion()" style="font-size:12px;padding:5px 14px">Guardar</button>
             </div>
         </h2>
@@ -634,6 +635,23 @@
                 if (el) el.style.display = 'none';
             }, 2000);
         }).catch(function() { toast('Error al guardar descripción', 'error'); });
+    }
+
+    // Genera una descripción con IA (no la guarda: la carga en el textarea para revisar).
+    function generarDescripcionIA() {
+        var btn = document.getElementById('btn-ia-desc');
+        var prev = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = 'Generando…';
+        fetch('/api/propiedades/' + propiedadId + '/generar-descripcion', { method: 'POST' })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+            .then(function(res) {
+                if (!res.ok) { toast((res.d && res.d.error) || 'No se pudo generar', 'error'); return; }
+                document.getElementById('descripcion').value = res.d.descripcion || '';
+                setDescEstado('&#x2728; Generado por IA — revis&aacute; y guard&aacute;', true);
+                toast('Descripción generada. Revisala y tocá Guardar.', 'success');
+            })
+            .catch(function() { toast('Error llamando a la IA', 'error'); })
+            .finally(function() { btn.disabled = false; btn.innerHTML = prev; });
     }
 
     // ── Fotos ─────────────────────────────────────────────────────────────────

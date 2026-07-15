@@ -601,6 +601,81 @@ def add_propiedad():
     db.session.commit()
     return jsonify(nueva.as_dict()), 201
 
+# ── IA: generación de descripciones (C1 — ver VISION.md) ──────────────────────
+
+_ANTHROPIC_URL   = 'https://api.anthropic.com/v1/messages'
+_ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
+
+def _claude_complete(prompt: str, max_tokens: int = 700) -> str:
+    """Llama a la API de Claude por HTTP (sin SDK). Requiere ANTHROPIC_API_KEY.
+    Lanza RuntimeError('no-key') si no está configurada."""
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not api_key:
+        raise RuntimeError('no-key')
+    import json as _json
+    import urllib.request
+    body = _json.dumps({
+        'model': _ANTHROPIC_MODEL,
+        'max_tokens': max_tokens,
+        'messages': [{'role': 'user', 'content': prompt}],
+    }).encode('utf-8')
+    req = urllib.request.Request(_ANTHROPIC_URL, data=body, method='POST', headers={
+        'x-api-key': api_key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+    })
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        payload = _json.loads(resp.read().decode('utf-8'))
+    parts = [b.get('text', '') for b in payload.get('content', []) if b.get('type') == 'text']
+    return ''.join(parts).strip()
+
+def _prompt_descripcion(p) -> str:
+    datos = []
+    def add(label, val):
+        if val not in (None, '', False):
+            datos.append(f"- {label}: {val}")
+    add('Tipo', p.tipo)
+    add('Operación', p.operacion)
+    add('Dirección', p.direccion)
+    add('Barrio/Zona', p.barrio)
+    add('Ambientes', p.ambientes)
+    add('Superficie cubierta (m²)', p.superficie_cubierta)
+    add('Superficie terreno (m²)', p.superficie_terreno)
+    if p.tipo == 'campo':
+        add('Nombre del campo', p.nombre_campo)
+        add('Hectáreas', p.hectareas)
+        add('Uso de suelo', p.uso_suelo)
+        add('Subdivisible', 'sí' if p.subdivisible else None)
+    seed = (p.descripcion or '').strip()
+    return (
+        "Sos el redactor de una inmobiliaria familiar en Gualeguay, Entre Ríos, Argentina. "
+        "Escribí una descripción atractiva y profesional en español rioplatense para publicar esta propiedad. "
+        "Reglas: NO inventes datos, amenities ni características que no estén en la lista; usá solo lo provisto. "
+        "Tono cálido y confiable, sin exageraciones ni clichés vacíos. 2 a 4 oraciones, entre 400 y 800 caracteres. "
+        "No incluyas el precio en el texto ni datos de contacto. Devolvé SOLO la descripción, sin títulos ni comillas.\n\n"
+        "Datos de la propiedad:\n" + "\n".join(datos) +
+        (f"\n\nNotas del agente para tener en cuenta: {seed}" if seed else "")
+    )
+
+@app.route('/api/propiedades/<int:id>/generar-descripcion', methods=['POST'])
+@api_login_required
+def generar_descripcion_propiedad(id):
+    """Genera una descripción con IA para revisión (no la guarda: la devuelve para editar)."""
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({'error': 'Propiedad no encontrada'}), 404
+    try:
+        texto = _claude_complete(_prompt_descripcion(p))
+    except RuntimeError as e:
+        if str(e) == 'no-key':
+            return jsonify({'error': 'IA no configurada: falta ANTHROPIC_API_KEY en el servidor.'}), 503
+        return jsonify({'error': 'No se pudo generar la descripción.'}), 502
+    except Exception:
+        return jsonify({'error': 'Error llamando a la IA. Reintentá en un momento.'}), 502
+    if not texto:
+        return jsonify({'error': 'La IA no devolvió texto.'}), 502
+    return jsonify({'descripcion': texto})
+
 @app.route('/api/propiedades/bulk-estado', methods=['PATCH'])
 @api_login_required
 def bulk_estado_propiedades():
