@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -15,7 +15,7 @@ import threading
 import smtplib
 import ssl
 from email.mime.text import MIMEText
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 try:
@@ -434,6 +434,101 @@ def api_public_consultas():
     ).start()
 
     return jsonify({"message": "Consulta enviada correctamente"}), 201
+
+# ── Public API: tracking de eventos (F1 — cimiento de KPIs, ver VISION.md) ─────
+
+_TRACK_TIPOS = {
+    'view_ficha', 'view_listado', 'buscar',
+    'contacto_wa', 'contacto_email', 'guardar', 'ver_similares',
+}
+_track_hits: dict = {}
+_TRACK_WINDOW = 60
+_TRACK_MAX    = 120   # eventos por IP por ventana (anti-spam)
+
+def _track_rate_ok(ip: str) -> bool:
+    now  = time.time()
+    hits = [t for t in _track_hits.get(ip, []) if now - t < _TRACK_WINDOW]
+    if len(hits) >= _TRACK_MAX:
+        _track_hits[ip] = hits
+        return False
+    hits.append(now)
+    _track_hits[ip] = hits
+    return True
+
+@app.route('/api/public/track', methods=['POST'])
+def api_public_track():
+    """Beacon público de comportamiento. Sin auth (visitante anónimo), con allowlist
+    de tipos y rate-limit por IP. Fire-and-forget: nunca debe romper la página."""
+    if not _track_rate_ok(request.remote_addr or '?'):
+        return ('', 204)
+    data = _json_body()
+    tipo = (data.get('tipo') or '').strip()[:40]
+    if tipo not in _TRACK_TIPOS:
+        return ('', 204)  # ignorar silenciosamente lo no reconocido
+    try:
+        prop_id = int(data['propiedad_id']) if data.get('propiedad_id') is not None else None
+    except (ValueError, TypeError):
+        prop_id = None
+    meta = data.get('meta')
+    if meta is not None and not isinstance(meta, str):
+        import json as _json
+        try:
+            meta = _json.dumps(meta)[:1000]
+        except Exception:
+            meta = None
+    elif isinstance(meta, str):
+        meta = meta[:1000]
+    try:
+        db.session.add(Evento(
+            tipo=tipo,
+            propiedad_id=prop_id,
+            session_id=(data.get('session_id') or '')[:64] or None,
+            path=(data.get('path') or '')[:300] or None,
+            referer=(request.headers.get('Referer') or '')[:300] or None,
+            meta=meta,
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return ('', 204)
+
+@app.route('/api/stats/eventos', methods=['GET'])
+@api_login_required
+def api_stats_eventos():
+    """Métricas del funnel a partir de eventos (VISION.md · E3 Dashboard / F1)."""
+    from sqlalchemy import func
+    dias  = max(1, min(request.args.get('dias', 30, type=int) or 30, 365))
+    desde = datetime.utcnow() - timedelta(days=dias)
+    por_tipo = dict(
+        db.session.query(Evento.tipo, func.count(Evento.id))
+        .filter(Evento.fecha >= desde).group_by(Evento.tipo).all()
+    )
+    visitantes = db.session.query(func.count(func.distinct(Evento.session_id))).filter(
+        Evento.fecha >= desde, Evento.session_id.isnot(None)
+    ).scalar() or 0
+    top = (
+        db.session.query(Evento.propiedad_id, func.count(Evento.id))
+        .filter(Evento.fecha >= desde, Evento.tipo == 'view_ficha', Evento.propiedad_id.isnot(None))
+        .group_by(Evento.propiedad_id).order_by(func.count(Evento.id).desc()).limit(10).all()
+    )
+    top_props = []
+    for pid, vistas in top:
+        p = db.session.get(Propiedad, pid)
+        top_props.append({'propiedad_id': pid, 'direccion': p.direccion if p else '—', 'vistas': vistas})
+    vistas_ficha = por_tipo.get('view_ficha', 0)
+    contactos    = por_tipo.get('contacto_wa', 0) + por_tipo.get('contacto_email', 0)
+    consultas    = Consulta.query.filter(Consulta.fecha >= desde).count()
+    return jsonify({
+        'dias': dias,
+        'por_tipo': por_tipo,
+        'visitantes_unicos': visitantes,
+        'vistas_ficha': vistas_ficha,
+        'contactos': contactos,
+        'consultas': consultas,
+        'tasa_contacto': round(contactos / vistas_ficha, 3) if vistas_ficha else 0,
+        'tasa_visitante_lead': round(consultas / visitantes, 3) if visitantes else 0,
+        'top_propiedades': top_props,
+    })
 
 # ── Admin API: Propiedades ────────────────────────────────────────────────────
 

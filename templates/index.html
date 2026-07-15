@@ -602,6 +602,25 @@
         buscarTimer = setTimeout(buscar, 380);
     }
 
+    // ── Tracking de comportamiento (F1 — ver VISION.md) ──
+    function _sid() {
+        try {
+            let s = localStorage.getItem('mi_sid');
+            if (!s) { s = Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem('mi_sid', s); }
+            return s;
+        } catch (e) { return ''; }
+    }
+    function track(tipo, propiedad_id, meta) {
+        try {
+            fetch('/api/public/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                keepalive: true,
+                body: JSON.stringify({ tipo, propiedad_id, meta, session_id: _sid(), path: location.pathname })
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
     function buscar() {
         const tipo      = document.getElementById('f-tipo').value;
         const ambientes = document.getElementById('f-ambientes').value;
@@ -613,6 +632,7 @@
         if (ambientes) params.set('ambientes', ambientes);
         if (precio)    params.set('precio_max', precio);
         if (barrio)    params.set('barrio', barrio);
+        track('buscar', null, { operacion: _activeTab, tipo, ambientes, precio_max: precio, barrio });
         fetch('/api/public/propiedades?' + params.toString())
             .then(r => r.json())
             .then(data => { propiedades = data; renderGrid(data); })
@@ -763,6 +783,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const params = new URLSearchParams(window.location.search);
         setTab(params.get('tab'));
+        track('view_listado');
 
         fetch('/api/stats')
             .then(r => r.json())

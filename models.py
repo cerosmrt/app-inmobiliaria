@@ -425,3 +425,29 @@ class Consulta(db.Model):
             'fecha': self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else '',
             'leida': self.leida
         }
+
+
+class Evento(db.Model):
+    """Evento de comportamiento del visitante/usuario. Cimiento de los KPIs del funnel
+    (visitante→lead→visita→venta) y de features como Buyer Intent Score y feed personalizado.
+    Ver VISION.md · F1."""
+    __tablename__ = 'eventos'
+    id           = db.Column(db.Integer, primary_key=True)
+    tipo         = db.Column(db.String, nullable=False, index=True)   # view_ficha|view_listado|buscar|contacto_wa|contacto_email|guardar
+    propiedad_id = db.Column(db.Integer, db.ForeignKey('propiedades.id'), nullable=True, index=True)
+    session_id   = db.Column(db.String, nullable=True, index=True)    # id anónimo del visitante (localStorage)
+    path         = db.Column(db.String, nullable=True)
+    referer      = db.Column(db.String, nullable=True)
+    meta         = db.Column(db.Text, nullable=True)                  # JSON libre (filtros, precio, etc.)
+    fecha        = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'tipo': self.tipo,
+            'propiedad_id': self.propiedad_id,
+            'session_id': self.session_id or '',
+            'path': self.path or '',
+            'meta': self.meta or '',
+            'fecha': self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else '',
+        }
