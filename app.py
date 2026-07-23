@@ -184,6 +184,19 @@ def _normalize_foto(path: str) -> str:
     """Normalize stored path: forward slashes, no leading slash."""
     return path.replace('\\', '/').lstrip('/')
 
+def _dentro_de_uploads(path: str) -> bool:
+    """True si `path` cae realmente adentro de UPLOAD_FOLDER.
+
+    Los nombres de foto llegan por URL con el converter <path:...>, que acepta
+    barras, y `_normalize_foto` no filtra '..'. Sin este chequeo un DELETE a
+    /api/propiedades/<id>/fotos/../../app.py borra cualquier archivo al que
+    llegue el proceso. Se compara con realpath para que los symlinks tampoco
+    permitan salirse.
+    """
+    base = os.path.realpath(app.config['UPLOAD_FOLDER'])
+    full = os.path.realpath(path)
+    return full == base or full.startswith(base + os.sep)
+
 def _fotos_from_str(raw: str):
     if not raw:
         return []
@@ -844,6 +857,11 @@ def delete_foto_propiedad(id, filename):
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     target = _normalize_foto(filename)
+    # El nombre viene del usuario: si apunta afuera de uploads no se toca nada,
+    # ni el disco ni la DB. Ver _dentro_de_uploads().
+    if not _dentro_de_uploads(target):
+        app.logger.warning('Intento de borrar foto fuera de uploads: %s', filename)
+        return jsonify({"message": "Ruta de foto inválida"}), 400
     fotos = [f for f in _fotos_from_str(p.fotos) if _normalize_foto(f) != target]
     p.fotos = _fotos_to_str(fotos) if fotos else None
     db.session.commit()
@@ -857,7 +875,7 @@ def delete_foto_propiedad(id, filename):
             app.logger.warning('Could not delete photo file %s: %s', candidate, e)
     # Delete thumbnail if present (new-style photos only)
     thumb = _thumb_path_for(target)
-    if thumb:
+    if thumb and _dentro_de_uploads(thumb):
         for candidate in [thumb, thumb.replace('/', os.sep)]:
             try:
                 if os.path.exists(candidate):
