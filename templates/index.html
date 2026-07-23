@@ -736,10 +736,10 @@
                 ).join('')}
             </div>` : (fotos && fotos.length > 0 ? `<div class="photo-count">📷 ${fotos.length}</div>` : '');
 
-        const ambHtml    = p.ambientes ? `<span class="card-spec">${p.ambientes} amb.</span>` : '';
-        const tipoHtml   = p.tipo      ? `<span class="card-spec">${p.tipo}</span>`           : '';
+        const ambHtml    = p.ambientes ? `<span class="card-spec">${escHtml(p.ambientes)} amb.</span>` : '';
+        const tipoHtml   = p.tipo      ? `<span class="card-spec">${escHtml(p.tipo)}</span>`           : '';
         const estadoHtml = p.estado && p.estado !== 'disponible'
-            ? `<span class="card-spec" style="margin-left:auto">${p.estado}</span>` : '';
+            ? `<span class="card-spec" style="margin-left:auto">${escHtml(p.estado)}</span>` : '';
 
         return `
         <article class="prop-card" id="card-${p.id}" onclick="window.location.href='/propiedad/${p.id}'">
@@ -747,15 +747,15 @@
                 ${photoHtml}
                 <div class="card-badges">
                     ${p.destacada  ? `<span class="badge badge-destacada">★ Destacada</span>` : ''}
-                    ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
-                    ${p.tipo      ? `<span class="badge badge-tipo">${p.tipo}</span>` : ''}
+                    ${p.operacion ? `<span class="badge badge-${escHtml(p.operacion)}">${escHtml(p.operacion)}</span>` : ''}
+                    ${p.tipo      ? `<span class="badge badge-tipo">${escHtml(p.tipo)}</span>` : ''}
                 </div>
                 ${carouselHtml}
             </div>
             <div class="card-body">
                 <div class="card-price">${precio}</div>
-                <div class="card-address">${p.direccion}</div>
-                ${p.barrio ? `<div class="card-barrio">${p.barrio}</div>` : ''}
+                <div class="card-address">${escHtml(p.direccion)}</div>
+                ${p.barrio ? `<div class="card-barrio">${escHtml(p.barrio)}</div>` : ''}
                 <div class="card-specs">${ambHtml}${tipoHtml}${estadoHtml}</div>
             </div>
             <div class="card-footer">
@@ -769,6 +769,14 @@
 
     function escAttr(s) {
         return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    }
+
+    // Todo dato de la DB que entre a innerHTML pasa por acá. Sin esto, una
+    // dirección o un barrio con HTML adentro se ejecuta en el sitio público.
+    function escHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     function renderError() {

@@ -471,18 +471,18 @@
         <div class="details">
             <div class="detail-card">
                 <div class="prop-badges">
-                    ${p.operacion ? `<span class="badge badge-${p.operacion}">${p.operacion}</span>` : ''}
-                    ${p.tipo      ? `<span class="badge badge-tipo">${p.tipo}</span>`                 : ''}
-                    ${p.estado    ? `<span class="badge badge-${p.estado}">${p.estado}</span>`        : ''}
+                    ${p.operacion ? `<span class="badge badge-${escHtml(p.operacion)}">${escHtml(p.operacion)}</span>` : ''}
+                    ${p.tipo      ? `<span class="badge badge-tipo">${escHtml(p.tipo)}</span>`                        : ''}
+                    ${p.estado    ? `<span class="badge badge-${escHtml(p.estado)}">${escHtml(p.estado)}</span>`      : ''}
                 </div>
                 <div class="prop-price">${formatPrecio(p)}</div>
-                <div class="prop-address">${p.direccion}</div>
-                ${p.barrio ? `<div class="prop-barrio">📍 ${p.barrio}</div>` : ''}
+                <div class="prop-address">${escHtml(p.direccion)}</div>
+                ${p.barrio ? `<div class="prop-barrio">📍 ${escHtml(p.barrio)}</div>` : ''}
                 <div class="prop-specs">
-                    ${p.ambientes ? `<div class="spec-item"><div class="spec-label">Ambientes</div><div class="spec-value">${p.ambientes}</div></div>` : ''}
-                    ${p.tipo      ? `<div class="spec-item"><div class="spec-label">Tipo</div><div class="spec-value">${capitalizar(p.tipo)}</div></div>` : ''}
-                    ${p.operacion ? `<div class="spec-item"><div class="spec-label">Operación</div><div class="spec-value">${capitalizar(p.operacion)}</div></div>` : ''}
-                    ${p.barrio    ? `<div class="spec-item"><div class="spec-label">Barrio</div><div class="spec-value">${p.barrio}</div></div>` : ''}
+                    ${p.ambientes ? `<div class="spec-item"><div class="spec-label">Ambientes</div><div class="spec-value">${escHtml(p.ambientes)}</div></div>` : ''}
+                    ${p.tipo      ? `<div class="spec-item"><div class="spec-label">Tipo</div><div class="spec-value">${escHtml(capitalizar(p.tipo))}</div></div>` : ''}
+                    ${p.operacion ? `<div class="spec-item"><div class="spec-label">Operación</div><div class="spec-value">${escHtml(capitalizar(p.operacion))}</div></div>` : ''}
+                    ${p.barrio    ? `<div class="spec-item"><div class="spec-label">Barrio</div><div class="spec-value">${escHtml(p.barrio)}</div></div>` : ''}
                 </div>
             </div>
 
