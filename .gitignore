@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .env
 static/uploads/
+private_uploads/
 all_code.txt
 flask_out.log
 flask_err.log

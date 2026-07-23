@@ -427,6 +427,48 @@ class Consulta(db.Model):
         }
 
 
+class Adjunto(db.Model):
+    """Archivo PRIVADO de una propiedad: planos, escrituras, mensuras, referencias.
+
+    Nunca sale al sitio público. A diferencia de las fotos, el archivo vive
+    **fuera de `static/`** a propósito: todo lo que cuelga de static lo sirve
+    el servidor web directo, sin pasar por Flask y por lo tanto sin sesión.
+    Un adjunto se baja sólo por `/adjuntos/<id>`, detrás de @login_required.
+
+    Se guarda el nombre en disco (uuid, para que no colisionen ni se adivinen)
+    y aparte el nombre original, que es el único que ve el usuario."""
+    __tablename__ = 'adjuntos'
+    id              = db.Column(db.Integer, primary_key=True)
+    propiedad_id    = db.Column(db.Integer, db.ForeignKey('propiedades.id'), nullable=False, index=True)
+    propiedad       = db.relationship('Propiedad', backref=db.backref('adjuntos', lazy=True))
+    filename        = db.Column(db.String, nullable=False)   # nombre en disco
+    nombre_original = db.Column(db.String, nullable=False)   # el que ve el usuario
+    mime            = db.Column(db.String, nullable=True)
+    tamano          = db.Column(db.Integer, nullable=True)   # bytes
+    subido_en       = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def es_pdf(self):
+        return (self.mime or '') == 'application/pdf'
+
+    @property
+    def es_imagen(self):
+        return (self.mime or '').startswith('image/')
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'propiedad_id': self.propiedad_id,
+            'nombre': self.nombre_original,
+            'mime': self.mime or '',
+            'tamano': self.tamano or 0,
+            'es_pdf': self.es_pdf,
+            'es_imagen': self.es_imagen,
+            'url': f'/adjuntos/{self.id}',
+            'subido_en': self.subido_en.strftime('%d/%m/%Y') if self.subido_en else '',
+        }
+
+
 class Evento(db.Model):
     """Evento de comportamiento del visitante/usuario. Cimiento de los KPIs del funnel
     (visitante→lead→visita→venta) y de features como Buyer Intent Score y feed personalizado.

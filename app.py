@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response, send_file, abort
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento, Adjunto
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -46,7 +46,12 @@ if app.config.get('DEBUG') and env == 'default':
         "Corriendo con DEBUG=True y FLASK_ENV sin setear. En producción seteá FLASK_ENV=production."
     )
 
-for folder in [app.config['UPLOAD_FOLDER'], 'static/uploads/properties', 'static/uploads/properties/thumbs', 'templates', 'static']:
+# `private_uploads` está afuera de static a propósito: lo que cuelga de static
+# lo sirve el servidor web sin pasar por Flask, o sea sin sesión. Los adjuntos
+# son privados, así que se bajan sólo por /adjuntos/<id>, con login.
+_ADJUNTOS_FOLDER = 'private_uploads/adjuntos'
+
+for folder in [app.config['UPLOAD_FOLDER'], 'static/uploads/properties', 'static/uploads/properties/thumbs', _ADJUNTOS_FOLDER, 'templates', 'static']:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -100,6 +105,32 @@ def allowed_file(file) -> bool:
     return (header[:3] == _JPEG_MAGIC or
             header[:4] == _PNG_MAGIC or
             (header[:4] == _WEBP_MAGIC and header[8:12] == b'WEBP'))
+
+# ── Adjuntos privados ─────────────────────────────────────────────────────────
+# Mismo criterio que las fotos: la extensión sola no alcanza, se mira el
+# encabezado real del archivo. Un .pdf que adentro es otra cosa no entra.
+_PDF_MAGIC = b'%PDF-'
+
+_ADJUNTO_TIPOS = {
+    'pdf':  ('application/pdf', lambda h: h[:5] == _PDF_MAGIC),
+    'jpg':  ('image/jpeg',      lambda h: h[:3] == _JPEG_MAGIC),
+    'jpeg': ('image/jpeg',      lambda h: h[:3] == _JPEG_MAGIC),
+    'png':  ('image/png',       lambda h: h[:4] == _PNG_MAGIC),
+    'webp': ('image/webp',      lambda h: h[:4] == _WEBP_MAGIC and h[8:12] == b'WEBP'),
+}
+
+def adjunto_mime(file):
+    """Devuelve el MIME si el archivo es de un tipo permitido, o None."""
+    if not file or not file.filename:
+        return None
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    tipo = _ADJUNTO_TIPOS.get(ext)
+    if not tipo:
+        return None
+    mime, verifica = tipo
+    header = file.read(12)
+    file.seek(0)
+    return mime if verifica(header) else None
 
 def _unique_filename(prefix: str, original: str) -> str:
     ext = secure_filename(original).rsplit('.', 1)[-1].lower()
@@ -899,6 +930,83 @@ def reordenar_fotos(id):
     p.fotos = _fotos_to_str(new_order) if new_order else None
     db.session.commit()
     return jsonify(p.as_dict())
+
+# ── Adjuntos privados (planos, escrituras, referencias) ──────────────────────
+
+@app.route('/api/propiedades/<int:id>/adjuntos', methods=['GET'])
+@api_login_required
+def listar_adjuntos(id):
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    adjuntos = (Adjunto.query
+                .filter_by(propiedad_id=id)
+                .order_by(Adjunto.subido_en.desc(), Adjunto.id.desc())
+                .all())
+    return jsonify([a.as_dict() for a in adjuntos])
+
+@app.route('/api/propiedades/<int:id>/adjuntos', methods=['POST'])
+@api_login_required
+def subir_adjunto(id):
+    p = db.session.get(Propiedad, id)
+    if not p:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    if 'file' not in request.files:
+        return jsonify({"message": "No se envió archivo"}), 400
+    file = request.files['file']
+    mime = adjunto_mime(file)
+    if not mime:
+        return jsonify({"message": "Formato no permitido — sólo PDF, JPG, PNG o WebP"}), 400
+
+    filename = _unique_filename(f"adj_{id}", file.filename)
+    destino  = os.path.join(_ADJUNTOS_FOLDER, filename)
+    file.save(destino)
+
+    a = Adjunto(
+        propiedad_id=id,
+        filename=filename,
+        nombre_original=secure_filename(file.filename) or filename,
+        mime=mime,
+        tamano=os.path.getsize(destino) if os.path.exists(destino) else None,
+    )
+    db.session.add(a)
+    db.session.commit()
+    return jsonify(a.as_dict()), 201
+
+@app.route('/api/adjuntos/<int:adjunto_id>', methods=['DELETE'])
+@api_login_required
+def borrar_adjunto(adjunto_id):
+    a = db.session.get(Adjunto, adjunto_id)
+    if not a:
+        return jsonify({"message": "Adjunto no encontrado"}), 404
+    # El nombre en disco lo generamos nosotros (uuid), pero se arma la ruta con
+    # basename igual: si alguna vez entrara con separadores, no sale de la carpeta.
+    destino = os.path.join(_ADJUNTOS_FOLDER, os.path.basename(a.filename))
+    db.session.delete(a)
+    db.session.commit()
+    try:
+        if os.path.exists(destino):
+            os.remove(destino)
+    except OSError as e:
+        app.logger.warning('No se pudo borrar el adjunto %s: %s', destino, e)
+    return jsonify({"message": "Adjunto eliminado"})
+
+@app.route('/adjuntos/<int:adjunto_id>')
+@login_required
+def ver_adjunto(adjunto_id):
+    """Sirve un adjunto privado. Va con @login_required (no api_) porque lo abre
+    el navegador en una pestaña o en un <iframe>, no un fetch: si no hay sesión
+    tiene que mandar al login, no devolver un 401 en JSON."""
+    a = db.session.get(Adjunto, adjunto_id)
+    if not a:
+        abort(404)
+    destino = os.path.join(_ADJUNTOS_FOLDER, os.path.basename(a.filename))
+    if not os.path.exists(destino):
+        abort(404)
+    # inline: los PDF y las imágenes se miran en el momento; el nombre que ve el
+    # usuario al bajarlo es el original, no el uuid con el que está guardado.
+    return send_file(destino, mimetype=a.mime or 'application/octet-stream',
+                     as_attachment=False, download_name=a.nombre_original)
 
 # ── Geometry ─────────────────────────────────────────────────────────────────
 

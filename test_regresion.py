@@ -217,6 +217,62 @@ check('la ficha admin renderiza con datos que contienen HTML', r.status_code == 
 check('el HTML crudo no aparece sin escapar en la ficha',
       b'<img src=x onerror' not in r.data)
 
+# ── 6c. Adjuntos privados ─────────────────────────────────────────────────────
+# Lo importante acá no es que suban: es que NO se puedan bajar sin sesión y que
+# no queden guardados abajo de static/, que el servidor sirve sin pasar por
+# Flask (o sea, sin auth). Ver el docstring de models.Adjunto.
+seccion('6c. Adjuntos — privados de verdad')
+login()
+import io as _io                                                   # noqa: E402
+
+_PDF = b'%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n'
+r = cli_http.post('/api/propiedades/%d/adjuntos' % PROP_ID,
+                  data={'file': (_io.BytesIO(_PDF), 'plano.pdf')},
+                  content_type='multipart/form-data', headers=H)
+check('subir un PDF da 201', r.status_code == 201, r.status_code)
+ADJ = r.get_json() if r.status_code == 201 else {}
+ADJ_ID = ADJ.get('id')
+
+# Un .pdf que adentro no es un PDF no entra: se mira el encabezado, no la extensión.
+r = cli_http.post('/api/propiedades/%d/adjuntos' % PROP_ID,
+                  data={'file': (_io.BytesIO(b'esto no es un pdf'), 'trucho.pdf')},
+                  content_type='multipart/form-data', headers=H)
+check('un PDF falso (magic bytes) da 400', r.status_code == 400, r.status_code)
+
+r = cli_http.post('/api/propiedades/%d/adjuntos' % PROP_ID,
+                  data={'file': (_io.BytesIO(b'MZ...'), 'virus.exe')},
+                  content_type='multipart/form-data', headers=H)
+check('una extensión no permitida da 400', r.status_code == 400, r.status_code)
+
+r = cli_http.get('/api/propiedades/%d/adjuntos' % PROP_ID)
+check('el listado devuelve el adjunto subido',
+      r.status_code == 200 and any(a['id'] == ADJ_ID for a in r.get_json()))
+
+if ADJ_ID:
+    r = cli_http.get('/adjuntos/%d' % ADJ_ID)
+    check('con sesión el adjunto se descarga', r.status_code == 200 and r.data == _PDF,
+          r.status_code)
+
+    logout()
+    r = cli_http.get('/adjuntos/%d' % ADJ_ID)
+    check('SIN sesión el adjunto redirige al login (no se sirve)',
+          r.status_code == 302 and _PDF not in r.data, r.status_code)
+    r = cli_http.get('/api/propiedades/%d/adjuntos' % PROP_ID)
+    check('SIN sesión el listado de adjuntos da 401', r.status_code == 401, r.status_code)
+    login()
+
+    with A.app.app_context():
+        from models import Adjunto as _Adj
+        _a = db.session.get(_Adj, ADJ_ID)
+        _ruta = os.path.join(A._ADJUNTOS_FOLDER, _a.filename) if _a else ''
+    check('el archivo no vive abajo de static/',
+          'static' not in _ruta.replace('\\', '/').split('/'), _ruta)
+    check('el archivo existe en disco', os.path.exists(_ruta), _ruta)
+
+    r = cli_http.delete('/api/adjuntos/%d' % ADJ_ID, headers=H)
+    check('borrar el adjunto da 200', r.status_code == 200, r.status_code)
+    check('el archivo se borró del disco', not os.path.exists(_ruta), _ruta)
+
 # ── 7. Invariantes de plantilla ───────────────────────────────────────────────
 seccion('7. Plantillas — lo que el JS necesita para funcionar')
 ficha = tpl('admin/propiedad.html')
@@ -241,6 +297,15 @@ invariantes = [
     # Los matches automáticos salieron de la ficha (siguen en el listado) y el
     # typeahead ya no vive siempre abierto: lo destapa un botón del subtítulo.
     ('la ficha ya no pide matches',        '/matches' not in ficha),
+    # La ficha se lee como "privado | público": los rótulos están escritos y el
+    # switch de publicar vive encima de lo que efectivamente publica.
+    ('la columna izquierda dice Privado',  'col-rotulo-privado' in ficha),
+    ('la columna derecha dice Público',    'col-rotulo-publico' in ficha),
+    ('el switch de publicar está en el rótulo',
+     'renderRotuloPublicada' in ficha
+     and "field: 'publicada'" not in ficha),
+    ('la ficha tiene bloque de adjuntos',
+     'adjuntos-lista' in ficha and 'function subirAdjuntos' in ficha),
     ('el buscador de personas se abre con un botón',
      'class="ta-abrir"' in ficha and 'function taToggle' in ficha
      and 'class="ta-wrap" id=' in ficha and 'hidden>' in ficha),

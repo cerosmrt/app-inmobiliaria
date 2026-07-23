@@ -48,18 +48,45 @@
        solo escondía su parte de abajo detrás de un segundo scrollbar. Además
        su max-height desfasado (86px contra los 94px reales de topbar+padding)
        hacía que la página scrollease 8px de más sin contenido que mostrar. */
-    .prop-rail { min-width: 0; }
+    /* El rail no pasa nunca de una pantalla. 95px = topbar (46 + 1 de borde) +
+       los 24px de padding arriba y abajo del .container; el intento viejo de
+       fijar el rail usaba 86 y por eso la página scrolleaba 8px de más. Como
+       es flex-column, el rótulo mide lo suyo y el card se queda con el resto;
+       adentro del card, la galería es la que se achica. Así el rail deja de
+       ser la columna más alta en cualquier monitor, sin depender de una altura
+       fija inventada. */
+    .prop-rail {
+        min-width: 0; display: flex; flex-direction: column;
+        max-height: calc(100vh - 95px);
+    }
     .prop-rail .section-card:last-child { margin-bottom: 0; }
-    /* El card del rail no pasa nunca de una pantalla. 95px = topbar (46 + 1 de
-       borde) + los 24px de padding arriba y abajo del .container; el intento
-       viejo de fijar el rail usaba 86 y por eso la página scrolleaba 8px de
-       más. Como es flex-column, la galería (el único hijo que se achica) se
-       queda con lo que sobra después del recuadro de subida y la descripción:
-       el rail deja de ser la columna más alta en cualquier monitor, sin
-       depender de una altura fija inventada. */
     .prop-rail > .section-card {
         display: flex; flex-direction: column;
-        max-height: calc(100vh - 95px);
+        flex: 0 1 auto; min-height: 0;
+    }
+
+    /* ── Rótulos privado / público ─────────────────────────────────────────────
+       La división de la ficha no es "datos vs. fotos": es lo que se guarda la
+       inmobiliaria contra lo que ve el cliente. Como no se deduce mirando, va
+       escrito. El switch de publicar vive acá, encima de lo que publica. */
+    .col-rotulo {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.6px; margin: 0 0 8px; padding: 0 2px;
+        flex: 0 0 auto;
+    }
+    .col-rotulo .rotulo-hint {
+        font-size: 11px; font-weight: 400; text-transform: none;
+        letter-spacing: 0; color: var(--muted);
+    }
+    .col-rotulo-privado { color: var(--text-2); }
+    .col-rotulo-publico { color: var(--accent); }
+    /* El switch a la derecha del todo, con su estado en palabras: un toggle
+       solo no dice si "encendido" es publicado u oculto. */
+    .rotulo-switch {
+        margin-left: auto; display: flex; align-items: center; gap: 7px;
+        font-size: 11px; font-weight: 600; text-transform: none;
+        letter-spacing: 0; color: var(--text-2);
     }
     /* Todo lo que no es la galería mide lo que mide: sin esto el flexbox les
        come altura al textarea y al recuadro de subida antes que a las fotos. */
@@ -346,6 +373,33 @@
     #orden-aviso { font-size: 12px; color: var(--muted); margin-left: auto; }
     #btn-guardar-orden { display: none; }
 
+    /* ── Adjuntos privados ─────────────────────────────────────────────────────
+       Lista, no grilla de miniaturas: un plano o una escritura se identifican
+       por el nombre del archivo, no por cómo se ven en chiquito.             */
+    .adj-row {
+        display: flex; align-items: center; gap: 9px;
+        padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .adj-row:last-child { border-bottom: none; }
+    .adj-icono { flex: 0 0 auto; font-size: 15px; line-height: 1; }
+    .adj-nombre {
+        flex: 1 1 auto; min-width: 0; text-align: left;
+        background: none; border: none; padding: 0; font-family: inherit;
+        font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .adj-nombre:hover { color: var(--accent); text-decoration: underline; }
+    .adj-meta { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); }
+
+    /* Visor: alto fijo en viewport para que el modal no se estire con un PDF
+       de 40 páginas ni se achique con una imagen chica. */
+    #adjunto-visor iframe,
+    #adjunto-visor img {
+        width: 100%; height: 68vh; min-height: 360px; display: block;
+        border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+    }
+    #adjunto-visor img { object-fit: contain; }
+
     /* ── Mapa de ubicación ─────────────────────────────────────────────────── */
     /* En el modal hay lugar de sobra: conviene grande para dibujar polígonos. */
     #geo-map { height: 56vh; min-height: 380px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
@@ -364,14 +418,18 @@
 
     <div class="prop-layout">
 
-    <!-- ══ COLUMNA IZQUIERDA — datos y gestión ═══════════════════════════════ -->
+    <!-- ══ COLUMNA IZQUIERDA — PRIVADO: sólo lo ve la inmobiliaria ═══════════ -->
     <div class="prop-main">
+
+    <p class="col-rotulo col-rotulo-privado">
+        &#x1F512; Privado <span class="rotulo-hint">&middot; s&oacute;lo lo ve la inmobiliaria</span>
+    </p>
 
     <!-- Cabecera: precio / estado / tipo / operación -->
     <div class="prop-hero" id="prop-hero"></div>
 
     <!-- Datos. Propietarios e interesados son dos grupos más, al mismo nivel
-         que Identificación / Medidas / Precio: sus subtítulos ya alcanzan
+         que Identificación / Dimensiones / Precio: sus subtítulos ya alcanzan
          como etiqueta, así que no llevan un título "Personas" arriba. -->
     <div class="section-card">
         <h2>Datos</h2>
@@ -382,10 +440,27 @@
         </div>
     </div>
 
+    <!-- Adjuntos: planos, escrituras, mensuras. Nunca salen al sitio público
+         (se sirven por /adjuntos/<id>, detrás de login). -->
+    <div class="section-card">
+        <h2>Adjuntos</h2>
+        <div class="upload-drop" onclick="document.getElementById('input-adjunto').click()">
+            <input type="file" id="input-adjunto" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple
+                   onchange="subirAdjuntos(this)">
+            &#x1F4CE; Clic aqu&iacute; para adjuntar &mdash; PDF, JPG, PNG o WebP, m&aacute;x 10 MB
+        </div>
+        <div id="adjuntos-lista"><p class="inter-vacio">Cargando...</p></div>
+    </div>
+
     </div><!-- .prop-main -->
 
-    <!-- ══ RAIL DERECHO — fotos, descripción y mapa, siempre a la vista ══════ -->
+    <!-- ══ RAIL DERECHO — PÚBLICO: exactamente lo que se publica ══════════════ -->
     <aside class="prop-rail">
+
+    <p class="col-rotulo col-rotulo-publico">
+        &#x1F30E; P&uacute;blico <span class="rotulo-hint">&middot; lo que ve el cliente</span>
+        <span class="rotulo-switch" id="rotulo-publicada"></span>
+    </p>
 
     <!-- Fotos + descripción: sin títulos, cada cosa se explica sola
          (el recuadro de subida y el placeholder del textarea). -->
@@ -470,6 +545,24 @@
         </div>
     </div>
 </div>
+
+<!-- Visor de adjuntos. El PDF va en un <iframe> con el visor del navegador y
+     las imágenes en un <img>: alcanza para mirar un plano sin bajarlo. El src
+     se setea recién al abrir, así ninguna ficha carga PDFs que nadie pidió. -->
+<div id="modal-adjunto" class="modal-overlay">
+    <div class="modal-box" style="max-width:1100px">
+        <div class="modal-header">
+            <h3 id="adjunto-titulo">Adjunto</h3>
+            <a id="adjunto-descargar" class="btn btn-gray" href="#" download
+               style="font-size:12px;padding:5px 11px;margin-left:auto">&#x2B07; Descargar</a>
+            <button class="modal-close" onclick="cerrarAdjunto()">&#x2715;</button>
+        </div>
+        <div id="adjunto-visor"></div>
+        <div class="modal-footer">
+            <button class="btn btn-gray" onclick="cerrarAdjunto()">Cerrar</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -513,9 +606,11 @@
         { label: 'Subdivisible',   field: 'subdivisible',        type: 'bool',   grupo: 'medidas', showFor: ['campo'] },
         { label: 'Uso del suelo',  field: 'uso_suelo',           type: 'select', grupo: 'medidas', opts: ['','agricola','ganadero','mixto'], showFor: ['campo'] },
 
+        // `publicada` no está acá a propósito: su switch vive en el rótulo de
+        // la columna pública, encima de las fotos y la descripción que son
+        // justamente lo que publica. Ver renderRotuloPublicada().
         { label: 'Moneda',         field: 'es_usd',             type: 'moneda', grupo: 'pub', opts: ['ARS','USD'] },
         { label: 'A consultar',    field: 'precio_a_consultar', type: 'bool',   grupo: 'pub' },
-        { label: 'Publicada',      field: 'publicada',          type: 'bool',   grupo: 'pub' },
         { label: 'Destacada',      field: 'destacada',          type: 'bool',   grupo: 'pub' },
     ];
 
@@ -549,6 +644,7 @@
                 renderPropietarios();
                 document.getElementById('descripcion').value = data.descripcion || '';
                 renderFotos();
+                cargarAdjuntos();
                 // El mapa no se inicializa acá: vive en un modal y Leaflet
                 // necesita que el contenedor tenga tamaño. Se arma al abrirlo.
             })
@@ -574,6 +670,23 @@
             '</div>';
         }).join('');
         attachCampoEvents();
+        renderRotuloPublicada();
+    }
+
+    // El switch de publicar, arriba de la columna pública. Con el estado en
+    // palabras al lado: un toggle solo no dice si "encendido" es publicado.
+    function renderRotuloPublicada() {
+        var cont = document.getElementById('rotulo-publicada');
+        if (!cont) return;
+        var on = !!propData.publicada;
+        cont.innerHTML =
+            '<span>' + (on ? 'Publicada' : 'Oculta') + '</span>' +
+            '<label class="switch">' +
+                '<input type="checkbox"' + (on ? ' checked' : '') +
+                ' aria-label="Publicada en el sitio"' +
+                ' onchange="guardarCampo(\'publicada\', this.checked)">' +
+                '<span class="switch-track"></span>' +
+            '</label>';
     }
 
     function buildCampo(c) {
@@ -1112,6 +1225,101 @@
                     toast('Foto eliminada', 'success');
                 }).catch(function(e) { console.error(e); });
         });
+    }
+
+    // ── ADJUNTOS PRIVADOS ─────────────────────────────────────────────────────
+    // Planos, escrituras, mensuras. No salen nunca al sitio público: se bajan
+    // por /adjuntos/<id>, que está detrás de login. Ver models.Adjunto.
+    var _adjuntos = [];
+
+    function cargarAdjuntos() {
+        fetch('/api/propiedades/' + propiedadId + '/adjuntos')
+            .then(function(r) { return r.json(); })
+            .then(function(data) { _adjuntos = data || []; renderAdjuntos(); })
+            .catch(function() {
+                document.getElementById('adjuntos-lista').innerHTML =
+                    '<p class="inter-vacio">No se pudieron cargar los adjuntos.</p>';
+            });
+    }
+
+    function _pesoLegible(bytes) {
+        if (!bytes) return '';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function renderAdjuntos() {
+        var cont = document.getElementById('adjuntos-lista');
+        if (!cont) return;
+        if (!_adjuntos.length) { cont.innerHTML = ''; return; }
+        cont.innerHTML = _adjuntos.map(function(a, i) {
+            var meta = [_pesoLegible(a.tamano), a.subido_en].filter(Boolean).join(' · ');
+            return '<div class="adj-row">' +
+                '<span class="adj-icono">' + (a.es_pdf ? '&#x1F4C4;' : '&#x1F5BC;') + '</span>' +
+                '<button class="adj-nombre" onclick="verAdjunto(' + i + ')" title="Ver">' +
+                    esc(a.nombre) + '</button>' +
+                '<span class="adj-meta">' + esc(meta) + '</span>' +
+                '<button class="btn-action btn-cancel" title="Eliminar"' +
+                    ' onclick="eliminarAdjunto(' + a.id + ')">&#x2715;</button>' +
+            '</div>';
+        }).join('');
+    }
+
+    function subirAdjuntos(input) {
+        var files = Array.from(input.files || []);
+        if (!files.length) return;
+        var pendientes = files.length, ok = 0, fail = 0;
+        files.forEach(function(f) {
+            var fd = new FormData();
+            fd.append('file', f);
+            fetch('/api/propiedades/' + propiedadId + '/adjuntos', { method: 'POST', body: fd })
+                .then(function(r) {
+                    return r.json().then(function(data) {
+                        if (!r.ok) throw new Error(data.message || 'Error al subir');
+                        ok++;
+                    });
+                })
+                .catch(function(e) { fail++; toast(e.message || 'Error al subir el adjunto', 'error'); })
+                .finally(function() {
+                    if (--pendientes === 0) {
+                        input.value = '';
+                        if (ok) toast(ok + ' adjunto(s) subido(s)', 'success');
+                        cargarAdjuntos();
+                    }
+                });
+        });
+    }
+
+    function eliminarAdjunto(id) {
+        confirmar('¿Eliminar este adjunto?', 'Eliminar adjunto', 'Eliminar').then(function(confirmado) {
+            if (!confirmado) return;
+            fetch('/api/adjuntos/' + id, { method: 'DELETE' })
+                .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+                .then(function() { toast('Adjunto eliminado', 'success'); cargarAdjuntos(); })
+                .catch(function() { toast('No se pudo eliminar', 'error'); });
+        });
+    }
+
+    // El src se arma recién acá: si estuviera en el HTML, cada ficha cargaría
+    // todos los PDFs de entrada aunque nadie los abra.
+    function verAdjunto(i) {
+        var a = _adjuntos[i];
+        if (!a) return;
+        document.getElementById('adjunto-titulo').textContent = a.nombre;
+        var dl = document.getElementById('adjunto-descargar');
+        dl.href = a.url;
+        dl.setAttribute('download', a.nombre);
+        document.getElementById('adjunto-visor').innerHTML = a.es_pdf
+            ? '<iframe src="' + esc(a.url) + '" title="' + esc(a.nombre) + '"></iframe>'
+            : '<img src="' + esc(a.url) + '" alt="' + esc(a.nombre) + '">';
+        document.getElementById('modal-adjunto').classList.add('active');
+    }
+
+    function cerrarAdjunto() {
+        document.getElementById('modal-adjunto').classList.remove('active');
+        // Vaciar el visor corta la descarga del PDF si seguía cargando.
+        document.getElementById('adjunto-visor').innerHTML = '';
     }
 
     // ── GEOMETRÍA ─────────────────────────────────────────────────────────────
