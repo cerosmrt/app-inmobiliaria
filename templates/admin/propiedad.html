@@ -474,7 +474,7 @@
     // Un campo aparece en un solo lugar: nada se duplica entre hero y grilla.
     const _GRUPOS = [
         { id: 'ident',   label: 'Identificación' },
-        { id: 'medidas', label: 'Medidas' },
+        { id: 'medidas', label: 'Dimensiones' },
         { id: 'pub',     label: 'Precio y publicación' },
     ];
 
@@ -491,9 +491,12 @@
         { label: 'Código',         field: 'codigo',             type: 'text',   grupo: 'ident' },
         { label: 'Barrio',         field: 'barrio',             type: 'text',   grupo: 'ident' },
 
-        { label: 'Ambientes',      field: 'ambientes',          type: 'number', grupo: 'medidas', hideFor: ['campo'] },
+        // Terreno y Cubierto primero y en ese orden: la grilla es de dos
+        // columnas y son el mismo dato en dos versiones, así que se leen
+        // juntos en una fila. Ambientes queda debajo.
         { label: 'Terreno m²',    field: 'superficie_terreno',  type: 'number', grupo: 'medidas', hideFor: ['campo'] },
         { label: 'Cubierto m²',   field: 'superficie_cubierta', type: 'number', grupo: 'medidas', hideFor: ['campo'] },
+        { label: 'Ambientes',      field: 'ambientes',          type: 'number', grupo: 'medidas', hideFor: ['campo'] },
         { label: 'Hectáreas',      field: 'hectareas',           type: 'number', grupo: 'medidas', showFor: ['campo'] },
         { label: 'Subdivisible',   field: 'subdivisible',        type: 'bool',   grupo: 'medidas', showFor: ['campo'] },
         { label: 'Uso del suelo',  field: 'uso_suelo',           type: 'select', grupo: 'medidas', opts: ['','agricola','ganadero','mixto'], showFor: ['campo'] },
