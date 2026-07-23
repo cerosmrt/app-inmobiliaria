@@ -105,25 +105,45 @@
        quedan apiladas y grandes. El editor inline es el mismo en los dos.      */
     .campo-item { cursor: pointer; user-select: none; min-width: 0; }
     .campo-item.campo-bool { cursor: default; }
+    /* --text-2 y no --muted: #9B9A97 sobre el fondo de las tarjetas da 2.7:1
+       de contraste (WCAG AA pide 4.5:1 en texto chico). #6F6E6A da 4.9:1. */
     .campo-label {
-        font-size: 11px; color: var(--muted); text-transform: uppercase;
+        font-size: 11px; color: var(--text-2); text-transform: uppercase;
         letter-spacing: 0.4px;
     }
     .campo-valor { font-weight: 700; word-break: break-word; }
     .campo-input {
         width: 100%; font-size: 13.5px; font-weight: 600; padding: 3px 7px;
         border: 2px solid var(--accent); border-radius: 4px; background: var(--surface);
-        box-sizing: border-box;
+        box-sizing: border-box; font-family: inherit;
     }
+
+    /* ── Switch ────────────────────────────────────────────────────────────────
+       Reemplaza el checkbox + la palabra "Sí"/"No", que era redundante: el
+       propio control ya dice si está prendido.                                */
     .campo-bool-row { display: flex; align-items: center; gap: 7px; }
-    .campo-bool-row input[type="checkbox"] {
-        width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent);
+    .switch { position: relative; display: inline-flex; flex: 0 0 auto; cursor: pointer; }
+    .switch input {
+        position: absolute; opacity: 0; width: 100%; height: 100%;
+        margin: 0; cursor: pointer;
     }
-    .campo-bool-row label { font-weight: 700; cursor: pointer; }
+    .switch-track {
+        width: 32px; height: 18px; border-radius: 9px;
+        background: var(--border-strong); transition: background var(--tx);
+        display: block; pointer-events: none;
+    }
+    .switch-track::after {
+        content: ''; position: absolute; top: 2px; left: 2px;
+        width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform var(--tx);
+    }
+    .switch input:checked ~ .switch-track { background: var(--accent); }
+    .switch input:checked ~ .switch-track::after { transform: translateX(14px); }
+    .switch input:focus-visible ~ .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .campo-grupo + .campo-grupo { margin-top: 14px; }
     .campo-grupo-label {
-        font-size: 10.5px; color: var(--muted); text-transform: uppercase;
+        font-size: 10.5px; color: var(--text-2); text-transform: uppercase;
         letter-spacing: 0.7px; font-weight: 700; margin: 0 0 2px;
     }
     #campos-container .campos-grid {
@@ -169,7 +189,7 @@
 
     /* ── Interesados ───────────────────────────────────────────────────────── */
     .inter-subtitulo {
-        font-size: 11px; color: var(--muted); text-transform: uppercase;
+        font-size: 11px; color: var(--text-2); text-transform: uppercase;
         letter-spacing: 0.5px; font-weight: 700; margin: 0 0 4px;
     }
     /* Envuelve en vez de desbordar: las columnas de Personas son angostas. */
@@ -246,9 +266,11 @@
 
     /* Grid fluido: se adapta al ancho del rail (3 por fila) y al ancho completo
        cuando el layout colapsa a una columna. */
+    /* 2 por fila en el rail: a 3 las miniaturas quedaban demasiado chicas
+       para reconocer el ambiente de un vistazo. */
     .fotos-admin-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
         gap: 10px; min-height: 40px;
     }
     /* El mensaje de "sin fotos" es un item más del grid: sin esto lo mete
@@ -451,7 +473,7 @@
         { label: 'Subdivisible',   field: 'subdivisible',        type: 'bool',   grupo: 'medidas', showFor: ['campo'] },
         { label: 'Uso del suelo',  field: 'uso_suelo',           type: 'select', grupo: 'medidas', opts: ['','agricola','ganadero','mixto'], showFor: ['campo'] },
 
-        { label: 'USD',            field: 'es_usd',             type: 'bool',   grupo: 'pub' },
+        { label: 'Moneda',         field: 'es_usd',             type: 'moneda', grupo: 'pub', opts: ['ARS','USD'] },
         { label: 'A consultar',    field: 'precio_a_consultar', type: 'bool',   grupo: 'pub' },
         { label: 'Publicada',      field: 'publicada',          type: 'bool',   grupo: 'pub' },
         { label: 'Destacada',      field: 'destacada',          type: 'bool',   grupo: 'pub' },
@@ -519,11 +541,15 @@
         var cls = 'campo-item' + (c.span2 ? ' span2' : '') + (c.type === 'bool' ? ' campo-bool' : '');
         var inner;
         if (c.type === 'bool') {
-            inner = '<div class="campo-bool-row">' +
-                '<input type="checkbox" id="chk-' + c.field + '"' + (val ? ' checked' : '') +
+            inner = '<div class="campo-bool-row"><label class="switch">' +
+                '<input type="checkbox"' + (val ? ' checked' : '') +
+                ' aria-label="' + esc(c.label) + '"' +
                 ' onchange="guardarCampo(\'' + c.field + '\', this.checked)">' +
-                '<label for="chk-' + c.field + '">' + (val ? 'Sí' : 'No') + '</label>' +
-                '</div>';
+                '<span class="switch-track"></span>' +
+                '</label></div>';
+        } else if (c.type === 'moneda') {
+            // es_usd es un booleano en la DB; acá se muestra como moneda.
+            inner = '<div class="campo-valor">' + (val ? 'USD' : 'ARS') + '</div>';
         } else if (c.badge) {
             inner = '<div class="campo-valor"><span class="badge badge-' + esc(val || '') + '">' + esc(val || '—') + '</span></div>';
         } else if (c.precio) {
@@ -557,10 +583,13 @@
                 var val   = propData[field];
                 var label = this.querySelector('.campo-label').textContent;
                 var inputEl;
+                // En moneda el valor guardado es booleano (es_usd), pero el
+                // select trabaja con 'ARS'/'USD'.
+                var sel = type === 'moneda' ? (val ? 'USD' : 'ARS') : val;
                 if (opts) {
                     inputEl = '<select class="campo-input">' +
                         opts.map(function(o) {
-                            return '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>';
+                            return '<option value="' + esc(o) + '"' + (o === sel ? ' selected' : '') + '>' + esc(o) + '</option>';
                         }).join('') + '</select>';
                 } else {
                     inputEl = '<input class="campo-input" type="' + type + '" value="' + esc(val != null ? String(val) : '') + '">';
@@ -572,7 +601,10 @@
                 var saved = false;
                 function commit() {
                     if (saved) return; saved = true;
-                    var v = type === 'number' ? (parseFloat(input.value) || null) : input.value;
+                    var v;
+                    if (type === 'number')      v = parseFloat(input.value) || null;
+                    else if (type === 'moneda') v = input.value === 'USD';
+                    else                        v = input.value;
                     guardarCampo(field, v);
                 }
                 input.addEventListener('blur', commit);

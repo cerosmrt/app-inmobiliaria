@@ -42,6 +42,8 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 - Mapa arranca centrado en **Gualeguay** (zoom 13); geocoding vía Nominatim.
 
 ### Plataforma
+- **Admin en sans (Inter)**: se sacó Lora del `<body>` de todo el panel — los remates ensucian labels chicos, mayúsculas e inputs, y el sidebar ya venía en sans. El sitio público no se tocó.
+- **Controles de la ficha**: switches en vez de checkbox + "Sí"/"No" (redundante); moneda como selector ARS/USD sobre el mismo booleano `es_usd`; labels con `--text-2` en vez de `--muted` (2.7:1 → 4.9:1 de contraste, WCAG AA pide 4.5:1); miniaturas de fotos a 2 por fila.
 - Auth por sesión (hashing Werkzeug, **CSRF**, rate-limit de login, cookies seguras en prod), setup del primer admin.
 - **Command palette** (Ctrl/Cmd+K), toasts, confirm modal, sidebar colapsable ("Portfolio / Inteligencia / Comunicación").
 - Config por entorno (dev SQLite / prod Postgres), deploy en PythonAnywhere.
