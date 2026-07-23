@@ -15,18 +15,12 @@
 {% endblock %}
 
 {% block head %}
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Leaflet Draw -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-<!-- Turf.js — area calculation -->
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
-<!-- shpjs — Shapefile parsing -->
-<script src="https://cdn.jsdelivr.net/npm/shpjs/dist/shp.js"></script>
-<!-- togeojson — KML parsing -->
-<script src="https://cdn.jsdelivr.net/npm/@mapbox/togeojson/dist/togeojson.umd.js"></script>
+<!-- Las librerías del mapa (Leaflet, Leaflet.draw, turf, shpjs, togeojson) NO
+     se cargan acá: son ~1 MB de JS bloqueante desde tres CDNs distintos, para
+     un mapa que vive en un modal que la mayoría de las veces no se abre. Con
+     los <script> en el head la ficha se quedaba "cargando" varios segundos, y
+     si un CDN no contesta (adblock, red lenta) no terminaba nunca. Se bajan
+     recién al abrir el mapa — ver cargarLibsMapa(). -->
 <style>
     .container { max-width: 1500px; margin: 0 auto; padding: 24px; }
 
@@ -1331,17 +1325,77 @@
     var _drawControl     = null;
     var _drawnItems      = null;
 
-    var ESRI_SAT = L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
-    );
+    // Librerías del mapa, bajadas recién cuando hacen falta. Antes vivían como
+    // <script> en el head: ~1 MB bloqueante desde tres CDNs para un modal que
+    // casi nunca se abre, y si uno no contestaba la ficha no terminaba de
+    // cargar nunca. Cada archivo se pide una sola vez: la promesa queda
+    // cacheada en _libsMapa.
+    var _libsMapa = null;
 
-    // Abre el modal del mapa. La primera vez lo construye; las siguientes solo
-    // le avisa a Leaflet que vuelva a medir (el contenedor estuvo oculto).
+    var _LIBS_MAPA = [
+        { tipo: 'css', url: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' },
+        { tipo: 'js',  url: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' },
+        { tipo: 'css', url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css' },
+        { tipo: 'js',  url: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js' },
+        { tipo: 'js',  url: 'https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js' },
+        { tipo: 'js',  url: 'https://cdn.jsdelivr.net/npm/shpjs/dist/shp.js' },
+        // @mapbox/togeojson ya no existe en npm (404): el paquete pasó a
+        // llamarse @tmcw/togeojson. Con la URL vieja el import de KML estaba
+        // roto sin avisar — toGeoJSON quedaba undefined.
+        { tipo: 'js',  url: 'https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js' },
+    ];
+
+    function _cargarRecurso(lib) {
+        return new Promise(function(resolve, reject) {
+            var el;
+            if (lib.tipo === 'css') {
+                el = document.createElement('link');
+                el.rel = 'stylesheet';
+                el.href = lib.url;
+            } else {
+                el = document.createElement('script');
+                el.src = lib.url;
+            }
+            el.onload  = function() { resolve(); };
+            el.onerror = function() { reject(new Error('No se pudo cargar ' + lib.url)); };
+            document.head.appendChild(el);
+        });
+    }
+
+    // En serie y no en paralelo: leaflet.draw se registra sobre L, así que
+    // necesita que Leaflet ya esté definido cuando corre.
+    function cargarLibsMapa() {
+        if (!_libsMapa) {
+            _libsMapa = _LIBS_MAPA.reduce(function(cadena, lib) {
+                return cadena.then(function() { return _cargarRecurso(lib); });
+            }, Promise.resolve());
+            // Si falla, se olvida la promesa para poder reintentar al reabrir.
+            _libsMapa = _libsMapa.catch(function(e) { _libsMapa = null; throw e; });
+        }
+        return _libsMapa;
+    }
+
+    // Abre el modal del mapa. La primera vez baja las librerías y lo construye;
+    // las siguientes solo le avisa a Leaflet que vuelva a medir (el contenedor
+    // estuvo oculto).
     function abrirMapa() {
-        document.getElementById('modal-geo').classList.add('active');
-        if (!_geoMap) initGeoMap(propData || {});
-        else setTimeout(function() { _geoMap.invalidateSize(); }, 30);
+        var modal = document.getElementById('modal-geo');
+        modal.classList.add('active');
+        if (_geoMap) {
+            setTimeout(function() { _geoMap.invalidateSize(); }, 30);
+            return;
+        }
+        var status = document.getElementById('geo-status');
+        if (status) status.textContent = 'Cargando el mapa…';
+        cargarLibsMapa()
+            .then(function() {
+                if (status) status.textContent = '';
+                initGeoMap(propData || {});
+            })
+            .catch(function(e) {
+                if (status) status.textContent = '';
+                toast(e.message || 'No se pudieron cargar las librerías del mapa', 'error');
+            });
     }
 
     function cerrarMapa() {
@@ -1350,7 +1404,13 @@
 
     function initGeoMap(data) {
         _geoMap = L.map('geo-map', { zoomControl: true });
-        ESRI_SAT.addTo(_geoMap);
+        // La capa se arma acá adentro: antes era una var de nivel superior y
+        // con las librerías cargadas a demanda `L` todavía no existe cuando el
+        // script se parsea.
+        L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+        ).addTo(_geoMap);
 
         var center = [-34.6037, -58.3816]; // Buenos Aires fallback
         var zoom   = 12;

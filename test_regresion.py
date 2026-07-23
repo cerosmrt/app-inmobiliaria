@@ -306,6 +306,15 @@ invariantes = [
      and "field: 'publicada'" not in ficha),
     ('la ficha tiene bloque de adjuntos',
      'adjuntos-lista' in ficha and 'function subirAdjuntos' in ficha),
+    # Las libs del mapa (~1 MB desde 3 CDNs) se bajan al abrir el modal, no en
+    # el <head>: con <script> bloqueantes la ficha tardaba segundos en cargar y
+    # si un CDN no contestaba no terminaba nunca.
+    ('el mapa carga sus libs a demanda',
+     '<script src="https://' not in ficha and 'function cargarLibsMapa' in ficha),
+    # @mapbox/togeojson ya no existe en npm: daba 404 y el import de KML quedaba
+    # roto sin avisar.
+    ('togeojson apunta al paquete que existe',
+     'npm/@mapbox/togeojson' not in ficha and 'npm/@tmcw/togeojson' in ficha),
     ('el buscador de personas se abre con un botón',
      'class="ta-abrir"' in ficha and 'function taToggle' in ficha
      and 'class="ta-wrap" id=' in ficha and 'hidden>' in ficha),
