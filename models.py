@@ -39,6 +39,10 @@ class Propiedad(db.Model):
     destacada = db.Column(db.Boolean, default=False)
     fotos = db.Column(db.String, nullable=True)
     descripcion = db.Column(db.Text, nullable=True)
+    # Privada: apuntes internos del agente. Al revés que `descripcion`, que es
+    # el texto del aviso, esto no sale nunca al sitio público — chequear que
+    # ningún endpoint de /api/public/ ni templates/propiedad.html la expongan.
+    notas = db.Column(db.Text, nullable=True)
     fecha_estado = db.Column(db.DateTime, nullable=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
     lat = db.Column(db.Float, nullable=True)
@@ -57,6 +61,26 @@ class Propiedad(db.Model):
         if not self.fotos:
             return []
         return [f.replace('\\', '/') for f in self.fotos.split(',') if f.strip()]
+
+    # Lo único que puede ver un visitante anónimo. Es lista blanca y no lista
+    # negra a propósito: si mañana se agrega una columna interna a as_dict(),
+    # con lista negra saldría publicada sola. Acá hay que sumarla a mano.
+    #
+    # Afuera quedan, además de `notas`: propietarios e interesados (nombre y
+    # TELÉFONO de gente real), `codigo` interno, `publicada` y `fecha_estado`.
+    _CAMPOS_PUBLICOS = (
+        'id', 'direccion', 'barrio', 'tipo', 'operacion', 'estado',
+        'ambientes', 'superficie_terreno', 'superficie_cubierta',
+        'hectareas', 'nombre_campo', 'uso_suelo', 'subdivisible',
+        'rango_min', 'rango_max', 'es_usd', 'precio_a_consultar',
+        'destacada', 'descripcion', 'fotos',
+        'lat', 'lng', 'geojson_geometry', 'tipo_geometria',
+    )
+
+    def as_dict_publico(self):
+        """Serialización para el sitio público. Ver _CAMPOS_PUBLICOS."""
+        completo = self.as_dict()
+        return {k: completo[k] for k in self._CAMPOS_PUBLICOS if k in completo}
 
     def as_dict(self):
         return {
@@ -78,6 +102,7 @@ class Propiedad(db.Model):
             'destacada': self.destacada,
             'fotos': self._fotos_list(),
             'descripcion': self.descripcion or '',
+            'notas': self.notas or '',
             'fecha_estado': self.fecha_estado.strftime('%d/%m/%Y') if self.fecha_estado else None,
             'propietario_id': self.propietario_id,
             'propietario': self.propietario.nombre + ' ' + self.propietario.apellido if self.propietario else None,

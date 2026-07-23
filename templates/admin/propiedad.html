@@ -367,6 +367,22 @@
     #orden-aviso { font-size: 12px; color: var(--muted); margin-left: auto; }
     #btn-guardar-orden { display: none; }
 
+    /* ── Notas internas ────────────────────────────────────────────────────────
+       Mismo control que la descripción pero del lado privado. Más baja a
+       propósito: son apuntes sueltos, no un texto de venta.                  */
+    .notas-privadas {
+        width: 100%; box-sizing: border-box; font-size: 13px; padding: 7px 10px;
+        border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+        resize: vertical; font-family: inherit; min-height: 80px; color: var(--text);
+        background: #FFFFFF; transition: border-color var(--tx);
+    }
+    .notas-privadas:focus { outline: none; border-color: var(--muted); }
+    .notas-acciones {
+        display: flex; align-items: center; justify-content: flex-end;
+        gap: 8px; margin-top: 8px;
+    }
+    #notas-estado { font-size: 12px; margin-right: auto; }
+
     /* ── Adjuntos privados ─────────────────────────────────────────────────────
        Lista, no grilla de miniaturas: un plano o una escritura se identifican
        por el nombre del archivo, no por cómo se ven en chiquito.             */
@@ -434,16 +450,36 @@
         </div>
     </div>
 
-    <!-- Adjuntos: planos, escrituras, mensuras. Nunca salen al sitio público
-         (se sirven por /adjuntos/<id>, detrás de login). -->
+    <!-- Notas internas. El campo existía en la base desde siempre pero la ficha
+         no lo mostraba (y el PUT tampoco lo aceptaba): había notas guardadas
+         que no veía nadie. Ojo con no confundirla con la descripción, que vive
+         del lado público — esta no sale nunca al sitio. -->
     <div class="section-card">
-        <h2>Adjuntos</h2>
-        <div class="upload-drop" onclick="document.getElementById('input-adjunto').click()">
+        <h2>Notas</h2>
+        <textarea id="notas" class="notas-privadas"
+                  placeholder="Notas internas &mdash; lo que no va al aviso"></textarea>
+        <div class="notas-acciones">
+            <span id="notas-estado" style="display:none"></span>
+            <!-- Adjuntar vive acá: un archivo casi siempre llega junto con la
+                 nota que lo explica ("planos que mandó el escribano"). La lista
+                 se dibuja aparte, en su propio card. -->
+            <button class="btn" onclick="document.getElementById('input-adjunto').click()"
+                    style="font-size:12px;padding:5px 14px"
+                    title="PDF, JPG, PNG o WebP &mdash; m&aacute;x 10 MB">&#x1F4CE; Adjuntar archivo</button>
             <input type="file" id="input-adjunto" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple
-                   onchange="subirAdjuntos(this)">
-            &#x1F4CE; Clic aqu&iacute; para adjuntar &mdash; PDF, JPG, PNG o WebP, m&aacute;x 10 MB
+                   style="display:none" onchange="subirAdjuntos(this)">
+            <button class="btn btn-green" onclick="guardarNotas()"
+                    style="font-size:12px;padding:5px 14px">Guardar</button>
         </div>
-        <div id="adjuntos-lista"><p class="inter-vacio">Cargando...</p></div>
+    </div>
+
+    <!-- Adjuntos: planos, escrituras, mensuras. Nunca salen al sitio público
+         (se sirven por /adjuntos/<id>, detrás de login). El card entero no se
+         dibuja si no hay ninguno: se adjunta desde Notas, así que un card
+         vacío acá no ofrecería nada. -->
+    <div class="section-card" id="card-adjuntos" style="display:none">
+        <h2>Adjuntos</h2>
+        <div id="adjuntos-lista"></div>
     </div>
 
     </div><!-- .prop-main -->
@@ -637,6 +673,7 @@
                 cargarInteresados();
                 renderPropietarios();
                 document.getElementById('descripcion').value = data.descripcion || '';
+                document.getElementById('notas').value = data.notas || '';
                 renderFotos();
                 cargarAdjuntos();
                 // El mapa no se inicializa acá: vive en un modal y Leaflet
@@ -1221,6 +1258,24 @@
         });
     }
 
+    // ── NOTAS INTERNAS ────────────────────────────────────────────────────────
+    // Lo privado. No confundir con la descripción, que vive del lado público:
+    // ésta no sale nunca al sitio.
+    function guardarNotas() {
+        var el = document.getElementById('notas-estado');
+        fetch('/api/propiedades/' + propiedadId, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notas: document.getElementById('notas').value })
+        }).then(function(r) {
+            if (!r.ok) throw new Error();
+            if (propData) propData.notas = document.getElementById('notas').value;
+            el.innerHTML = '&#x2713; Guardado';
+            el.style.color = 'var(--accent)';
+            el.style.display = 'inline';
+            setTimeout(function() { el.style.display = 'none'; }, 2000);
+        }).catch(function() { toast('Error al guardar las notas', 'error'); });
+    }
+
     // ── ADJUNTOS PRIVADOS ─────────────────────────────────────────────────────
     // Planos, escrituras, mensuras. No salen nunca al sitio público: se bajan
     // por /adjuntos/<id>, que está detrás de login. Ver models.Adjunto.
@@ -1245,7 +1300,11 @@
 
     function renderAdjuntos() {
         var cont = document.getElementById('adjuntos-lista');
+        var card = document.getElementById('card-adjuntos');
         if (!cont) return;
+        // El card aparece recién cuando hay algo colgado: se adjunta desde
+        // Notas, así que vacío no ofrecería ninguna acción.
+        if (card) card.style.display = _adjuntos.length ? '' : 'none';
         if (!_adjuntos.length) { cont.innerHTML = ''; return; }
         cont.innerHTML = _adjuntos.map(function(a, i) {
             var meta = [_pesoLegible(a.tamano), a.subido_en].filter(Boolean).join(' · ');

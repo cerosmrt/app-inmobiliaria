@@ -400,7 +400,9 @@ def api_public_propiedades():
         except ValueError:
             pass
 
-    return jsonify([p.as_dict() for p in query.order_by(
+    # as_dict_publico y NO as_dict: el completo incluye propietarios e
+    # interesados con teléfono, notas internas y el código. Ver models.py.
+    return jsonify([p.as_dict_publico() for p in query.order_by(
         Propiedad.destacada.desc(), Propiedad.id.desc()
     ).all()])
 
@@ -409,7 +411,7 @@ def api_public_propiedad(id):
     p = Propiedad.query.filter_by(id=id, publicada=True).filter(Propiedad.deleted_at.is_(None)).first()
     if not p:
         return jsonify({"error": "Propiedad no encontrada"}), 404
-    return jsonify(p.as_dict())
+    return jsonify(p.as_dict_publico())
 
 def _send_consulta_email(data, prop_info, host_url):
     smtp_host = app.config.get('MAIL_SMTP', '')
@@ -817,6 +819,10 @@ def update_propiedad(id):
     p.publicada        = data.get('publicada', p.publicada)
     p.destacada        = data.get('destacada', p.destacada)
     p.descripcion      = data.get('descripcion', p.descripcion)
+    # `notas` es lo privado, al revés que `descripcion`, que se publica. La
+    # columna existía y salía en as_dict() desde siempre, pero no estaba acá:
+    # no había forma de escribirla, así que la ficha nunca la mostró.
+    p.notas            = data.get('notas', p.notas)
     nuevo_estado = data.get('estado', p.estado)
     if nuevo_estado != p.estado:
         p.fecha_estado = datetime.utcnow()

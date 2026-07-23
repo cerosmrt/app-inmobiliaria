@@ -217,6 +217,62 @@ check('la ficha admin renderiza con datos que contienen HTML', r.status_code == 
 check('el HTML crudo no aparece sin escapar en la ficha',
       b'<img src=x onerror' not in r.data)
 
+# ── 6b1. La API pública no filtra datos internos ──────────────────────────────
+# Regresión de un bug real: /api/public/propiedades devolvía p.as_dict() entero,
+# o sea nombre y TELÉFONO de propietarios e interesados a cualquier visitante
+# anónimo, más el código interno. Ahora usa as_dict_publico() (lista blanca).
+seccion('6b1. Privacidad — la API pública no expone datos internos')
+with A.app.app_context():
+    p = db.session.get(Propiedad, PROP_ID)
+    p.direccion, p.barrio = 'Sarmiento 450', 'Centro'   # limpiar el XSS de antes
+    p.codigo = 'INTERNO-77'
+    p.notas  = 'El dueño acepta 10% menos'
+    cl = db.session.get(Cliente, CLI_ID)
+    p.propietarios = [cl]
+    p.interesados  = [cl]
+    db.session.commit()
+
+logout()
+r = cli_http.get('/api/public/propiedades')
+cuerpo = r.get_data(as_text=True)
+check('la API pública responde 200', r.status_code == 200, r.status_code)
+for dato, etiqueta in [('3444111222', 'el teléfono del propietario'),
+                       ('Ruiz', 'el apellido del propietario'),
+                       ('INTERNO-77', 'el código interno'),
+                       ('acepta 10% menos', 'las notas privadas')]:
+    check('no se filtra %s' % etiqueta, dato not in cuerpo)
+for clave in ['propietarios', 'interesados', 'propietario_id', 'notas', 'codigo']:
+    check("la clave '%s' no viaja al público" % clave, ('"%s"' % clave) not in cuerpo)
+# Y lo que el sitio sí necesita tiene que seguir estando.
+uno = r.get_json()[0] if r.get_json() else {}
+for clave in ['id', 'direccion', 'tipo', 'operacion', 'rango_min', 'fotos', 'descripcion']:
+    check("la clave '%s' sí llega al sitio" % clave, clave in uno)
+r = cli_http.get('/api/public/propiedades/%d' % PROP_ID)
+check('la ficha pública tampoco filtra',
+      r.status_code == 200 and '3444111222' not in r.get_data(as_text=True), r.status_code)
+login()
+
+# ── 6b2. Notas internas ───────────────────────────────────────────────────────
+# La columna existía y salía en as_dict() desde siempre, pero el PUT no la
+# aceptaba: no había forma de escribirla y la ficha nunca la mostró.
+seccion('6b2. Notas — el campo privado se puede guardar y leer')
+login()
+r = cli_http.put('/api/propiedades/%d' % PROP_ID,
+                 json={'notas': 'Llamar al escribano por la mensura'}, headers=H)
+check('PUT con notas da 200', r.status_code == 200, r.status_code)
+r = cli_http.get('/api/propiedades/%d' % PROP_ID)
+check('las notas vuelven en el GET',
+      r.status_code == 200 and r.get_json().get('notas') == 'Llamar al escribano por la mensura',
+      r.get_json().get('notas') if r.status_code == 200 else r.status_code)
+# Lo privado no se publica: la ficha pública no puede filtrarlo.
+r = cli_http.get('/api/public/propiedades')
+check('las notas NO salen en la API pública',
+      r.status_code == 200 and 'escribano' not in r.get_data(as_text=True), r.status_code)
+logout()
+r = cli_http.get('/propiedad/%d' % PROP_ID)
+check('las notas NO salen en la ficha pública', b'escribano' not in r.data)
+login()
+
 # ── 6c. Adjuntos privados ─────────────────────────────────────────────────────
 # Lo importante acá no es que suban: es que NO se puedan bajar sin sesión y que
 # no queden guardados abajo de static/, que el servidor sirve sin pasar por
