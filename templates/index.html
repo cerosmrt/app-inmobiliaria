@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roberto Moret Inmobiliaria — Propiedades en venta y alquiler</title>
+    <title>Roberto Moret Inmobiliaria — Propiedades en venta</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <meta name="description" content="Encontrá propiedades en venta y alquiler en Buenos Aires. Roberto Moret Inmobiliaria, más de 30 años de experiencia acompañándote en cada paso.">
+    <meta name="description" content="Encontrá propiedades en venta en Buenos Aires. Roberto Moret Inmobiliaria, más de 30 años de experiencia acompañándote en cada paso.">
     <meta property="og:title" content="Roberto Moret Inmobiliaria">
-    <meta property="og:description" content="Propiedades en venta y alquiler en Buenos Aires. Más de 30 años de experiencia.">
+    <meta property="og:description" content="Propiedades en venta en Buenos Aires. Más de 30 años de experiencia.">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="es_AR">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -226,9 +226,15 @@
         .prop-card.visible { opacity: 1; transform: none; }
         .prop-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.10); border-color: transparent; }
 
+        /* La foto va metida adentro de la card, no pegada a los bordes: así
+           las cuatro esquinas quedan redondeadas en vez de sólo las dos de
+           arriba (abajo cortaba en escuadra contra el cuerpo blanco). El
+           margen usa el radio de la card menos el suyo, que es lo que hace
+           que las curvas de la foto y del borde se vean concéntricas. */
         .card-photo {
             position: relative; aspect-ratio: 3/2;
             background: #F2F2F2; overflow: hidden; flex-shrink: 0;
+            margin: 4px 4px 0; border-radius: 7px;
         }
         .card-photo img.photo-main {
             width: 100%; height: 100%; object-fit: cover; display: block;
@@ -444,7 +450,7 @@
     <div class="hero-content">
         <div class="hero-eyebrow">Más de 30 años de experiencia</div>
         <h1>Tu próxima propiedad<br>te está <em>esperando</em></h1>
-        <p class="hero-sub">Propiedades en venta y alquiler en Buenos Aires.<br>Te acompañamos en cada paso del proceso.</p>
+        <p class="hero-sub">Propiedades en venta en Buenos Aires.<br>Te acompañamos en cada paso del proceso.</p>
         <div class="hero-actions">
             <a href="#propiedades" class="hero-cta">
                 Ver propiedades
@@ -473,7 +479,6 @@
     <div class="tabs-bar">
         <button class="tab-btn" id="tab-todas"    onclick="setTab('todas')">Todas</button>
         <button class="tab-btn" id="tab-venta"    onclick="setTab('venta')">En Venta</button>
-        <button class="tab-btn" id="tab-alquiler" onclick="setTab('alquiler')">En Alquiler</button>
     </div>
     <div class="search-inner">
         <select id="f-tipo" onchange="buscar()">
@@ -498,7 +503,6 @@
             <option value="300000">hasta USD 300.000</option>
             <option value="500000">hasta USD 500.000</option>
         </select>
-        <input type="text" id="f-barrio" placeholder="Barrio o dirección..." onkeyup="buscarDebounce()">
         <button class="btn-buscar" onclick="buscar()">Buscar</button>
         <button class="btn-limpiar" onclick="limpiar()">Limpiar</button>
         <div class="sort-bar">
@@ -560,9 +564,9 @@
     document.getElementById('footer-year').textContent = new Date().getFullYear();
 
     let propiedades = [];
-    let buscarTimer = null;
     let _activeTab  = 'todas';
     const carouselIdx = {};
+    const _MAX_DOTS = 8;   // más que esto no entra prolijo abajo de la foto
 
     const revealObserver = new IntersectionObserver(entries => {
         entries.forEach(e => {
@@ -585,9 +589,12 @@
         });
     }
 
+    // Sin alquileres: la inmobiliaria hoy solo opera venta. Un `?tab=alquiler`
+    // viejo (link guardado, buscador) cae en 'todas' en vez de filtrar por una
+    // operación que ya no se ofrece y devolver una grilla vacía.
     function setTab(tab) {
-        _activeTab = (tab === 'venta' || tab === 'alquiler') ? tab : 'todas';
-        ['todas', 'venta', 'alquiler'].forEach(t => {
+        _activeTab = tab === 'venta' ? 'venta' : 'todas';
+        ['todas', 'venta'].forEach(t => {
             const btn = document.getElementById('tab-' + t);
             if (btn) btn.classList.toggle('active', t === _activeTab);
         });
@@ -595,11 +602,6 @@
         url.searchParams.set('tab', _activeTab);
         window.history.replaceState({}, '', url.toString());
         buscar();
-    }
-
-    function buscarDebounce() {
-        clearTimeout(buscarTimer);
-        buscarTimer = setTimeout(buscar, 380);
     }
 
     // ── Tracking de comportamiento (F1 — ver VISION.md) ──
@@ -621,18 +623,19 @@
         } catch (e) {}
     }
 
+    // Sin búsqueda por barrio ni dirección: Gualeguay es chica y nadie busca
+    // así — los filtros que sí se usan son tipo, ambientes y precio. La API
+    // sigue aceptando `barrio` por si alguna vez vuelve.
     function buscar() {
         const tipo      = document.getElementById('f-tipo').value;
         const ambientes = document.getElementById('f-ambientes').value;
         const precio    = document.getElementById('f-precio').value;
-        const barrio    = document.getElementById('f-barrio').value.trim();
         const params    = new URLSearchParams();
         if (_activeTab !== 'todas') params.set('operacion', _activeTab);
         if (tipo)      params.set('tipo', tipo);
         if (ambientes) params.set('ambientes', ambientes);
         if (precio)    params.set('precio_max', precio);
-        if (barrio)    params.set('barrio', barrio);
-        track('buscar', null, { operacion: _activeTab, tipo, ambientes, precio_max: precio, barrio });
+        track('buscar', null, { operacion: _activeTab, tipo, ambientes, precio_max: precio });
         fetch('/api/public/propiedades?' + params.toString())
             .then(r => r.json())
             .then(data => { propiedades = data; renderGrid(data); })
@@ -641,7 +644,6 @@
 
     function limpiar() {
         ['f-tipo', 'f-ambientes', 'f-precio'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('f-barrio').value = '';
         setTab('todas');
     }
 
@@ -656,6 +658,8 @@
         const img = card.querySelector('.photo-main');
         if (img) img.src = '/' + thumbUrl(fotos[idx]);
         card.querySelectorAll('.c-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+        const pos = card.querySelector('.carousel-pos');
+        if (pos) pos.textContent = (idx + 1) + ' / ' + fotos.length;
     }
 
     function carouselNav(propId, dir, event) {
@@ -697,7 +701,9 @@
             photo.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
             photo.addEventListener('touchend', e => {
                 const dx = e.changedTouches[0].clientX - sx;
-                if (Math.abs(dx) > 40) carouselNav(p.id, dx < 0 ? 1 : -1, null);
+                // Con el evento adelante: si no, el swipe burbujea al onclick
+                // de la card y en el celular pasar de foto te abría la ficha.
+                if (Math.abs(dx) > 40) carouselNav(p.id, dx < 0 ? 1 : -1, e);
             });
         });
     }
@@ -725,16 +731,27 @@
                    onerror="this.parentElement.innerHTML='<div class=no-photo><div class=no-photo-icon>🏠</div></div>'">`
             : `<div class="no-photo"><div class="no-photo-icon">🏠</div></div>`;
 
+        // Un dot por foto: antes se dibujaban 5 como máximo mientras las
+        // flechas recorrían todas, así que en una propiedad con 8 fotos los
+        // pasos 6 a 8 no encendían ningún dot y parecía que el carrusel se
+        // quedaba clavado en la misma foto. Pasadas _MAX_DOTS la fila de
+        // puntitos sería más larga que la card, así que ahí va un contador.
+        const indicadorHtml = multiPhoto
+            ? (fotos.length <= _MAX_DOTS
+                ? `<div class="carousel-dots">
+                       ${fotos.map((_, i) =>
+                           `<button class="c-dot${i===0?' active':''}" onclick="carouselGo(${p.id}, ${i}, event)"></button>`
+                       ).join('')}
+                   </div>`
+                : `<div class="photo-count carousel-pos">1 / ${fotos.length}</div>`)
+            : '';
+
         const carouselHtml = multiPhoto ? `
             <div class="carousel-arrows">
                 <button class="c-arrow" onclick="carouselNav(${p.id}, -1, event)">‹</button>
                 <button class="c-arrow" onclick="carouselNav(${p.id}, 1, event)">›</button>
             </div>
-            <div class="carousel-dots">
-                ${fotos.slice(0, 5).map((_, i) =>
-                    `<button class="c-dot${i===0?' active':''}" onclick="carouselGo(${p.id}, ${i}, event)"></button>`
-                ).join('')}
-            </div>` : (fotos && fotos.length > 0 ? `<div class="photo-count">📷 ${fotos.length}</div>` : '');
+            ${indicadorHtml}` : (fotos && fotos.length > 0 ? `<div class="photo-count">📷 ${fotos.length}</div>` : '');
 
         const ambHtml    = p.ambientes ? `<span class="card-spec">${escHtml(p.ambientes)} amb.</span>` : '';
         const tipoHtml   = p.tipo      ? `<span class="card-spec">${escHtml(p.tipo)}</span>`           : '';

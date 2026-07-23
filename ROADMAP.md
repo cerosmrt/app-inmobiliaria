@@ -43,6 +43,12 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 - **Catastro**: parcelas en DB, capa **ATER en vivo** (WFS por bbox + gating de zoom + debounce + caché 24h), integración **IGN** (provincias/departamentos) con fallback a estáticos locales.
 - Mapa arranca centrado en **Gualeguay** (zoom 13); geocoding vía Nominatim.
 
+### Sitio público
+- **Sin alquileres.** La inmobiliaria hoy solo opera venta: se sacó la solapa *En Alquiler*, y un `?tab=alquiler` viejo (link guardado, buscador) cae en *Todas* en vez de filtrar por una operación que ya no se ofrece y devolver una grilla vacía. También salió de `<title>`, meta description, OG y hero. El valor `alquiler` sigue existiendo en el modelo y en el admin: se sacó de la oferta, no de los datos.
+- **Sin búsqueda por barrio ni dirección.** Gualeguay es chica y nadie busca así; quedan tipo, ambientes y precio. La API sigue aceptando `barrio` por si alguna vez vuelve.
+- **Fotos de las cards con las cuatro esquinas redondeadas** (van metidas adentro de la card, con margen y radio concéntricos) — antes cortaban en escuadra contra el cuerpo blanco.
+- **Carrusel: un dot por foto.** Se dibujaban 5 como máximo mientras las flechas recorrían todas, así que en una propiedad con 8 fotos los pasos 6 a 8 no encendían ningún dot y parecía que se quedaba clavado en la misma foto. Pasadas 8 fotos va un contador `n / total` en vez de la fila de puntitos. Además el swipe táctil ahora corta la propagación: en el celular pasar de foto abría la ficha.
+
 ### Plataforma
 - **Admin en sans (Inter)**: se sacó Lora del `<body>` de todo el panel — los remates ensucian labels chicos, mayúsculas e inputs, y el sidebar ya venía en sans. El sitio público no se tocó.
 - **Controles de la ficha**: switches en vez de checkbox + "Sí"/"No" (redundante); moneda como selector ARS/USD sobre el mismo booleano `es_usd`; labels con `--text-2` en vez de `--muted` (2.7:1 → 4.9:1 de contraste, WCAG AA pide 4.5:1); miniaturas de fotos a 2 por fila.
@@ -91,7 +97,10 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ### 🟡 Medio — deuda técnica y datos
 9. **Normalizar `fotos`** (hoy CSV en un String) a una tabla `Foto` 1:N, y coords/bbox/neighbor_cache (hoy strings) a tipos reales. *Por qué importa: integridad referencial y menos parsing manual frágil.*
-10. **Modelo de adjuntos** (planos, escrituras PDF) subibles desde el admin y descargables. *Por qué importa: valor real para una inmobiliaria; hoy solo hay fotos.*
+10. **La ficha admin como "privado | público", con adjuntos.** *(idea del 23/07/2026 — falta definir antes de tocar código)* Hoy la separación izquierda/derecha es temática (datos vs. fotos) y no dice nada sobre qué ve el cliente. Pasar a que **la columna izquierda sea lo privado** (datos internos, personas, notas y **adjuntos**) y **la derecha lo público** (fotos + descripción, o sea exactamente lo que se publica), con esos dos rótulos escritos en la interfaz y un **switch de publicar/ocultar sobre el bloque público**.
+    - **Adjuntos privados:** subir y **previsualizar** archivos de varios tipos (PDF de planos y escrituras, imágenes de referencia) que **nunca** salen al sitio público. Es lo que hoy hace el padre en papel. Requiere modelo `Adjunto` 1:N, upload validado por magic bytes (igual que las fotos), servirlos sólo con `@login_required` y un visor inline (PDF en `<iframe>`/`<embed>`, imágenes en el lightbox).
+    - **A definir:** (a) si "publicar" es el `publicada` que ya existe o un flag nuevo por bloque; (b) si las fotos pueden ser privadas de a una (una foto de plano no debería publicarse) o es todo o nada; (c) qué pasa con la descripción, que hoy es pública pero se escribe como nota interna.
+    - *Por qué importa: es la distinción mental con la que el agente ya trabaja (lo que muestro / lo que me guardo), y hoy la interfaz no la refleja en ningún lado. Además hay riesgo real de publicar sin querer.*
 11. **Modularizar `app.py`** (2015 líneas, ~110 rutas) en blueprints (público / propiedades / clientes / consultas / captación / catastro). *Por qué importa: sostenibilidad; hoy todo cuelga de un archivo.*
 12. **Vincular propiedad ↔ parcela catastral** (FK) para surfacear cédula/partida en la ficha. *Por qué importa: hoy son entidades paralelas sin relación.*
 

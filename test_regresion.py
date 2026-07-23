@@ -258,6 +258,14 @@ check('admin.css va versionado (cache-busting)', "admin.css') }}?v=" in base)
 listado = tpl('admin/index.html')
 check('el modal de propietarios permite crear', 'formNuevoPropietarioModal' in listado)
 
+# Sitio público: la inmobiliaria hoy solo opera venta y nadie busca por barrio
+# en una ciudad chica. Y el carrusel dibuja un dot por foto — cuando eran 5
+# fijos, una propiedad con 8 fotos parecía quedarse clavada al pasar la quinta.
+check('el sitio público no ofrece alquiler',
+      'tab-alquiler' not in pub_index and "setTab('alquiler')" not in pub_index)
+check('el sitio público no busca por barrio', 'f-barrio' not in pub_index)
+check('el carrusel no recorta los dots', 'fotos.slice(0, 5)' not in pub_index)
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 shutil.rmtree(_TMP, ignore_errors=True)
 print('\n' + '=' * 62)
