@@ -28,6 +28,7 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 ### Fotos
 - Upload con **validación por magic bytes**, conversión a **WebP**, generación de **thumbnails**, límite 10 MB.
 - Reordenar por **drag & drop**; borrar; galería con **lightbox** (teclado + swipe táctil) en la ficha pública.
+- **La galería del admin tiene altura acotada** (`max-height: 480px` + scroll interno propio). Antes crecía sin techo: con 10+ fotos el rail derecho pasaba a ser la columna más alta y estiraba toda la página, rompiendo el balance de las dos columnas. El rail sigue **sin** sticky ni scroll propio a propósito (ver comentario en `propiedad.html:46`): si la galería ya no crece, no hace falta, y así no vuelve el bug del scrollbar doble.
 
 ### Personas y comercial
 - Clientes / **propietarios** / **interesados** (compradores) con relaciones M2M y **matching automático** propiedad↔interesado.

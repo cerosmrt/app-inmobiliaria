@@ -233,6 +233,11 @@ invariantes = [
     ('el mapa se inicializa al abrirlo',  'function abrirMapa' in ficha),
     ('el rail no tiene scroll propio',    'overflow-y: auto' not in ficha.split('.prop-rail')[1][:300]),
     ('labels con contraste AA',           'color: var(--text-2)' in ficha),
+    # La galería sí scrollea adentro suyo: es lo que evita que el rail crezca
+    # sin techo y estire la página cuando la propiedad tiene 10+ fotos.
+    ('la galería tiene altura acotada',
+     'max-height' in ficha.split('.fotos-admin-grid {')[1][:220]
+     and 'overflow-y: auto' in ficha.split('.fotos-admin-grid {')[1][:220]),
 ]
 for nombre, ok in invariantes:
     check(nombre, ok)

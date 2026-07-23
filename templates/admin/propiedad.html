@@ -262,10 +262,21 @@
        cuando el layout colapsa a una columna. */
     /* 2 por fila en el rail: a 3 las miniaturas quedaban demasiado chicas
        para reconocer el ambiente de un vistazo. */
+    /* Techo de altura: sin esto una propiedad con 10+ fotos convertía al rail
+       en la columna más alta y estiraba toda la página. Con max-height la
+       galería scrollea adentro suyo y la ficha mide siempre lo mismo, tenga 2
+       fotos o 50. El padding-right deja lugar al scrollbar para que no se
+       monte encima de las miniaturas. */
     .fotos-admin-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
         gap: 10px; min-height: 40px;
+        max-height: 480px; overflow-y: auto; padding-right: 4px;
+        overscroll-behavior: contain;
+    }
+    .fotos-admin-grid::-webkit-scrollbar { width: 5px; }
+    .fotos-admin-grid::-webkit-scrollbar-thumb {
+        background: var(--border-strong); border-radius: 3px;
     }
     /* El mensaje de "sin fotos" es un item más del grid: sin esto lo mete
        adentro de una columna de 112px y queda partido en tres renglones. */
