@@ -104,6 +104,13 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ### 🟠 Alto — experiencia y performance
 
+6g. **Identidad visual alineada al logo** *(decidido el 23/07/2026)*. El logo es serif pesada + sans geométrica + rojo pleno sobre negro. Decisiones tomadas:
+   - **Serif sólo en títulos del portal público** (logo, direcciones de propiedad, H1/H2) y **sans en todo lo demás**, incluido el admin entero. *Esto revierte el "pasar el público a sans también" decidido un rato antes el mismo día.*
+   - **Paleta del admin de cálida a gris frío** (`#F8F9FA` / `#F1F3F5` / bordes `#E5E7EB`, texto `#333` / `#666`).
+   - **Rojo de acento: muestreado del logo** — pendiente de que `static/logo.png` exista. **Hoy el archivo no está**: `index.html:415` lo referencia con un `onerror` que lo esconde, así que el sitio muestra un fallback de texto y el logo real nunca se vio.
+   - **`.btn-ver` negro sólido** (`#111` con texto blanco), no rojo: en la misma card ya hay un badge rojo de VENTA sobre la foto, y el propio spec pide no saturar de rojo.
+   - *Ojo con el spec de origen: recomienda Playfair Display / Bodoni, que son didonas de alto contraste, mientras la serif del logo es pesada y de bajo contraste (slab). De su lista, Merriweather es la única que se acerca. Y dice que el sidebar es `#111111` cuando en realidad es `#000000`.*
+
 6c. **Galería de fotos en 2×2 + modal de gestión.** *(decidido el 23/07/2026, revierte parte de lo hecho ese mismo día)* En el rail se ven **4 miniaturas (2×2)** y la cuarta lleva el contador **«+N»**; el manejo real —reordenar por drag & drop, subir y borrar— se muda a un **modal grande**, que da mucho más lugar para arrastrar. Reemplaza el scroll interno con techo elástico que quedó hoy. *Costo: agrega un clic para cualquier cambio en las fotos. Ojo: el techo del rail (`100vh - 95px`) sigue haciendo falta para el resto del card.*
 
 

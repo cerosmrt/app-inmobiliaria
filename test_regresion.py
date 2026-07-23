@@ -21,6 +21,7 @@ Qué cubre — pensado para avisar si rompimos algo al implementar lo próximo:
 """
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -381,8 +382,45 @@ invariantes = [
 for nombre, ok in invariantes:
     check(nombre, ok)
 
+# ── 7b. Contraste real de la paleta ───────────────────────────────────────────
+# No alcanza con mirar que el token esté escrito: se calcula el contraste WCAG
+# de los grises de texto contra la superficie de las tarjetas. Si alguien
+# aclara un gris al retocar la paleta, esto lo frena.
+seccion('7b. Paleta — contraste WCAG AA calculado')
+
+
+def _lum(hexcolor):
+    c = hexcolor.lstrip('#')
+    canales = []
+    for i in (0, 2, 4):
+        v = int(c[i:i + 2], 16) / 255
+        canales.append(v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4)
+    r, g, b = canales
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contraste(a, b):
+    la, lb = _lum(a), _lum(b)
+    if la < lb:
+        la, lb = lb, la
+    return (la + 0.05) / (lb + 0.05)
+
+
+css = open(os.path.join(PROJ, 'static', 'admin.css'), encoding='utf-8').read()
+tokens = dict(re.findall(r'--([\w-]+):\s*(#[0-9A-Fa-f]{6})', css))
+fondo = tokens.get('surface', '#FFFFFF')
+for token, minimo in [('text', 4.5), ('text-2', 4.5), ('muted', 4.5), ('ink', 4.5)]:
+    if token in tokens:
+        ratio = _contraste(tokens[token], fondo)
+        check('--%s sobre --surface cumple AA (%.1f:1)' % (token, ratio),
+              ratio >= minimo, '%s vs %s' % (tokens[token], fondo))
+
 base = tpl('admin/base.html')
 check('el admin carga Inter, no Lora', 'family=Inter' in base and 'Lora' not in base)
+# setup.html era la última pantalla del panel con serif (Georgia).
+setup = tpl('admin/setup.html')
+check('setup.html ya no usa serif',
+      'font-family: Georgia' not in setup and "font-family: 'Inter'" in setup)
 check('admin.css va versionado (cache-busting)', "admin.css') }}?v=" in base)
 
 listado = tpl('admin/index.html')

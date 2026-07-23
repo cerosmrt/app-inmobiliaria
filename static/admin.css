@@ -11,23 +11,31 @@
     --accent-dk:    #A50E28;
     --accent-lt:    rgba(196,18,48,0.06);
 
-    /* ── Neutrals — warm ink ── */
-    --ink:          #1A1A17;   /* display headings */
-    --text:         #37352F;   /* primary body text */
-    --text-2:       #6F6E6A;   /* secondary text */
-    --muted:        #737270;   /* labels, hints, placeholders — 4.6:1 sobre --surface.
+    /* ── Neutrals — gris frío ──
+       Eran tonos papel (#37352F, #6F6E6A…). Se pasaron a gris neutro para
+       alinear con la identidad de marca: rojo + negro + gris frío. Se mantuvo
+       la misma escala de luminosidad, así que la jerarquía visual no cambió;
+       lo que cambió es el matiz. Los valores de texto están elegidos por
+       contraste, no por gusto — hay un test que los verifica contra WCAG AA
+       (4.5:1 sobre --surface). No bajarlos sin correr la suite. */
+    --ink:          #111111;   /* display headings */
+    --text:         #333333;   /* primary body text — 11.6:1 */
+    --text-2:       #666666;   /* secondary text — 5.5:1 */
+    --muted:        #6B7280;   /* labels, hints, placeholders — 4.7:1.
                                   Era #9B9A97, que daba 2.7:1 y reprobaba WCAG AA (4.5:1). */
 
-    /* ── Surfaces — paper ── */
-    --bg:           #FFFFFF;   /* page background — white paper */
-    --surface:      #FAFAF8;   /* card / panel surface */
-    --surface-2:    #F3F2EE;   /* recessed: stat tiles, hover */
-    --surface-3:    #ECEAE3;   /* deeper hover */
+    /* ── Surfaces — gris frío ──
+       El blanco puro queda reservado a inputs y al contenedor activo; las
+       tarjetas van en gris para que el papel no compita con el contenido. */
+    --bg:           #FFFFFF;   /* page background */
+    --surface:      #F8F9FA;   /* card / panel surface */
+    --surface-2:    #F1F3F5;   /* recessed: stat tiles, hover */
+    --surface-3:    #E9ECEF;   /* deeper hover */
 
     /* ── Borders ── */
-    --border:        #E9E8E4;
-    --border-strong: #D4D3CE;
-    --border-subtle: #F0EFEB;  /* tbody row dividers */
+    --border:        #E5E7EB;
+    --border-strong: #D1D5DB;
+    --border-subtle: #F1F3F5;  /* tbody row dividers */
 
     /* ── Semantic status ── */
     --green:        #16A34A;
@@ -36,8 +44,10 @@
     --navy:         #1e3a5f;
 
     /* ── Shadows — borders on cards, shadow only on floating elements ── */
-    --shadow-float: 0 4px 16px rgba(55,53,47,0.08), 0 1px 4px rgba(55,53,47,0.04);
-    --shadow-lg:    0 20px 60px rgba(55,53,47,0.18);
+    /* Sombra neutra: la de antes tiraba a marrón (rgba(55,53,47)) para pegar
+       con el papel cálido, y sobre gris frío se veía sucia. */
+    --shadow-float: 0 4px 16px rgba(17,17,17,0.08), 0 1px 4px rgba(17,17,17,0.04);
+    --shadow-lg:    0 20px 60px rgba(17,17,17,0.18);
 
     /* ── Border radius ── */
     --radius-xs: 4px;
@@ -478,7 +488,7 @@ a:hover { color: var(--text); text-decoration: underline; }
     box-shadow: var(--shadow-float); pointer-events: auto;
     animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1); max-width: 320px;
 }
-.toast-success { background: #1A1A17; color: #FAFAF8; }
+.toast-success { background: #111111; color: #F8F9FA; }
 .toast-error   { background: var(--accent); color: white; }
 .toast-info    { background: var(--surface-3); color: var(--text); }
 @keyframes toastIn {

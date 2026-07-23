@@ -9,17 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* El login no carga admin.css (es standalone), así que repite los
+           tokens. Mantenerlos en sync con :root de static/admin.css. */
         :root {
             --red:       #C41230;
             --red-hover: #A50E28;
-            --ink:       #1A1A17;
-            --text:      #37352F;
-            --text-2:    #6F6E6A;
-            --muted:     #9B9A97;
+            --ink:       #111111;
+            --text:      #333333;
+            --text-2:    #666666;
+            --muted:     #6B7280;
             --bg:        #FFFFFF;
-            --surface:   #FAFAF8;
-            --surface-2: #F3F2EE;
-            --border:    #E9E8E4;
+            --surface:   #F8F9FA;
+            --surface-2: #F1F3F5;
+            --border:    #E5E7EB;
             --tx:        0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }

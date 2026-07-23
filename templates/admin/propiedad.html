@@ -136,8 +136,9 @@
        quedan apiladas y grandes. El editor inline es el mismo en los dos.      */
     .campo-item { cursor: pointer; user-select: none; min-width: 0; }
     .campo-item.campo-bool { cursor: default; }
-    /* --text-2 y no --muted: #9B9A97 sobre el fondo de las tarjetas da 2.7:1
-       de contraste (WCAG AA pide 4.5:1 en texto chico). #6F6E6A da 4.9:1. */
+    /* --text-2 y no --muted: el gris clarito que había antes daba 2.7:1 de
+       contraste sobre el fondo de las tarjetas, y WCAG AA pide 4.5:1 en texto
+       chico. Los valores vigentes los verifica test_regresion.py. */
     .campo-label {
         font-size: 11px; color: var(--text-2); text-transform: uppercase;
         letter-spacing: 0.4px;
