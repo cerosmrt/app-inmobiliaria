@@ -3,12 +3,14 @@
 {% block title %}Propiedad{% endblock %}
 
 {% block page_topbar %}
+{# El breadcrumb es el único título de la página: antes se repetía en un <h1>
+   abajo, con el mismo dato (propData.direccion) y ocupando una franja entera. #}
 <div class="page-topbar">
-    <span class="page-topbar-title">
+    <h1 class="page-topbar-title">
         <a href="/admin?tab=propiedades" class="topbar-back">Propiedades</a>
         <span class="topbar-sep">›</span>
         <span id="topbar-prop-titulo">Propiedad</span>
-    </span>
+    </h1>
 </div>
 {% endblock %}
 
@@ -26,10 +28,39 @@
 <!-- togeojson — KML parsing -->
 <script src="https://cdn.jsdelivr.net/npm/@mapbox/togeojson/dist/togeojson.umd.js"></script>
 <style>
-    .container { max-width: 1060px; margin: 0 auto; padding: 24px; }
+    .container { max-width: 1500px; margin: 0 auto; padding: 24px; }
 
-    .prop-header { margin-bottom: 20px; }
-    .prop-header h1 { margin: 0; font-size: 22px; font-weight: 800; color: var(--text); }
+    /* El breadcrumb es un <h1> acá; sin esto trae el margen por defecto. */
+    .page-topbar-title { margin: 0; }
+
+    /* ── Layout de dos columnas ────────────────────────────────────────────────
+       Izquierda: datos, gente, descripción. Derecha: rail pegajoso con fotos y
+       mapa, que queda a la vista mientras se scrollea la izquierda.            */
+    .prop-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 470px;
+        gap: 20px;
+        align-items: start;
+    }
+    .prop-main { min-width: 0; }
+    .prop-rail {
+        min-width: 0;
+        position: sticky;
+        top: 62px;                              /* 46px de .page-topbar + aire */
+        max-height: calc(100vh - 86px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 2px;                     /* que el scrollbar no tape el borde */
+    }
+    .prop-rail::-webkit-scrollbar { width: 8px; }
+    .prop-rail::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .prop-rail .section-card:last-child { margin-bottom: 0; }
+
+    /* Pantallas angostas: una sola columna, el rail vuelve al flujo normal. */
+    @media (max-width: 1180px) {
+        .prop-layout { grid-template-columns: minmax(0, 1fr); }
+        .prop-rail { position: static; max-height: none; overflow: visible; }
+    }
 
     .section-card {
         background: var(--surface); border-radius: 10px; padding: 22px;
@@ -42,68 +73,166 @@
     }
     .section-card h2 .acciones { display: flex; align-items: center; gap: 8px; }
 
-    /* ── Campos editables ──────────────────────────────────────────────────── */
-    .campos-grid {
+    /* ── Franja de cabecera ────────────────────────────────────────────────────
+       Los 4 datos que siempre se miran, en grande. Editables igual que el resto
+       (comparten la clase .campo-item, así los toma attachCampoEvents).        */
+    .prop-hero {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
-        gap: 10px;
+        grid-template-columns: 1.4fr 1fr 1fr 1fr;
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 20px;
     }
-    .campo-item {
-        background: var(--bg); border-radius: 7px; padding: 10px 12px;
-        cursor: pointer; transition: background 0.12s; user-select: none;
-        min-width: 0;
+    .prop-hero .campo-item {
+        background: var(--surface); border-radius: 0; padding: 13px 18px;
     }
-    .campo-item:hover { background: var(--surface-3); }
+    .prop-hero .campo-label { display: block; margin-bottom: 5px; }
+    .prop-hero .campo-item:hover { background: var(--surface-2); }
+    .prop-hero .campo-valor { font-size: 21px; font-weight: 800; line-height: 1.25; }
+    .prop-hero .campo-valor .badge { font-size: 13px; padding: 4px 12px; }
+    .prop-hero .campo-valor.hero-vacio { color: var(--muted); font-weight: 600; }
+    .prop-hero .campo-input { font-size: 19px; font-weight: 800; }
+    @media (max-width: 760px) {
+        .prop-hero { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Campos editables ──────────────────────────────────────────────────────
+       Dos presentaciones del mismo .campo-item: en #campos-container son filas
+       densas (etiqueta y valor en la misma línea, sin recuadro), y en .prop-hero
+       quedan apiladas y grandes. El editor inline es el mismo en los dos.      */
+    .campo-item { cursor: pointer; user-select: none; min-width: 0; }
     .campo-item.campo-bool { cursor: default; }
-    .campo-item.campo-bool:hover { background: var(--bg); }
-    .campo-item.span2 { grid-column: span 2; }
     .campo-label {
         font-size: 11px; color: var(--muted); text-transform: uppercase;
-        letter-spacing: 0.4px; margin-bottom: 4px;
+        letter-spacing: 0.4px;
     }
-    .campo-valor { font-size: 15px; font-weight: 700; word-break: break-word; }
+    .campo-valor { font-weight: 700; word-break: break-word; }
     .campo-input {
-        width: 100%; font-size: 14px; font-weight: 600; padding: 4px 7px;
+        width: 100%; font-size: 13.5px; font-weight: 600; padding: 3px 7px;
         border: 2px solid var(--accent); border-radius: 4px; background: var(--surface);
-        margin-top: 2px; box-sizing: border-box;
+        box-sizing: border-box;
     }
-    .campo-bool-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+    .campo-bool-row { display: flex; align-items: center; gap: 7px; }
     .campo-bool-row input[type="checkbox"] {
-        width: 17px; height: 17px; cursor: pointer; accent-color: var(--accent);
+        width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent);
     }
-    .campo-bool-row label { font-size: 14px; font-weight: 700; cursor: pointer; }
+    .campo-bool-row label { font-weight: 700; cursor: pointer; }
+
+    .campo-grupo + .campo-grupo { margin-top: 14px; }
+    .campo-grupo-label {
+        font-size: 10.5px; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.7px; font-weight: 700; margin: 0 0 2px;
+    }
+    #campos-container .campos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        column-gap: 30px;
+    }
+    #campos-container .campo-item {
+        display: flex; align-items: baseline; gap: 12px;
+        padding: 5px 4px; border-bottom: 1px solid var(--border);
+        transition: background 0.12s;
+    }
+    #campos-container .campo-item:hover { background: var(--surface-2); }
+    #campos-container .campo-item.campo-bool:hover { background: none; }
+    #campos-container .campo-item.span2 { grid-column: 1 / -1; }
+    #campos-container .campo-label { flex: 0 0 104px; line-height: 1.5; }
+    #campos-container .campo-valor { flex: 1; min-width: 0; font-size: 13.5px; }
+    #campos-container .campo-bool-row { flex: 1; }
+    #campos-container .campo-bool-row label { font-size: 13.5px; }
+    #campos-container .campo-input { flex: 1; }
+    /* Apagado si la propiedad no tiene ubicación marcada. */
+    .campo-maplink {
+        flex: 0 0 auto; font-size: 13px; text-decoration: none; cursor: pointer;
+        opacity: 0.3; filter: grayscale(1); transition: opacity 0.12s, filter 0.12s;
+    }
+    .campo-maplink.con-geo { opacity: 1; filter: none; }
+    .campo-maplink:hover { opacity: 1; filter: none; }
+
+    /* ── Personas ──────────────────────────────────────────────────────────────
+       Propietarios e interesados lado a lado; apilados si no entran.           */
+    /* Mismas columnas que la grilla de campos, para que las dos alineen. */
+    .personas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 10px 30px;
+        margin-top: 14px;
+    }
+    /* Las columnas tienen distinta cantidad de subtítulos (interesados suma
+       "Matches automáticos"), así que los buscadores se van al pie: quedan
+       alineados entre sí tengan lo que tengan arriba. */
+    .personas-grid > div { min-width: 0; display: flex; flex-direction: column; }
+    .personas-grid .ta-wrap { margin-top: auto; padding-top: 12px; }
 
     /* ── Interesados ───────────────────────────────────────────────────────── */
     .inter-subtitulo {
         font-size: 11px; color: var(--muted); text-transform: uppercase;
-        letter-spacing: 0.5px; font-weight: 700; margin: 0 0 8px;
+        letter-spacing: 0.5px; font-weight: 700; margin: 0 0 4px;
     }
+    /* Envuelve en vez de desbordar: las columnas de Personas son angostas. */
     .inter-row {
-        display: flex; align-items: center; gap: 8px; padding: 7px 0;
-        border-bottom: 1px solid var(--border); font-size: 13px;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+        padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px;
     }
     .inter-row:last-child { border-bottom: none; }
-    .inter-nombre { flex: 1; font-weight: 600; }
-    .inter-tel { color: var(--muted); font-size: 12px; min-width: 85px; }
+    .inter-nombre { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+    .inter-tel { color: var(--muted); font-size: 12px; }
     .inter-vacio { color: var(--muted); font-size: 13px; margin: 4px 0; }
-    .inter-sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+    .inter-sep { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
-    .buscar-wrap { position: relative; margin-top: 14px; }
-    .buscar-wrap input {
-        width: 100%; font-size: 14px; padding: 8px 12px;
+    /* ── Typeahead de personas ─────────────────────────────────────────────────
+       En reposo no muestra nada: los resultados aparecen recién al escribir.   */
+    .ta-wrap { position: relative; margin-top: 12px; }
+    .ta-input {
+        width: 100%; font-size: 14px; padding: 8px 12px; font-family: inherit;
         border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;
+        background: var(--bg); color: var(--text);
     }
-    .buscar-wrap input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-    #buscar-resultados,
-    #buscar-prop-resultados {
-        max-height: 260px; overflow-y: auto;
-        border: 1px solid var(--border); border-radius: 6px; margin-top: 8px;
+    .ta-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .ta-list:empty { display: none; }
+    .ta-list {
+        max-height: 280px; overflow-y: auto;
+        border: 1px solid var(--border); border-radius: 6px; margin-top: 6px;
+        background: var(--bg);
     }
-    .disp-empty { color: var(--muted); font-size: 13px; padding: 8px 4px; }
+    .ta-list .inter-row { padding: 7px 10px; cursor: pointer; }
+    .ta-list .inter-row:hover,
+    .ta-list .inter-row.ta-sel { background: var(--surface-2); }
+    .ta-hint { color: var(--muted); font-size: 12.5px; padding: 9px 11px; }
+    .ta-crear {
+        display: flex; align-items: center; gap: 7px; width: 100%;
+        padding: 9px 11px; font-size: 13px; font-family: inherit; text-align: left;
+        background: none; border: none; border-top: 1px solid var(--border);
+        color: var(--accent); font-weight: 600; cursor: pointer;
+    }
+    .ta-list .ta-crear:only-child { border-top: none; }
+    .ta-crear:hover, .ta-crear.ta-sel { background: var(--accent-lt); }
+    .ta-nuevo { padding: 12px 11px; border-top: 1px solid var(--border); }
+    .ta-nuevo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .ta-nuevo label {
+        font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px;
+    }
+    .ta-nuevo input {
+        width: 100%; box-sizing: border-box; padding: 6px 9px; font-size: 13px;
+        border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;
+    }
+    .ta-nuevo-acciones { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
+    .ta-opcional { font-size: 11px; color: var(--muted); font-weight: 400; }
 
-    /* ── Descripción ───────────────────────────────────────────────────────── */
-    .notes-textarea { min-height: 160px; }
-    #desc-estado { font-size: 12px; margin-left: 8px; }
+    /* ── Descripción ─────────────────────────────────────────────────────────
+       Va pegada abajo de las fotos, en el mismo card y sin título: el
+       placeholder del textarea hace de etiqueta.                             */
+    .desc-bloque {
+        margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+    }
+    .desc-acciones {
+        display: flex; align-items: center; justify-content: flex-end;
+        gap: 8px; margin-top: 8px;
+    }
+    #desc-estado { font-size: 12px; margin-right: auto; }
 
     /* ── Fotos ─────────────────────────────────────────────────────────────── */
     .upload-drop {
@@ -115,7 +244,16 @@
     .upload-drop:hover { border-color: var(--accent); background: var(--accent-lt); }
     .upload-drop input { display: none; }
 
-    .fotos-admin-grid { display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px; }
+    /* Grid fluido: se adapta al ancho del rail (3 por fila) y al ancho completo
+       cuando el layout colapsa a una columna. */
+    .fotos-admin-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        gap: 10px; min-height: 40px;
+    }
+    /* El mensaje de "sin fotos" es un item más del grid: sin esto lo mete
+       adentro de una columna de 112px y queda partido en tres renglones. */
+    .fotos-admin-grid > p { grid-column: 1 / -1; }
     .foto-admin-item {
         position: relative; border-radius: 8px; overflow: hidden;
         border: 2px solid transparent; transition: border-color 0.15s, opacity 0.15s;
@@ -124,7 +262,7 @@
     .foto-admin-item:active { cursor: grabbing; }
     .foto-admin-item.drag-sobre { border-color: var(--accent); opacity: 0.55; }
     .foto-admin-item img {
-        width: 150px; height: 115px; object-fit: cover; display: block;
+        width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
         transition: opacity 0.15s;
     }
     .foto-admin-item img:hover { opacity: 0.88; }
@@ -139,11 +277,19 @@
         border-radius: 3px; font-size: 11px; font-weight: 700;
         padding: 1px 5px; cursor: pointer; line-height: 1.4;
     }
-    .orden-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    /* Pie de la galería: el hint a la izquierda, el aviso y el botón de orden
+       a la derecha (antes vivían en el <h2> "Fotos", que ya no existe). */
+    .fotos-pie {
+        display: flex; align-items: center; gap: 8px;
+        margin-top: 10px; min-height: 4px;
+    }
+    .orden-hint { font-size: 12px; color: var(--muted); margin: 0; flex: 1; }
+    #orden-aviso { font-size: 12px; color: var(--muted); margin-left: auto; }
     #btn-guardar-orden { display: none; }
 
     /* ── Mapa de ubicación ─────────────────────────────────────────────────── */
-    #geo-map { height: 380px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
+    /* En el modal hay lugar de sobra: conviene grande para dibujar polígonos. */
+    #geo-map { height: 56vh; min-height: 380px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
     .geo-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
     .geo-import-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .geo-import-btns label { cursor: pointer; }
@@ -157,25 +303,76 @@
 {% block content %}
 <div class="container">
 
-    <div class="prop-header">
-        <h1 id="prop-titulo">Cargando...</h1>
-    </div>
+    <div class="prop-layout">
 
-    <!-- Datos -->
+    <!-- ══ COLUMNA IZQUIERDA — datos y gestión ═══════════════════════════════ -->
+    <div class="prop-main">
+
+    <!-- Cabecera: precio / estado / tipo / operación -->
+    <div class="prop-hero" id="prop-hero"></div>
+
+    <!-- Datos. Propietarios e interesados son dos grupos más, al mismo nivel
+         que Identificación / Medidas / Precio: sus subtítulos ya alcanzan
+         como etiqueta, así que no llevan un título "Personas" arriba. -->
     <div class="section-card">
         <h2>Datos</h2>
-        <div class="campos-grid" id="campos-grid"></div>
+        <div id="campos-container"></div>
+        <div class="personas-grid">
+            <div id="propietarios-container"><p class="inter-vacio">Cargando...</p></div>
+            <div id="interesados-container"><p class="inter-vacio">Cargando...</p></div>
+        </div>
     </div>
 
-    <!-- Dirección -->
+    </div><!-- .prop-main -->
+
+    <!-- ══ RAIL DERECHO — fotos, descripción y mapa, siempre a la vista ══════ -->
+    <aside class="prop-rail">
+
+    <!-- Fotos + descripción: sin títulos, cada cosa se explica sola
+         (el recuadro de subida y el placeholder del textarea). -->
     <div class="section-card">
-        <h2>
-            Direcci&oacute;n
-            <div class="acciones">
+        <div class="upload-drop" onclick="document.getElementById('input-fotos').click()">
+            <input type="file" id="input-fotos" accept=".jpg,.jpeg,.png" multiple onchange="subirFotos(this)">
+            &#x1F4F7; Clic aqu&iacute; para agregar fotos &mdash; JPG o PNG, m&aacute;x 10 MB por foto
+        </div>
+        <div class="fotos-admin-grid" id="fotos-grid"></div>
+        <div class="fotos-pie">
+            <p class="orden-hint" id="orden-hint" style="display:none">Arrastr&aacute; las fotos para cambiar el orden.</p>
+            <span id="orden-aviso" style="display:none">Orden modificado</span>
+            <button id="btn-guardar-orden" class="btn btn-blue" onclick="guardarOrden()" style="font-size:12px;padding:5px 14px">Guardar orden</button>
+        </div>
+
+        <div class="desc-bloque">
+            <textarea id="descripcion" class="notes-textarea"
+                      placeholder="Descripci&oacute;n &mdash; c&oacute;mo se la contar&iacute;as a un cliente"></textarea>
+            <div class="desc-acciones">
+                <span id="desc-estado" style="display:none"></span>
+                <button class="btn" id="btn-ia-desc" onclick="generarDescripcionIA()" style="font-size:12px;padding:5px 14px" title="Generar descripci&oacute;n con IA a partir de los datos">&#x2728; Generar con IA</button>
+                <button class="btn btn-green" onclick="guardarDescripcion()" style="font-size:12px;padding:5px 14px">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    </aside><!-- .prop-rail -->
+
+    </div><!-- .prop-layout -->
+
+</div>
+
+<!-- ══ MAPA — modal, se abre con el 📍 del campo Dirección ═══════════════════
+     Vive fuera de .prop-layout: adentro del rail (overflow:auto) el overlay
+     quedaba recortado. El mapa se inicializa recién al abrirlo por primera
+     vez, porque Leaflet necesita que el contenedor ya tenga tamaño.        -->
+<div id="modal-geo" class="modal-overlay">
+    <div class="modal-box" style="max-width:1000px">
+        <div class="modal-header">
+            <h3>Ubicaci&oacute;n</h3>
+            <div class="acciones" style="display:flex;align-items:center;gap:8px;margin-left:auto">
                 <span id="geo-status" style="font-size:12px;color:var(--muted)"></span>
                 <button id="btn-clear-geo" class="btn btn-gray" style="font-size:12px;padding:5px 11px;display:none" onclick="clearGeo()">&#x2715; Limpiar</button>
             </div>
-        </h2>
+            <button class="modal-close" onclick="cerrarMapa()">&#x2715;</button>
+        </div>
 
         <div class="geo-toggle">
             <button id="btn-modo-punto"    class="btn btn-blue" onclick="setGeoModo('punto')"   style="font-size:13px;padding:6px 16px">&#x1F4CD; Punto</button>
@@ -208,50 +405,11 @@
             <div id="geo-area-info"></div>
             <button id="btn-confirm-poligono" class="btn btn-green" style="display:none;font-size:13px;padding:6px 16px" onclick="confirmarPoligono()">&#x2713; Confirmar y guardar pol&iacute;gono</button>
         </div>
-    </div>
 
-    <!-- Propietarios -->
-    <div class="section-card">
-        <h2>Propietarios</h2>
-        <div id="propietarios-container"><p class="inter-vacio">Cargando...</p></div>
-    </div>
-
-    <!-- Interesados -->
-    <div class="section-card">
-        <h2>Interesados / Compradores</h2>
-        <div id="interesados-container"><p class="inter-vacio">Cargando...</p></div>
-    </div>
-
-    <!-- Descripción -->
-    <div class="section-card">
-        <h2>
-            Descripci&oacute;n
-            <div class="acciones">
-                <span id="desc-estado" style="display:none"></span>
-                <button class="btn" id="btn-ia-desc" onclick="generarDescripcionIA()" style="font-size:12px;padding:5px 14px" title="Generar descripci&oacute;n con IA a partir de los datos">&#x2728; Generar con IA</button>
-                <button class="btn btn-green" onclick="guardarDescripcion()" style="font-size:12px;padding:5px 14px">Guardar</button>
-            </div>
-        </h2>
-        <textarea id="descripcion" class="notes-textarea" placeholder="Descripci&oacute;n de la propiedad..."></textarea>
-    </div>
-
-    <!-- Fotos -->
-    <div class="section-card">
-        <h2>
-            Fotos
-            <div class="acciones">
-                <span id="orden-aviso" style="font-size:12px;color:var(--muted);display:none">Orden modificado</span>
-                <button id="btn-guardar-orden" class="btn btn-blue" onclick="guardarOrden()" style="font-size:12px;padding:5px 14px">Guardar orden</button>
-            </div>
-        </h2>
-        <div class="upload-drop" onclick="document.getElementById('input-fotos').click()">
-            <input type="file" id="input-fotos" accept=".jpg,.jpeg,.png" multiple onchange="subirFotos(this)">
-            &#x1F4F7; Clic aqu&iacute; para agregar fotos &mdash; JPG o PNG, m&aacute;x 10 MB por foto
+        <div class="modal-footer">
+            <button class="btn btn-gray" onclick="cerrarMapa()">Cerrar</button>
         </div>
-        <div class="fotos-admin-grid" id="fotos-grid"></div>
-        <p class="orden-hint" id="orden-hint" style="display:none">Arrastr&aacute; las fotos para cambiar el orden.</p>
     </div>
-
 </div>
 {% endblock %}
 
@@ -264,33 +422,56 @@
     let _descTimer   = null;
     let _clientesCache = null;
 
-    const _CAMPOS_BASE = [
-        { label: 'Código',         field: 'codigo',             type: 'text' },
-        { label: 'Nombre del campo', field: 'nombre_campo',    type: 'text',   span2: true, showFor: ['campo'] },
-        { label: 'Dirección', field: 'direccion',          type: 'text',   span2: true, mapLink: true },
-        { label: 'Barrio',         field: 'barrio',             type: 'text' },
-        { label: 'Tipo',           field: 'tipo',               type: 'select', opts: ['casa','departamento','local','terreno','campo','otro'] },
-        { label: 'Operación', field: 'operacion',          type: 'select', opts: ['venta','alquiler'] },
-        { label: 'Estado',         field: 'estado',             type: 'select', opts: ['disponible','reservada','vendida','rentada','cerrada'], badge: true },
-        { label: 'Ambientes',      field: 'ambientes',          type: 'number',  hideFor: ['campo'] },
-        { label: 'Terreno m²',    field: 'superficie_terreno',  type: 'number',  hideFor: ['campo'] },
-        { label: 'Cubierto m²',   field: 'superficie_cubierta', type: 'number',  hideFor: ['campo'] },
-        { label: 'Hectáreas',      field: 'hectareas',           type: 'number',  showFor: ['campo'] },
-        { label: 'Subdivisible',   field: 'subdivisible',        type: 'bool',    showFor: ['campo'] },
-        { label: 'Uso del suelo',  field: 'uso_suelo',           type: 'select',  opts: ['','agricola','ganadero','mixto'], showFor: ['campo'] },
-        { label: 'Precio',         field: 'rango_min',          type: 'number' },
-        { label: 'USD',            field: 'es_usd',             type: 'bool' },
-        { label: 'A consultar',    field: 'precio_a_consultar', type: 'bool' },
-        { label: 'Publicada',      field: 'publicada',          type: 'bool' },
-        { label: 'Destacada',      field: 'destacada',          type: 'bool' },
+    // `grupo` decide en qué bloque cae el campo. 'hero' = franja de cabecera
+    // (los 4 datos que siempre se miran); el resto van agrupados abajo.
+    // Un campo aparece en un solo lugar: nada se duplica entre hero y grilla.
+    const _GRUPOS = [
+        { id: 'ident',   label: 'Identificación' },
+        { id: 'medidas', label: 'Medidas' },
+        { id: 'pub',     label: 'Precio y publicación' },
     ];
 
-    function _getCamposForTipo(tipo) {
+    const _CAMPOS_BASE = [
+        { label: 'Precio',         field: 'rango_min',          type: 'number', grupo: 'hero', precio: true },
+        { label: 'Estado',         field: 'estado',             type: 'select', grupo: 'hero', opts: ['disponible','reservada','vendida','rentada','cerrada'], badge: true },
+        { label: 'Tipo',           field: 'tipo',               type: 'select', grupo: 'hero', opts: ['casa','departamento','local','terreno','campo','otro'] },
+        { label: 'Operación', field: 'operacion',          type: 'select', grupo: 'hero', opts: ['venta','alquiler'] },
+
+        // Dirección va primera: ocupa el ancho completo, así Código y Barrio
+        // quedan emparejados en una sola fila en vez de dejar medias filas vacías.
+        { label: 'Dirección', field: 'direccion',          type: 'text',   grupo: 'ident', span2: true, mapLink: true },
+        { label: 'Nombre del campo', field: 'nombre_campo',    type: 'text',   grupo: 'ident', span2: true, showFor: ['campo'] },
+        { label: 'Código',         field: 'codigo',             type: 'text',   grupo: 'ident' },
+        { label: 'Barrio',         field: 'barrio',             type: 'text',   grupo: 'ident' },
+
+        { label: 'Ambientes',      field: 'ambientes',          type: 'number', grupo: 'medidas', hideFor: ['campo'] },
+        { label: 'Terreno m²',    field: 'superficie_terreno',  type: 'number', grupo: 'medidas', hideFor: ['campo'] },
+        { label: 'Cubierto m²',   field: 'superficie_cubierta', type: 'number', grupo: 'medidas', hideFor: ['campo'] },
+        { label: 'Hectáreas',      field: 'hectareas',           type: 'number', grupo: 'medidas', showFor: ['campo'] },
+        { label: 'Subdivisible',   field: 'subdivisible',        type: 'bool',   grupo: 'medidas', showFor: ['campo'] },
+        { label: 'Uso del suelo',  field: 'uso_suelo',           type: 'select', grupo: 'medidas', opts: ['','agricola','ganadero','mixto'], showFor: ['campo'] },
+
+        { label: 'USD',            field: 'es_usd',             type: 'bool',   grupo: 'pub' },
+        { label: 'A consultar',    field: 'precio_a_consultar', type: 'bool',   grupo: 'pub' },
+        { label: 'Publicada',      field: 'publicada',          type: 'bool',   grupo: 'pub' },
+        { label: 'Destacada',      field: 'destacada',          type: 'bool',   grupo: 'pub' },
+    ];
+
+    function _getCamposForTipo(tipo, grupo) {
         return _CAMPOS_BASE.filter(function(c) {
+            if (grupo && c.grupo !== grupo) return false;
             if (c.showFor && !c.showFor.includes(tipo)) return false;
             if (c.hideFor && c.hideFor.includes(tipo)) return false;
             return true;
         });
+    }
+
+    // Precio tal como se lee en la franja: "USD 85.000" / "$ 85.000" / "A consultar".
+    function _fmtPrecio() {
+        if (propData.precio_a_consultar) return 'A consultar';
+        var v = propData.rango_min;
+        if (v == null || v === '') return null;
+        return (propData.es_usd ? 'USD ' : '$ ') + Number(v).toLocaleString('es-AR');
     }
 
     // ── Carga inicial ─────────────────────────────────────────────────────────
@@ -306,20 +487,30 @@
                 renderPropietarios();
                 document.getElementById('descripcion').value = data.descripcion || '';
                 renderFotos();
-                initGeoMap(data);
+                // El mapa no se inicializa acá: vive en un modal y Leaflet
+                // necesita que el contenedor tenga tamaño. Se arma al abrirlo.
             })
             .catch(function(err) {
-                document.getElementById('prop-titulo').textContent = 'Error: ' + err.message;
+                var tb = document.getElementById('topbar-prop-titulo');
+                if (tb) tb.textContent = 'Error: ' + err.message;
+                toast('No se pudo cargar la propiedad: ' + err.message, 'error');
             });
     }
 
     // ── Datos editables ───────────────────────────────────────────────────────
     function renderDatos() {
-        var titulo = propData.direccion || '(Sin dirección)';
-        document.getElementById('prop-titulo').textContent = titulo;
         var tb = document.getElementById('topbar-prop-titulo');
-        if (tb) tb.textContent = titulo;
-        document.getElementById('campos-grid').innerHTML = _getCamposForTipo(propData.tipo).map(buildCampo).join('');
+        if (tb) tb.textContent = propData.direccion || '(Sin dirección)';
+        document.getElementById('prop-hero').innerHTML =
+            _getCamposForTipo(propData.tipo, 'hero').map(buildCampo).join('');
+        document.getElementById('campos-container').innerHTML = _GRUPOS.map(function(g) {
+            var campos = _getCamposForTipo(propData.tipo, g.id);
+            if (!campos.length) return '';
+            return '<div class="campo-grupo">' +
+                '<p class="campo-grupo-label">' + esc(g.label) + '</p>' +
+                '<div class="campos-grid">' + campos.map(buildCampo).join('') + '</div>' +
+            '</div>';
+        }).join('');
         attachCampoEvents();
     }
 
@@ -335,22 +526,29 @@
                 '</div>';
         } else if (c.badge) {
             inner = '<div class="campo-valor"><span class="badge badge-' + esc(val || '') + '">' + esc(val || '—') + '</span></div>';
+        } else if (c.precio) {
+            var txt = _fmtPrecio();
+            inner = '<div class="campo-valor' + (txt ? '' : ' hero-vacio') + '">' + esc(txt || 'Sin precio') + '</div>';
         } else {
             inner = '<div class="campo-valor">' + esc(val != null && val !== '' ? String(val) : '—') + '</div>';
         }
         var attrs = c.type !== 'bool'
             ? ' data-field="' + c.field + '" data-type="' + c.type + '"' + (c.opts ? ' data-opts=\'' + JSON.stringify(c.opts) + '\'' : '')
             : '';
-        var labelExtra = c.mapLink
-            ? ' <a href="#geo-map" onclick="document.getElementById(\'geo-map\').scrollIntoView({behavior:\'smooth\'});return false;" ' +
-              'style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:600;margin-left:6px">📍 marcar en mapa</a>'
+        // El link al mapa va afuera de la etiqueta: adentro rompía la fila en dos.
+        // stopPropagation para que el clic no abra además el editor del campo.
+        var tieneGeo = !!(propData.lat != null || propData.geojson_geometry);
+        var mapLink = c.mapLink
+            ? '<a class="campo-maplink' + (tieneGeo ? ' con-geo' : '') + '" href="#" ' +
+              'title="' + (tieneGeo ? 'Ver la ubicación en el mapa' : 'Sin ubicación marcada — clic para marcarla') + '" ' +
+              'onclick="event.stopPropagation();abrirMapa();return false;">📍</a>'
             : '';
         return '<div class="' + cls + '"' + attrs + '>' +
-            '<div class="campo-label">' + esc(c.label) + labelExtra + '</div>' + inner + '</div>';
+            '<div class="campo-label">' + esc(c.label) + '</div>' + inner + mapLink + '</div>';
     }
 
     function attachCampoEvents() {
-        document.querySelectorAll('#campos-grid .campo-item:not(.campo-bool)').forEach(function(item) {
+        document.querySelectorAll('#prop-hero .campo-item:not(.campo-bool), #campos-container .campo-item:not(.campo-bool)').forEach(function(item) {
             item.addEventListener('click', function() {
                 if (this.querySelector('input.campo-input,select.campo-input')) return;
                 var field = this.dataset.field;
@@ -431,52 +629,155 @@
             .catch(function() { cb(null); });
     }
 
-    // ── Inline disponibles list ───────────────────────────────────────────────
-    function renderDispList(listId, excludeSet, onAssign) {
-        var list = document.getElementById(listId);
+    // ── Typeahead de personas ─────────────────────────────────────────────────
+    // Un solo componente para Propietarios e Interesados. En reposo no muestra
+    // nada: antes se volcaba la lista completa de clientes debajo del input.
+    const _TA_MIN = 2;   // letras antes de empezar a buscar
+    const _TA_MAX = 6;   // resultados visibles como máximo
+
+    // `excluir` lo refresca renderPropietarios/renderInteresados en cada render.
+    const _TA = {
+        propietario: {
+            inputId: 'ta-input-prop', listId: 'ta-list-prop',
+            placeholder: 'Buscar o crear propietario…',
+            tipo: 'propietario', asignar: 'asignarPropietario', excluir: {},
+        },
+        interesado: {
+            inputId: 'ta-input-inter', listId: 'ta-list-inter',
+            placeholder: 'Buscar o crear interesado…',
+            tipo: 'interesado', asignar: 'asignarInteresado', excluir: {},
+        },
+    };
+
+    function taHTML(key) {
+        var cfg = _TA[key];
+        return '<div class="ta-wrap">' +
+            '<input id="' + cfg.inputId + '" class="ta-input" type="text" autocomplete="off"' +
+                ' placeholder="' + esc(cfg.placeholder) + '"' +
+                ' oninput="taBuscar(\'' + key + '\')" onkeydown="taKey(event,\'' + key + '\')">' +
+            '<div id="' + cfg.listId + '" class="ta-list"></div>' +
+        '</div>';
+    }
+
+    function _taQuery(key) {
+        var el = document.getElementById(_TA[key].inputId);
+        return el ? el.value.trim() : '';
+    }
+
+    function taBuscar(key) {
+        var cfg  = _TA[key];
+        var list = document.getElementById(cfg.listId);
         if (!list) return;
-        list.innerHTML = '<p class="disp-empty">Cargando...</p>';
+        var q = _taQuery(key);
+        cfg.sel = -1;
+
+        if (q.length < _TA_MIN) { list.innerHTML = ''; return; }
+
         ensureClientesCache(function(clientes) {
+            if (_taQuery(key) !== q) return;   // el usuario siguió escribiendo
             if (!clientes) {
-                list.innerHTML = '<p class="disp-empty" style="color:var(--accent)">Error al cargar clientes.</p>';
+                list.innerHTML = '<p class="ta-hint" style="color:var(--accent)">Error al cargar clientes.</p>';
                 return;
             }
-            var disponibles = clientes.filter(function(c) { return !excludeSet[c.id]; });
-            if (!disponibles.length) {
-                list.innerHTML = '<p class="disp-empty">No hay clientes disponibles.</p>';
-                return;
-            }
-            list.innerHTML = disponibles.map(function(c) {
-                var qStr = esc((c.nombre + ' ' + c.apellido + ' ' + (c.telefono || '')).toLowerCase());
-                return '<div class="inter-row" data-q="' + qStr + '">' +
-                    '<span class="inter-nombre"><a href="/cliente/' + c.id + '" target="_blank">' + esc(c.nombre) + ' ' + esc(c.apellido) + '</a></span>' +
+            var ql = q.toLowerCase();
+            var hits = clientes.filter(function(c) {
+                if (cfg.excluir[c.id]) return false;
+                return (c.nombre + ' ' + c.apellido + ' ' + (c.telefono || '')).toLowerCase().includes(ql);
+            });
+            var total = hits.length;
+            var filas = hits.slice(0, _TA_MAX).map(function(c) {
+                return '<div class="inter-row" onclick="' + cfg.asignar + '(' + c.id + ')">' +
+                    '<span class="inter-nombre">' + esc((c.nombre + ' ' + c.apellido).trim()) + '</span>' +
                     '<span class="inter-tel">' + esc(c.telefono || '') + '</span>' +
                     (c.tipo ? '<span class="badge badge-' + esc(c.tipo) + '" style="font-size:10px">' + esc(c.tipo) + '</span>' : '') +
-                    '<button class="btn-action btn-match" onclick="' + onAssign + '(' + c.id + ')" style="font-size:11px;white-space:nowrap">+ Asignar</button>' +
+                    '<button class="btn-action btn-match" style="font-size:11px;white-space:nowrap">+ Asignar</button>' +
                 '</div>';
             }).join('');
+            if (total > _TA_MAX) {
+                filas += '<p class="ta-hint">' + (total - _TA_MAX) + ' más — afiná la búsqueda.</p>';
+            }
+            if (!total) {
+                filas = '<p class="ta-hint">Sin resultados para &laquo;' + esc(q) + '&raquo;.</p>';
+            }
+            list.innerHTML = filas +
+                '<button class="ta-crear" onclick="taFormNuevo(\'' + key + '\')">' +
+                    '+ Crear &laquo;' + esc(q) + '&raquo;' +
+                '</button>';
         });
     }
 
-    function filtrarDisp(input, listId) {
-        var q = input.value.trim().toLowerCase();
-        var list = document.getElementById(listId);
+    // ↓/↑ para moverse, Enter asigna el resaltado, Escape limpia.
+    function taKey(e, key) {
+        var list = document.getElementById(_TA[key].listId);
         if (!list) return;
-        var rows = list.querySelectorAll('.inter-row[data-q]');
-        var visible = 0;
-        rows.forEach(function(r) {
-            var show = !q || r.dataset.q.includes(q);
-            r.style.display = show ? '' : 'none';
-            if (show) visible++;
-        });
-        var emp = list.querySelector('.disp-empty-filter');
-        if (!emp) {
-            emp = document.createElement('p');
-            emp.className = 'disp-empty disp-empty-filter';
-            list.appendChild(emp);
+        var items = list.querySelectorAll('.inter-row, .ta-crear');
+        if (e.key === 'Escape') {
+            document.getElementById(_TA[key].inputId).value = '';
+            list.innerHTML = '';
+            return;
         }
-        emp.textContent = visible === 0 ? 'Sin resultados para "' + q + '"' : '';
-        emp.style.display = visible === 0 ? '' : 'none';
+        if (!items.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            var n = _TA[key].sel == null ? -1 : _TA[key].sel;
+            n += (e.key === 'ArrowDown' ? 1 : -1);
+            if (n < 0) n = items.length - 1;
+            if (n >= items.length) n = 0;
+            _TA[key].sel = n;
+            items.forEach(function(el, i) { el.classList.toggle('ta-sel', i === n); });
+            items[n].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            var i = _TA[key].sel;
+            if (i == null || i < 0) i = 0;      // Enter sin elegir = el primero
+            items[i].click();
+        }
+    }
+
+    // Mini-form prellenado con lo que se escribió. Solo el nombre es obligatorio:
+    // apellido y teléfono se pueden completar después desde la ficha del cliente.
+    function taFormNuevo(key) {
+        var cfg = _TA[key];
+        var q = _taQuery(key);
+        var corte = q.indexOf(' ');
+        var nombre   = corte === -1 ? q : q.slice(0, corte);
+        var apellido = corte === -1 ? '' : q.slice(corte + 1).trim();
+        document.getElementById(cfg.listId).innerHTML =
+            '<div class="ta-nuevo">' +
+                '<div class="ta-nuevo-grid">' +
+                    '<div><label>Nombre *</label>' +
+                        '<input id="ta-nuevo-nombre" type="text" value="' + esc(nombre) + '"></div>' +
+                    '<div><label>Apellido <span class="ta-opcional">(opcional)</span></label>' +
+                        '<input id="ta-nuevo-apellido" type="text" value="' + esc(apellido) + '"></div>' +
+                    '<div style="grid-column:1/-1"><label>Teléfono <span class="ta-opcional">(opcional)</span></label>' +
+                        '<input id="ta-nuevo-telefono" type="text" placeholder="3444123456"></div>' +
+                '</div>' +
+                '<div class="ta-nuevo-acciones">' +
+                    '<button class="btn btn-green" style="font-size:13px;padding:5px 16px" onclick="taCrear(\'' + key + '\')">Guardar y asignar</button>' +
+                    '<button class="btn btn-gray" style="font-size:13px;padding:5px 14px" onclick="taBuscar(\'' + key + '\')">Cancelar</button>' +
+                '</div>' +
+            '</div>';
+        var el = document.getElementById('ta-nuevo-telefono');
+        if (el) el.focus();
+    }
+
+    function taCrear(key) {
+        var cfg      = _TA[key];
+        var nombre   = (document.getElementById('ta-nuevo-nombre').value   || '').trim();
+        var apellido = (document.getElementById('ta-nuevo-apellido').value || '').trim();
+        var telefono = (document.getElementById('ta-nuevo-telefono').value || '').trim();
+        if (!nombre) { toast('El nombre es obligatorio.', 'error'); return; }
+        fetch('/api/clientes', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nombre, apellido: apellido, telefono: telefono, tipo: cfg.tipo })
+        }).then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function(c) {
+              if (_clientesCache) _clientesCache.push(c);   // que aparezca sin recargar
+              document.getElementById(cfg.inputId).value = '';
+              window[cfg.asignar](c.id);
+              toast('Creado y asignado', 'success');
+          })
+          .catch(function() { toast('Error al crear la persona', 'error'); });
     }
 
     // ── Interesados ───────────────────────────────────────────────────────────
@@ -495,29 +796,23 @@
         var excluirBusqueda = {};
         asignados.forEach(function(c) { excluirBusqueda[c.id] = true; });
         matchesLibres.forEach(function(c) { excluirBusqueda[c.id] = true; });
+        // Los bloques vacíos no imprimen texto ni separador: el (0) del subtítulo alcanza.
         var html =
-            '<p class="inter-subtitulo">Asignados (' + asignados.length + ')</p>' +
+            '<p class="inter-subtitulo">Interesados (' + asignados.length + ')</p>' +
             (asignados.length
                 ? asignados.map(function(c) {
                     return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarInteresado(' + c.id + ')" title="Desasignar">&#x2715;</button>');
-                  }).join('')
-                : '<p class="inter-vacio">Ninguno asignado.</p>') +
-            '<hr class="inter-sep">' +
+                  }).join('') + '<hr class="inter-sep">'
+                : '') +
             '<p class="inter-subtitulo">Matches autom&aacute;ticos (' + matchesLibres.length + ')</p>' +
             (matchesLibres.length
                 ? matchesLibres.map(function(c) {
                     return filaPersona(c, '<button class="btn-action btn-match" onclick="asignarInteresado(' + c.id + ')" style="font-size:11px">+ Asignar</button>');
-                  }).join('')
-                : '<p class="inter-vacio">Sin matches.</p>') +
-            '<hr class="inter-sep">' +
-            '<p class="inter-subtitulo">Buscar m&aacute;s</p>' +
-            '<div class="buscar-wrap">' +
-                '<input id="buscar-interesado" type="text" placeholder="Filtrar clientes..." ' +
-                    'oninput="filtrarDisp(this,\'buscar-resultados\')" autocomplete="off">' +
-            '</div>' +
-            '<div id="buscar-resultados" class="disp-list"></div>';
+                  }).join('') + '<hr class="inter-sep">'
+                : '') +
+            taHTML('interesado');
+        _TA.interesado.excluir = excluirBusqueda;
         document.getElementById('interesados-container').innerHTML = html;
-        renderDispList('buscar-resultados', excluirBusqueda, 'asignarInteresado');
     }
 
     function asignarInteresado(clienteId) {
@@ -544,62 +839,11 @@
             (propietarios.length
                 ? propietarios.map(function(c) {
                     return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarPropietario(' + c.id + ')" title="Quitar">&#x2715;</button>');
-                  }).join('')
-                : '<p class="inter-vacio">Sin propietarios asignados.</p>') +
-            '<hr class="inter-sep">' +
-            '<p class="inter-subtitulo">Disponibles para asignar</p>' +
-            '<div class="buscar-wrap">' +
-                '<input id="buscar-propietario" type="text" placeholder="Filtrar clientes..." ' +
-                    'oninput="filtrarDisp(this,\'buscar-prop-resultados\')" autocomplete="off">' +
-            '</div>' +
-            '<div id="buscar-prop-resultados" class="disp-list"></div>' +
-            '<hr class="inter-sep">' +
-            '<button onclick="toggleNuevoPropietario()" id="btn-toggle-nuevo-prop" ' +
-                'style="background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--muted);padding:0;text-decoration:underline">' +
-                '+ Crear propietario nuevo' +
-            '</button>' +
-            '<div id="nuevo-prop-form" style="display:none;margin-top:10px">' +
-                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-                    '<div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Nombre *</label>' +
-                        '<input id="np2-nombre" type="text" placeholder="Juan" style="width:100%;box-sizing:border-box;padding:6px 9px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit"></div>' +
-                    '<div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Apellido *</label>' +
-                        '<input id="np2-apellido" type="text" placeholder="García" style="width:100%;box-sizing:border-box;padding:6px 9px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit"></div>' +
-                    '<div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Teléfono *</label>' +
-                        '<input id="np2-telefono" type="text" placeholder="2235551234" style="width:100%;box-sizing:border-box;padding:6px 9px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit"></div>' +
-                '</div>' +
-                '<div style="margin-top:10px;display:flex;gap:8px">' +
-                    '<button class="btn btn-green" style="font-size:13px;padding:5px 16px" onclick="crearYAsignarPropietario()">Guardar y asignar</button>' +
-                    '<button class="btn btn-gray"  style="font-size:13px;padding:5px 14px" onclick="toggleNuevoPropietario()">Cancelar</button>' +
-                '</div>' +
-            '</div>';
+                  }).join('') + '<hr class="inter-sep">'
+                : '') +
+            taHTML('propietario');
+        _TA.propietario.excluir = asigSet;
         document.getElementById('propietarios-container').innerHTML = html;
-        renderDispList('buscar-prop-resultados', asigSet, 'asignarPropietario');
-    }
-
-    function toggleNuevoPropietario() {
-        var form = document.getElementById('nuevo-prop-form');
-        var btn  = document.getElementById('btn-toggle-nuevo-prop');
-        var open = form.style.display === 'none';
-        form.style.display = open ? '' : 'none';
-        btn.textContent = open ? '← Cancelar' : '+ Crear propietario nuevo';
-        if (open) document.getElementById('np2-nombre').focus();
-    }
-
-    function crearYAsignarPropietario() {
-        var nombre   = (document.getElementById('np2-nombre').value   || '').trim();
-        var apellido = (document.getElementById('np2-apellido').value  || '').trim();
-        var telefono = (document.getElementById('np2-telefono').value  || '').trim();
-        if (!nombre || !apellido || !telefono) { toast('Nombre, apellido y teléfono son requeridos.', 'error'); return; }
-        fetch('/api/clientes', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: nombre, apellido: apellido, telefono: telefono, tipo: 'propietario' })
-        }).then(function(r) { return r.json(); })
-          .then(function(c) {
-              return fetch('/api/propiedades/' + propiedadId + '/propietarios/' + c.id, { method: 'POST' });
-          })
-          .then(function(r) { return r.json(); })
-          .then(function(data) { propData = data; renderPropietarios(); toast('Propietario creado y asignado', 'success'); })
-          .catch(function() { toast('Error al crear propietario', 'error'); });
     }
 
     function asignarPropietario(clienteId) {
@@ -784,6 +1028,18 @@
         { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
     );
 
+    // Abre el modal del mapa. La primera vez lo construye; las siguientes solo
+    // le avisa a Leaflet que vuelva a medir (el contenedor estuvo oculto).
+    function abrirMapa() {
+        document.getElementById('modal-geo').classList.add('active');
+        if (!_geoMap) initGeoMap(propData || {});
+        else setTimeout(function() { _geoMap.invalidateSize(); }, 30);
+    }
+
+    function cerrarMapa() {
+        document.getElementById('modal-geo').classList.remove('active');
+    }
+
     function initGeoMap(data) {
         _geoMap = L.map('geo-map', { zoomControl: true });
         ESRI_SAT.addTo(_geoMap);
@@ -820,8 +1076,16 @@
         if (zoom !== null) _geoMap.setView(center, zoom);
 
         if (_geoModo === 'punto') {
-            document.getElementById('geo-punto-hint').style.display = '';
+            document.getElementById('geo-punto-hint').style.display = 'block';
         }
+
+        // El mapa vive en el rail derecho, que cambia de ancho cuando el layout
+        // colapsa a una columna: hay que avisarle a Leaflet o queda con tiles grises.
+        var _resizeTimer = null;
+        window.addEventListener('resize', function() {
+            clearTimeout(_resizeTimer);
+            _resizeTimer = setTimeout(function() { if (_geoMap) _geoMap.invalidateSize(); }, 150);
+        });
 
         // Click → drop point (only in punto mode)
         _geoMap.on('click', function(e) {
@@ -851,7 +1115,9 @@
         _geoModo = modo;
         document.getElementById('btn-modo-punto').className    = 'btn ' + (modo === 'punto'    ? 'btn-blue' : 'btn-gray');
         document.getElementById('btn-modo-poligono').className = 'btn ' + (modo === 'poligono' ? 'btn-blue' : 'btn-gray');
-        document.getElementById('geo-punto-hint').style.display        = modo === 'punto'    ? '' : 'none';
+        // 'block', no '': con '' se borra el estilo inline y vuelve a mandar
+        // la regla CSS #geo-punto-hint { display: none }, así que no se veía.
+        document.getElementById('geo-punto-hint').style.display        = modo === 'punto'    ? 'block' : 'none';
         document.getElementById('geo-poligono-tools').style.display    = modo === 'poligono' ? '' : 'none';
 
         if (!_geoMap) return;

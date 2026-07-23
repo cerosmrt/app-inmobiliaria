@@ -715,14 +715,12 @@ else:
     # ── 1. propiedad.html HTML structure ─────────────────────────────────────
     rph = session.get(f"{BASE}/admin/propiedad/{pid19}")
     check("propiedad.html carga 200", rph.status_code == 200, str(rph.status_code))
-    check("propiedad.html tiene #buscar-propietario",
-          'id="buscar-propietario"' in rph.text, "input no encontrado")
-    check("propiedad.html tiene #buscar-prop-resultados",
-          'id="buscar-prop-resultados"' in rph.text, "div no encontrado")
-    check("propiedad.html CSS dropdown propietarios (display:none compartido)",
-          '#buscar-prop-resultados' in rph.text, "CSS no encontrado")
-    check("propiedad.html tiene #buscar-interesado",
-          'id="buscar-interesado"' in rph.text, "input no encontrado")
+    check("propiedad.html tiene el typeahead de propietarios",
+          "'ta-input-prop'" in rph.text, "config del typeahead no encontrada")
+    check("propiedad.html tiene el typeahead de interesados",
+          "'ta-input-inter'" in rph.text, "config del typeahead no encontrada")
+    check("propiedad.html CSS del typeahead (.ta-list oculta en reposo)",
+          '.ta-list:empty' in rph.text, "CSS no encontrado")
 
     # ── 2. perfil.html HTML structure (nuevo UI) ──────────────────────────────
     rpf_prop = session.get(f"{BASE}/cliente/{cid19p}")
@@ -1017,29 +1015,25 @@ else:
     # ── 1. propiedad.html — estructura JS del nuevo UI ────────────────────────
     rph22 = session.get(f"{BASE}/admin/propiedad/{pid22}")
     check("propiedad.html carga 200", rph22.status_code == 200, str(rph22.status_code))
-    check("propiedad.html tiene renderDispList (lista inmediata)",
-          'renderDispList' in rph22.text, "función renderDispList no encontrada")
-    check("propiedad.html tiene filtrarDisp (filtro inline)",
-          'filtrarDisp' in rph22.text, "función filtrarDisp no encontrada")
+    check("propiedad.html tiene taBuscar (typeahead)",
+          'function taBuscar' in rph22.text, "función taBuscar no encontrada")
     check("propiedad.html tiene ensureClientesCache",
           'ensureClientesCache' in rph22.text, "función ensureClientesCache no encontrada")
     check("propiedad.html NO tiene buscarClienteGeneric (eliminada)",
           'buscarClienteGeneric' not in rph22.text, "función vieja aún presente")
-    check("propiedad.html interesados sin cap slice(0, 8)",
-          '.slice(0, 8)' not in rph22.text, "cap de 8 registros todavía presente")
-    check("propiedad.html ID buscar-propietario presente en JS",
-          "'buscar-propietario'" in rph22.text or 'id="buscar-propietario"' in rph22.text,
-          "id buscar-propietario no encontrado")
-    check("propiedad.html ID buscar-prop-resultados presente en JS",
-          "'buscar-prop-resultados'" in rph22.text or 'id="buscar-prop-resultados"' in rph22.text,
-          "id buscar-prop-resultados no encontrado")
-    check("propiedad.html ID buscar-interesado presente en JS",
-          "'buscar-interesado'" in rph22.text or 'id="buscar-interesado"' in rph22.text,
-          "id buscar-interesado no encontrado")
-    check("propiedad.html tiene disp-empty para estado vacío",
-          'disp-empty' in rph22.text, "clase disp-empty no encontrada")
-    check("propiedad.html CSS #buscar-prop-resultados como lista inline",
-          '#buscar-prop-resultados' in rph22.text, "selector CSS no encontrado")
+    check("propiedad.html NO vuelca la lista completa (renderDispList eliminada)",
+          'renderDispList' not in rph22.text, "la lista inmediata sigue presente")
+    check("propiedad.html NO tiene filtrarDisp (reemplazada por el typeahead)",
+          'filtrarDisp' not in rph22.text, "función vieja aún presente")
+    check("propiedad.html typeahead no busca con menos de 2 letras",
+          '_TA_MIN = 2' in rph22.text, "umbral de letras no encontrado")
+    check("propiedad.html typeahead capea los resultados",
+          '_TA_MAX' in rph22.text, "cap de resultados no encontrado")
+    check("propiedad.html typeahead ofrece crear lo tipeado",
+          'function taFormNuevo' in rph22.text, "flujo de creación no encontrado")
+    check("propiedad.html creación solo exige nombre",
+          "if (!nombre) { toast('El nombre es obligatorio." in rph22.text,
+          "la creación sigue exigiendo apellido/teléfono")
 
     # ── 2. perfil.html — estructura JS del nuevo UI ───────────────────────────
     rpf22 = session.get(f"{BASE}/cliente/{cid22}")

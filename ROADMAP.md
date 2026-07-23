@@ -22,6 +22,8 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 - Estados (disponible/vendida/rentada/cerrada), operación (venta/alquiler), destacada y publicada.
 - Edición **inline campo-por-campo** (click → input → PUT individual) con autosave en la descripción.
 - Número de propiedad como link a su ficha.
+- **Ficha admin en dos columnas** (`templates/admin/propiedad.html`), todo en una sola página sin tabs ni acordeones: izquierda datos + personas + descripción; derecha **rail pegajoso** con fotos y mapa, que queda a la vista mientras se scrollea. Ancho hasta 1500px (antes 1060). **Franja de cabecera** con precio / estado / tipo / operación en grande, editables inline igual que el resto. Colapsa a una columna por debajo de 1180px.
+- **Densidad de la ficha admin:** los campos de Datos son **filas** (etiqueta y valor en la misma línea, sin recuadro) agrupadas en *Identificación · Medidas · Precio y publicación* — de ~56px a ~26px por campo. Propietarios e interesados viven en **un único card "Personas" a dos columnas** en vez de dos tarjetas apiladas. Los bloques vacíos no imprimen texto ni separador: alcanza con el `(0)` del subtítulo. Se eliminó el `<h1>` con la dirección, que duplicaba el breadcrumb del topbar (mismo dato, `propData.direccion`): ahora el breadcrumb **es** el `<h1>`. **Fotos y descripción comparten un card en el rail, sin títulos**: el recuadro de subida y el placeholder del textarea alcanzan como etiqueta. **El mapa salió del rail a un modal**, que se abre con el 📍 del campo Dirección (apagado si la propiedad no tiene ubicación marcada) — se inicializa recién al abrirlo, y es bastante más grande que antes (950×506 vs 470×330), lo que ayuda a dibujar polígonos. Con esto la ficha entra en una pantalla.
 
 ### Fotos
 - Upload con **validación por magic bytes**, conversión a **WebP**, generación de **thumbnails**, límite 10 MB.
@@ -29,6 +31,8 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ### Personas y comercial
 - Clientes / **propietarios** / **interesados** (compradores) con relaciones M2M y **matching automático** propiedad↔interesado.
+- **Crear al asignar, también desde el listado:** el modal de propietarios de la tabla de propiedades (`admin/index.html`) ofrece **"+ Crear «lo tipeado»"** con el mismo mini-form que la ficha (solo el nombre obligatorio) y asigna en el mismo paso, sin salir del modal.
+- **Typeahead para asignar personas** en la ficha admin (Propietarios e Interesados): en reposo no muestra nada — antes volcaba la lista completa de clientes debajo del input. Desde 2 letras aparecen hasta 6 coincidencias, con navegación por teclado (↓↑ / Enter / Esc), y ofrece **crear con lo tipeado** en un mini-form prellenado. **Solo el nombre es obligatorio**: `POST /api/clientes` acepta alta sin apellido ni teléfono (se guardan como `''`, sin migración) y devuelve 400 en vez de 500 si falta lo requerido.
 - **Consultas** del formulario público con notificación por email (SMTP en thread) y bandeja de no-leídas.
 - **Captación**: pipeline de leads en frío (lead → propietario → actividades → convertir a cliente), import CSV.
 
@@ -50,11 +54,12 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 1. ~~Config peligrosa en prod (SECRET_KEY efímera / DEBUG por defecto).~~ ✅ **Hecho.** *Nota de deploy: asegurarse de que PythonAnywhere tenga `FLASK_ENV=production` y `SECRET_KEY` seteadas en el WSGI/panel.*
 2. ~~Credenciales hardcodeadas en `load_demo.py`.~~ ✅ **Hecho.**
 3. **Doble sistema de esquema.** Alembic (`migrations/`) conviviendo con un bloque de `ALTER TABLE` crudos + `db.create_all()` en cada arranque (`app.py:1960-2012`), todo en `try/except: pass`. *Por qué importa: el esquema depende del orden de arranque, hay carreras entre workers y los errores se silencian. Requiere backup de la DB de prod antes de tocar.*
-4. **Validación de entrada — parcial.** ✅ Guards aplicados a `add_propiedad` y `bulk-estado`. Falta extender el patrón `_json_body()`/`_missing()` al resto de endpoints de escritura (clientes, captación, catastro). *Por qué importa: todavía quedan rutas que pueden tirar 500 por body ausente.*
+4. **Validación de entrada — parcial.** ✅ Guards aplicados a `add_propiedad`, `bulk-estado` y `add_cliente`. Falta extender el patrón `_json_body()`/`_missing()` al resto de endpoints de escritura (edición de clientes, captación, catastro). *Por qué importa: todavía quedan rutas que pueden tirar 500 por body ausente.*
 5. **Posible path traversal** al borrar fotos por `<path:filename>` sin validar que el path resuelto quede dentro de `static/uploads/` (`app.py:642`). *Por qué importa: un nombre con `../` podría borrar fuera de la carpeta.*
 
 ### 🟠 Alto — experiencia y performance
-6. **Rediseño de la ficha de propiedad del ADMIN** (`templates/admin/propiedad.html`): arriba una **"vista cliente"** (galería + descripción + precio + specs, como la ve un visitante del front); debajo las **secciones privadas** de gestión (datos, fotos, geometría, propietarios, interesados, catastro, actividad). *Por qué importa: pedido explícito; es la pantalla que más usa el dueño.*
+
+6. ~~**Rediseño de la ficha de propiedad del ADMIN** — layout de dos columnas.~~ ✅ **Hecho.** *Ver detalle en Hecho › Propiedades.* Queda **pendiente aparte (a decidir):** si además va arriba una **"vista cliente"** (galería + descripción + precio como la ve un visitante del front).
 7. **Performance del mapa de catastro.** Los **13.761 polígonos de Gualeguay** se cargan de golpe sin canvas/clustering/gating (`catastro.html:947`) → congela el navegador. Aplicar el mismo patrón que ATER (bbox + `preferCanvas` + gating de zoom). *Por qué importa: descongela la feature estrella.*
 8. **`nearest` O(n) en Python** sin índice espacial (`app.py:1685`), ignorando el `neighbor_cache` que el modelo ya define. *Por qué importa: escala mal y se recalcula en cada apertura.*
 
