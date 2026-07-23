@@ -77,7 +77,9 @@
 
 * { box-sizing: border-box; }
 body {
-    font-family: 'Lora', Georgia, 'Times New Roman', serif;
+    /* Sans en todo el admin: los remates ensucian labels chicos, may\00FAsculas
+       e inputs, que es casi todo lo que hay en un panel de gesti\00F3n. */
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
     margin: 0; background: var(--bg); color: var(--text); font-size: 13.5px;
     -webkit-font-smoothing: antialiased;
 }
