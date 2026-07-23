@@ -9,6 +9,7 @@ CRM inmobiliario para la inmobiliaria familiar (Moret, Gualeguay, Entre Ríos). 
 - **Una modificación por vez.** No avanzar en varias cosas juntas ni en batch.
 - **Antes de tocar código, recapitular el cambio con el usuario mediante preguntas multiple-choice** (herramienta AskUserQuestion) hasta confirmar que ambos están en la misma página.
 - **Todo lo nuevo entra primero como "Pendiente" en `ROADMAP.md`.** Al completar un ítem, moverlo a "Hecho".
+- **Commitear después de cada implementación terminada.** No acumular varios cambios sin commitear: cada modificación verificada se cierra con su propio commit (mensaje en español, en imperativo, explicando el *por qué*). Así cada paso queda revertible por separado.
 - No asumir intención: si hay ambigüedad de alcance, preguntar antes.
 
 ## Stack
