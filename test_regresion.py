@@ -264,6 +264,7 @@ check('el modal de propietarios permite crear', 'formNuevoPropietarioModal' in l
 check('el sitio público no ofrece alquiler',
       'tab-alquiler' not in pub_index and "setTab('alquiler')" not in pub_index)
 check('el sitio público no busca por barrio', 'f-barrio' not in pub_index)
+check('sin barra de solapas', 'tabs-bar' not in pub_index and 'setTab' not in pub_index)
 check('el carrusel no recorta los dots', 'fotos.slice(0, 5)' not in pub_index)
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
