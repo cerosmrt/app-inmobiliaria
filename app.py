@@ -1034,11 +1034,17 @@ def get_clientes():
 @app.route('/api/clientes', methods=['POST'])
 @api_login_required
 def add_cliente():
-    data = request.get_json()
+    # Solo el nombre y el tipo son obligatorios: se puede dar de alta a alguien
+    # con lo único que se sabe en el momento y completar apellido/teléfono después.
+    # apellido y telefono son NOT NULL en la DB, así que van como '' (no None).
+    data = _json_body()
+    faltan = _missing(data, 'nombre', 'tipo')
+    if faltan:
+        return jsonify({'error': 'Faltan campos requeridos: ' + ', '.join(faltan)}), 400
     nuevo = Cliente(
-        nombre=data['nombre'],
-        apellido=data['apellido'],
-        telefono=data['telefono'],
+        nombre=data['nombre'].strip(),
+        apellido=(data.get('apellido') or '').strip(),
+        telefono=(data.get('telefono') or '').strip(),
         email=data.get('email'),
         tipo=data['tipo'],
         rango_min=data.get('rango_min'),
