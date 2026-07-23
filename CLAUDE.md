@@ -72,7 +72,12 @@ python manage.py db upgrade    # aplica
 # Seed demo (NO correr en prod)
 python load_demo.py
 
-# Tests funcionales (HTTP contra la app corriendo)
+# Suite de regresión — OFFLINE: no necesita servidor, credenciales ni paquetes
+# extra (test client de Flask + SQLite temporal). Correr antes de commitear.
+python test_regresion.py
+
+# Tests funcionales viejos (HTTP contra la app corriendo en :5000).
+# Ojo: requiere `requests`, que no está en el venv, y credenciales reales.
 python audit_test.py
 ```
 **Deploy (PythonAnywhere):** `git push` desde local → en PythonAnywhere `git pull` en el directorio del proyecto → **Reload** del web app desde el panel. Env vars (`SECRET_KEY`, `FLASK_ENV=production`, `DATABASE_URL`, contacto, SMTP) se setean en el panel/WSGI, no en git. El `.env` nunca se commitea.
