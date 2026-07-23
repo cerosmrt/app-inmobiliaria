@@ -446,29 +446,6 @@
     let sortPropietarios = { field: null, dir: 1 };
     let sortPropiedades  = { field: null, dir: 1 };
     let notasPropiedadId = null;
-    const selectedPropIds = new Set();
-
-    // ── BULK SELECTION ────────────────────────────────────────────────────────
-    function toggleSelectProp(id, checked) {
-        checked ? selectedPropIds.add(id) : selectedPropIds.delete(id);
-        actualizarBulkToolbar();
-    }
-    function toggleSelectAll(checked) {
-        document.querySelectorAll('#tablaPropiedades .chk-prop').forEach(function(chk) {
-            chk.checked = checked;
-            checked ? selectedPropIds.add(parseInt(chk.value)) : selectedPropIds.delete(parseInt(chk.value));
-        });
-        actualizarBulkToolbar();
-    }
-    function actualizarBulkToolbar() { /* bulk toolbar removed */ }
-    function deseleccionarTodo() {
-        selectedPropIds.clear();
-        document.querySelectorAll('#tablaPropiedades .chk-prop').forEach(function(c) { c.checked = false; });
-        var chkAll = document.getElementById('chk-all-props');
-        if (chkAll) chkAll.checked = false;
-        actualizarBulkToolbar();
-    }
-    function aplicarBulkEstado() { /* bulk toolbar removed */ }
 
     // ── URL filter persistence ─────────────────────────────────────────────────
     function guardarFiltrosEnURL() {
@@ -853,10 +830,6 @@
 
         const tbody = document.querySelector('#tablaPropiedades tbody');
         tbody.innerHTML = '';
-        selectedPropIds.clear();
-        actualizarBulkToolbar();
-        var chkAll = document.getElementById('chk-all-props');
-        if (chkAll) chkAll.checked = false;
 
         filtradas.forEach(function(p) {
             const row = document.createElement('tr');
