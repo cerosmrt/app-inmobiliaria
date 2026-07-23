@@ -59,6 +59,28 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 4. **Validación de entrada — parcial.** ✅ Guards aplicados a `add_propiedad`, `bulk-estado` y `add_cliente`. Falta extender el patrón `_json_body()`/`_missing()` al resto de endpoints de escritura (edición de clientes, captación, catastro). *Por qué importa: todavía quedan rutas que pueden tirar 500 por body ausente.*
 5. **Posible path traversal** al borrar fotos por `<path:filename>` sin validar que el path resuelto quede dentro de `static/uploads/` (`app.py:642`). *Por qué importa: un nombre con `../` podría borrar fuera de la carpeta.*
 
+### 🔵 Del assessment del 22/07/2026 — para revisar juntos (NO tocado)
+
+> Barrido de las 6 pantallas del admin. Lo que era **bug** ya está arreglado y commiteado; esto es lo que quedó porque es decisión de diseño o de negocio.
+>
+> **Confirmado que NO son problemas** (medido, no supuesto): cero errores JS en las 9 vistas; cero 500 en 50 combinaciones de endpoint/body; y **cero XSS en el admin** — se inyectaron 30 payloads en campos de la DB y los 30 salieron escapados. (El XSS que sí existía era en el **sitio público** y ya está arreglado.)
+
+**a. Accesibilidad — 24 inputs sin nombre accesible.** `captacion.html` (10), `index.html` (7), `catastro.html` (6), `consultas.html` (1). Casi todos se construyen por JS con `id` pero sin `<label for>` ni `aria-label`. *Por qué importa: un lector de pantalla los anuncia como "edición, en blanco".* Los del login y la ficha ya se arreglaron.
+
+**b. Contraste en estados de hover.** `--muted` sobre `--surface-2` (4.29:1) y `--surface-3` (3.99:1) queda en AA-grande, no AA. Igual `--text-2` sobre `--surface-3` (4.24:1). *Por qué importa: es texto chico en hover; se arregla oscureciendo un punto más los grises o aclarando los fondos de hover.*
+
+**c. Revisar el cambio de `--muted` en las 6 pantallas.** Pasó de `#9B9A97` a `#737270` por accesibilidad. Es más oscuro y se nota en labels, hints y placeholders de todo el admin. *Por qué importa: puede pedir reequilibrio visual en pantallas que no miramos (catastro, captación).*
+
+**d. Endpoints que aceptan crear registros vacíos.** `POST /api/catastro/parcelas` devuelve **201** con body `{}`, y lo mismo `investigaciones`, `propietarios` y `layers/register`. *Por qué importa: se llena la base de registros fantasma. No lo toqué porque "qué campo es obligatorio" es una regla tuya, no técnica.*
+
+**e. `PATCH /api/propiedades/bulk-estado` quedó sin llamador.** Se borró la UI de selección masiva (era código muerto), pero el endpoint sigue vivo. *Decidir: se recupera la feature o se borra la ruta.*
+
+**f. La columna izquierda de la ficha queda más corta que el rail.** Con Datos + Personas termina a media altura y abajo queda un hueco blanco, mientras el rail sigue hasta el final de las fotos. *Opciones: mover algo a la izquierda, o angostar el rail.*
+
+**g. `audit_test.py` no se puede correr.** Necesita `requests` (no está en el venv), un servidor en `:5000` y credenciales reales. Quedó desactualizado respecto del UI nuevo salvo las assertions que reescribí. *Decidir: se migra a `test_regresion.py` (que corre offline) o se instala `requests` y se mantienen los dos.*
+
+**h. Sigue abierto del rediseño:** si arriba de la ficha va una **"vista cliente"** (galería + descripción + precio como la ve un visitante), que era la forma original del ítem 6.
+
 ### 🟠 Alto — experiencia y performance
 
 6. ~~**Rediseño de la ficha de propiedad del ADMIN** — layout de dos columnas.~~ ✅ **Hecho.** *Ver detalle en Hecho › Propiedades.* Queda **pendiente aparte (a decidir):** si además va arriba una **"vista cliente"** (galería + descripción + precio como la ve un visitante del front).
