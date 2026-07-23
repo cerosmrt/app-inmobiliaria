@@ -581,12 +581,14 @@
                 // select trabaja con 'ARS'/'USD'.
                 var sel = type === 'moneda' ? (val ? 'USD' : 'ARS') : val;
                 if (opts) {
-                    inputEl = '<select class="campo-input">' +
+                    inputEl = '<select class="campo-input" aria-label="' + esc(label) + '">' +
                         opts.map(function(o) {
                             return '<option value="' + esc(o) + '"' + (o === sel ? ' selected' : '') + '>' + esc(o) + '</option>';
                         }).join('') + '</select>';
                 } else {
-                    inputEl = '<input class="campo-input" type="' + type + '" value="' + esc(val != null ? String(val) : '') + '">';
+                    inputEl = '<input class="campo-input" type="' + type + '"' +
+                        ' aria-label="' + esc(label) + '"' +
+                        ' value="' + esc(val != null ? String(val) : '') + '">';
                 }
                 this.innerHTML = '<div class="campo-label">' + esc(label) + '</div>' + inputEl;
                 var input = this.querySelector('input.campo-input,select.campo-input');
@@ -771,11 +773,11 @@
         document.getElementById(cfg.listId).innerHTML =
             '<div class="ta-nuevo">' +
                 '<div class="ta-nuevo-grid">' +
-                    '<div><label>Nombre *</label>' +
+                    '<div><label for="ta-nuevo-nombre">Nombre *</label>' +
                         '<input id="ta-nuevo-nombre" type="text" value="' + esc(nombre) + '"></div>' +
-                    '<div><label>Apellido <span class="ta-opcional">(opcional)</span></label>' +
+                    '<div><label for="ta-nuevo-apellido">Apellido <span class="ta-opcional">(opcional)</span></label>' +
                         '<input id="ta-nuevo-apellido" type="text" value="' + esc(apellido) + '"></div>' +
-                    '<div style="grid-column:1/-1"><label>Teléfono <span class="ta-opcional">(opcional)</span></label>' +
+                    '<div style="grid-column:1/-1"><label for="ta-nuevo-telefono">Teléfono <span class="ta-opcional">(opcional)</span></label>' +
                         '<input id="ta-nuevo-telefono" type="text" placeholder="3444123456"></div>' +
                 '</div>' +
                 '<div class="ta-nuevo-acciones">' +

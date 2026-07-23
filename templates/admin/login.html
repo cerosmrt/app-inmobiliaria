@@ -94,10 +94,10 @@
     {% endif %}
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label>Usuario</label>
-        <input type="text" name="username" autocomplete="username" autofocus required>
-        <label>Contraseña</label>
-        <input type="password" name="password" autocomplete="current-password" required>
+        <label for="login-usuario">Usuario</label>
+        <input id="login-usuario" type="text" name="username" autocomplete="username" autofocus required>
+        <label for="login-password">Contraseña</label>
+        <input id="login-password" type="password" name="password" autocomplete="current-password" required>
         <button type="submit" class="btn-login">Ingresar</button>
     </form>
     <div class="setup-link">

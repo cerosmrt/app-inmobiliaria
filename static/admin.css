@@ -15,7 +15,8 @@
     --ink:          #1A1A17;   /* display headings */
     --text:         #37352F;   /* primary body text */
     --text-2:       #6F6E6A;   /* secondary text */
-    --muted:        #9B9A97;   /* labels, hints, placeholders */
+    --muted:        #737270;   /* labels, hints, placeholders — 4.6:1 sobre --surface.
+                                  Era #9B9A97, que daba 2.7:1 y reprobaba WCAG AA (4.5:1). */
 
     /* ── Surfaces — paper ── */
     --bg:           #FFFFFF;   /* page background — white paper */
