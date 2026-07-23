@@ -238,6 +238,12 @@ invariantes = [
     # página cuando la propiedad tiene 10+ fotos.
     ('el card del rail tope una pantalla',
      'max-height: calc(100vh - 95px)' in ficha),
+    # Los matches automáticos salieron de la ficha (siguen en el listado) y el
+    # typeahead ya no vive siempre abierto: lo destapa un botón del subtítulo.
+    ('la ficha ya no pide matches',        '/matches' not in ficha),
+    ('el buscador de personas se abre con un botón',
+     'class="ta-abrir"' in ficha and 'function taToggle' in ficha
+     and 'class="ta-wrap" id=' in ficha and 'hidden>' in ficha),
     ('la galería es el bloque elástico',
      'flex: 0 1 auto' in ficha.split('.fotos-admin-grid {')[1][:260]
      and 'overflow-y: auto' in ficha.split('.fotos-admin-grid {')[1][:260]),

@@ -191,9 +191,9 @@
         gap: 10px 30px;
         margin-top: 14px;
     }
-    /* Las columnas tienen distinta cantidad de subtítulos (interesados suma
-       "Matches automáticos"), así que los buscadores se van al pie: quedan
-       alineados entre sí tengan lo que tengan arriba. */
+    /* Las dos columnas pueden tener listas de distinto largo, así que el
+       buscador se va al pie: cuando está abierto queda alineado con el de al
+       lado en vez de flotar a media altura. */
     .personas-grid > div { min-width: 0; display: flex; flex-direction: column; }
     .personas-grid .ta-wrap { margin-top: auto; padding-top: 12px; }
 
@@ -201,7 +201,20 @@
     .inter-subtitulo {
         font-size: 11px; color: var(--text-2); text-transform: uppercase;
         letter-spacing: 0.5px; font-weight: 700; margin: 0 0 4px;
+        display: flex; align-items: center; gap: 8px;
     }
+    /* Botón que abre el buscador, pegado al subtítulo. Discreto en reposo
+       (es una acción secundaria) y con el acento recién al pasar por encima. */
+    .ta-abrir {
+        margin-left: auto; flex: 0 0 auto;
+        background: none; border: 1px solid var(--border); border-radius: 5px;
+        color: var(--muted); font-family: inherit; font-size: 10.5px;
+        font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;
+        padding: 2px 8px; cursor: pointer;
+        transition: color var(--tx), border-color var(--tx), background var(--tx);
+    }
+    .ta-abrir:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-lt); }
+    .ta-abrir:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     /* Envuelve en vez de desbordar: las columnas de Personas son angostas. */
     .inter-row {
         display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
@@ -211,7 +224,6 @@
     .inter-nombre { flex: 1 1 auto; min-width: 0; font-weight: 600; }
     .inter-tel { color: var(--muted); font-size: 12px; }
     .inter-vacio { color: var(--muted); font-size: 13px; margin: 4px 0; }
-    .inter-sep { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
     /* ── Typeahead de personas ─────────────────────────────────────────────────
        En reposo no muestra nada: los resultados aparecen recién al escribir.   */
@@ -700,25 +712,63 @@
     // `excluir` lo refresca renderPropietarios/renderInteresados en cada render.
     const _TA = {
         propietario: {
-            inputId: 'ta-input-prop', listId: 'ta-list-prop',
+            inputId: 'ta-input-prop', listId: 'ta-list-prop', wrapId: 'ta-wrap-prop',
             placeholder: 'Buscar o crear propietario…',
             tipo: 'propietario', asignar: 'asignarPropietario', excluir: {},
         },
         interesado: {
-            inputId: 'ta-input-inter', listId: 'ta-list-inter',
+            inputId: 'ta-input-inter', listId: 'ta-list-inter', wrapId: 'ta-wrap-inter',
             placeholder: 'Buscar o crear interesado…',
             tipo: 'interesado', asignar: 'asignarInteresado', excluir: {},
         },
     };
 
+    // El subtítulo lleva pegado el botón que abre el buscador: la ficha se lee
+    // mucho más de lo que se edita, así que los inputs no viven permanentemente
+    // ocupando lugar — aparecen cuando los pedís.
+    function subtituloPersonas(titulo, n, key) {
+        return '<p class="inter-subtitulo">' +
+            '<span>' + esc(titulo) + ' (' + n + ')</span>' +
+            '<button type="button" class="ta-abrir" onclick="taToggle(\'' + key + '\')"' +
+                ' title="Agregar ' + esc(titulo.toLowerCase()) + '">+ Agregar</button>' +
+        '</p>';
+    }
+
     function taHTML(key) {
         var cfg = _TA[key];
-        return '<div class="ta-wrap">' +
+        return '<div class="ta-wrap" id="' + cfg.wrapId + '" hidden>' +
             '<input id="' + cfg.inputId + '" class="ta-input" type="text" autocomplete="off"' +
                 ' placeholder="' + esc(cfg.placeholder) + '"' +
                 ' oninput="taBuscar(\'' + key + '\')" onkeydown="taKey(event,\'' + key + '\')">' +
             '<div id="' + cfg.listId + '" class="ta-list"></div>' +
         '</div>';
+    }
+
+    // Abre y cierra el buscador. Al cerrar limpia lo tipeado y los resultados:
+    // si volvés a abrirlo, arranca de cero en vez de con la búsqueda anterior.
+    function taToggle(key) {
+        var cfg  = _TA[key];
+        var wrap = document.getElementById(cfg.wrapId);
+        if (!wrap) return;
+        if (wrap.hidden) {
+            wrap.hidden = false;
+            var input = document.getElementById(cfg.inputId);
+            if (input) input.focus();
+        } else {
+            taCerrar(key);
+        }
+    }
+
+    function taCerrar(key) {
+        var cfg  = _TA[key];
+        var wrap = document.getElementById(cfg.wrapId);
+        if (!wrap) return;
+        var input = document.getElementById(cfg.inputId);
+        var list  = document.getElementById(cfg.listId);
+        if (input) input.value = '';
+        if (list) list.innerHTML = '';
+        cfg.sel = -1;
+        wrap.hidden = true;
     }
 
     function _taQuery(key) {
@@ -774,8 +824,7 @@
         if (!list) return;
         var items = list.querySelectorAll('.inter-row, .ta-crear');
         if (e.key === 'Escape') {
-            document.getElementById(_TA[key].inputId).value = '';
-            list.innerHTML = '';
+            taCerrar(key);          // Escape cierra el buscador entero, no sólo los resultados
             return;
         }
         if (!items.length) return;
@@ -843,37 +892,26 @@
     }
 
     // ── Interesados ───────────────────────────────────────────────────────────
-    function cargarInteresados() {
-        fetch('/api/propiedades/' + propiedadId + '/matches')
-            .then(function(r) { return r.json(); })
-            .then(renderInteresados)
-            .catch(function() { renderInteresados([]); });
-    }
+    // Ya no se piden los matches automáticos: el bloque sumaba un subtítulo
+    // más de un lado que del otro y dejaba la columna desbalanceada, casi
+    // siempre para mostrar un "(0)". La sugerencia sigue viva en el listado de
+    // propiedades, que es donde se usa (`admin/index.html`).
+    function cargarInteresados() { renderInteresados(); }
 
-    function renderInteresados(matches) {
+    function renderInteresados() {
         var asignados = propData.interesados || [];
         var asigSet = {};
         asignados.forEach(function(c) { asigSet[c.id] = true; });
-        var matchesLibres = matches.filter(function(m) { return !asigSet[m.id]; });
-        var excluirBusqueda = {};
-        asignados.forEach(function(c) { excluirBusqueda[c.id] = true; });
-        matchesLibres.forEach(function(c) { excluirBusqueda[c.id] = true; });
         // Los bloques vacíos no imprimen texto ni separador: el (0) del subtítulo alcanza.
         var html =
-            '<p class="inter-subtitulo">Interesados (' + asignados.length + ')</p>' +
+            subtituloPersonas('Interesados', asignados.length, 'interesado') +
             (asignados.length
                 ? asignados.map(function(c) {
                     return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarInteresado(' + c.id + ')" title="Desasignar">&#x2715;</button>');
-                  }).join('') + '<hr class="inter-sep">'
-                : '') +
-            '<p class="inter-subtitulo">Matches autom&aacute;ticos (' + matchesLibres.length + ')</p>' +
-            (matchesLibres.length
-                ? matchesLibres.map(function(c) {
-                    return filaPersona(c, '<button class="btn-action btn-match" onclick="asignarInteresado(' + c.id + ')" style="font-size:11px">+ Asignar</button>');
-                  }).join('') + '<hr class="inter-sep">'
+                  }).join('')
                 : '') +
             taHTML('interesado');
-        _TA.interesado.excluir = excluirBusqueda;
+        _TA.interesado.excluir = asigSet;
         document.getElementById('interesados-container').innerHTML = html;
     }
 
@@ -897,11 +935,11 @@
         var asigSet = {};
         propietarios.forEach(function(c) { asigSet[c.id] = true; });
         var html =
-            '<p class="inter-subtitulo">Propietarios (' + propietarios.length + ')</p>' +
+            subtituloPersonas('Propietarios', propietarios.length, 'propietario') +
             (propietarios.length
                 ? propietarios.map(function(c) {
                     return filaPersona(c, '<button class="btn-action btn-cancel" onclick="desasignarPropietario(' + c.id + ')" title="Quitar">&#x2715;</button>');
-                  }).join('') + '<hr class="inter-sep">'
+                  }).join('')
                 : '') +
             taHTML('propietario');
         _TA.propietario.excluir = asigSet;
