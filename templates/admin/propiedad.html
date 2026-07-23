@@ -43,23 +43,17 @@
         align-items: start;
     }
     .prop-main { min-width: 0; }
-    .prop-rail {
-        min-width: 0;
-        position: sticky;
-        top: 62px;                              /* 46px de .page-topbar + aire */
-        max-height: calc(100vh - 86px);
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        padding-right: 2px;                     /* que el scrollbar no tape el borde */
-    }
-    .prop-rail::-webkit-scrollbar { width: 8px; }
-    .prop-rail::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    /* Sin sticky ni scroll propio a propósito. Cuando el rail tenía el mapa,
+       pegarlo servía; ahora es la columna más alta de las dos, así que fijarlo
+       solo escondía su parte de abajo detrás de un segundo scrollbar. Además
+       su max-height desfasado (86px contra los 94px reales de topbar+padding)
+       hacía que la página scrollease 8px de más sin contenido que mostrar. */
+    .prop-rail { min-width: 0; }
     .prop-rail .section-card:last-child { margin-bottom: 0; }
 
-    /* Pantallas angostas: una sola columna, el rail vuelve al flujo normal. */
+    /* Pantallas angostas: una sola columna. */
     @media (max-width: 1180px) {
         .prop-layout { grid-template-columns: minmax(0, 1fr); }
-        .prop-rail { position: static; max-height: none; overflow: visible; }
     }
 
     .section-card {
