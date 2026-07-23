@@ -28,7 +28,7 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 ### Fotos
 - Upload con **validación por magic bytes**, conversión a **WebP**, generación de **thumbnails**, límite 10 MB.
 - Reordenar por **drag & drop**; borrar; galería con **lightbox** (teclado + swipe táctil) en la ficha pública.
-- **La galería del admin tiene altura acotada** (`max-height: 480px` + scroll interno propio). Antes crecía sin techo: con 10+ fotos el rail derecho pasaba a ser la columna más alta y estiraba toda la página, rompiendo el balance de las dos columnas. El rail sigue **sin** sticky ni scroll propio a propósito (ver comentario en `propiedad.html:46`): si la galería ya no crece, no hace falta, y así no vuelve el bug del scrollbar doble.
+- **El card del rail no pasa de una pantalla** (`max-height: calc(100vh - 95px)`, donde 95 = topbar 46+1 + los 24px de padding arriba y abajo del `.container`) y adentro la **galería es el único bloque elástico** (`flex: 0 1 auto` + scroll propio): crece lo que necesita y se achica cuando el card toca el techo. Antes crecía sin límite y con 10+ fotos el rail pasaba a ser la columna más alta y estiraba toda la página. *Un primer intento con `max-height: 480px` fijo no alcanzó — sumado al recuadro de subida y la descripción el rail seguía midiendo ~780px contra ~520px de la izquierda.* El rail sigue **sin** sticky a propósito (ver comentario en `propiedad.html:46`), así no vuelve el bug del scrollbar doble.
 
 ### Personas y comercial
 - Clientes / **propietarios** / **interesados** (compradores) con relaciones M2M y **matching automático** propiedad↔interesado.
@@ -110,6 +110,8 @@ Los 6 primeros por impacto/esfuerzo (arrancar por acá):
 Resto del backlog estratégico (rankeado 7-20): asistente IA para compradores, seller readiness score, dashboard de negocio, identidad ligera del visitante, AVM por comparables, copiloto del agente, calidad de fotos, feed personalizado, ficha PDF, agendar visita, oportunidades de tierra/subdivisión, auto-follow-up WhatsApp, detección de duplicados, comparador. → ver `VISION.md`.
 
 ### 🟢 Bajo — pulido
+12b. **Ficha admin — grupo "Dimensiones".** Renombrar el grupo `Medidas` a **Dimensiones** y reordenar sus campos a `Terreno m² | Cubierto m²` en la primera fila, con `Ambientes` debajo: hoy caen en orden de declaración (`propiedad.html:474-476`) y la grilla de 2 columnas los parte en `Ambientes | Terreno` / `Cubierto | —`. *Por qué importa: terreno y cubierto se leen juntos, son el mismo dato en dos versiones.*
+12c. **Ficha admin — asignar personas desde un botón.** Sacar la línea **"Matches automáticos (0)"** (deja el bloque de Interesados desbalanceado contra el de Propietarios) y reemplazar los dos inputs de typeahead siempre visibles por un **botón al lado del subtítulo "Propietarios (n)" / "Interesados (n)"** que abra el buscador. *Por qué importa: dos inputs vacíos permanentes ocupan lugar y ensucian un card que se lee más de lo que se edita.*
 13. **Pinnear dependencias** (`requirements.txt` usa `>=` sin lock). *Por qué importa: reproducibilidad de builds.*
 14. **Cachés geo in-memory sin límite** (`_GEO_CACHE`, `_ATER_CACHE`) → crecimiento ilimitado por bbox. *Por qué importa: fuga de memoria en workers de larga vida.*
 15. **TLS sin verificar** hacia IGN/ATER (`_create_unverified_context`). *Por qué importa: MITM en las llamadas a servicios externos.*

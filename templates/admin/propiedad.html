@@ -50,6 +50,22 @@
        hacía que la página scrollease 8px de más sin contenido que mostrar. */
     .prop-rail { min-width: 0; }
     .prop-rail .section-card:last-child { margin-bottom: 0; }
+    /* El card del rail no pasa nunca de una pantalla. 95px = topbar (46 + 1 de
+       borde) + los 24px de padding arriba y abajo del .container; el intento
+       viejo de fijar el rail usaba 86 y por eso la página scrolleaba 8px de
+       más. Como es flex-column, la galería (el único hijo que se achica) se
+       queda con lo que sobra después del recuadro de subida y la descripción:
+       el rail deja de ser la columna más alta en cualquier monitor, sin
+       depender de una altura fija inventada. */
+    .prop-rail > .section-card {
+        display: flex; flex-direction: column;
+        max-height: calc(100vh - 95px);
+    }
+    /* Todo lo que no es la galería mide lo que mide: sin esto el flexbox les
+       come altura al textarea y al recuadro de subida antes que a las fotos. */
+    .prop-rail .upload-drop,
+    .prop-rail .fotos-pie,
+    .prop-rail .desc-bloque { flex: 0 0 auto; }
 
     /* Pantallas angostas: una sola columna. */
     @media (max-width: 1180px) {
@@ -262,16 +278,20 @@
        cuando el layout colapsa a una columna. */
     /* 2 por fila en el rail: a 3 las miniaturas quedaban demasiado chicas
        para reconocer el ambiente de un vistazo. */
-    /* Techo de altura: sin esto una propiedad con 10+ fotos convertía al rail
-       en la columna más alta y estiraba toda la página. Con max-height la
-       galería scrollea adentro suyo y la ficha mide siempre lo mismo, tenga 2
-       fotos o 50. El padding-right deja lugar al scrollbar para que no se
-       monte encima de las miniaturas. */
+    /* La galería es el único bloque elástico del card del rail (ver el techo
+       de .prop-rail > .section-card): `flex: 0 1 auto` = crece lo que necesita
+       pero se achica cuando el card toca el techo de la pantalla, y ahí
+       scrollea adentro suyo. Sin `grow` a propósito: si creciera, una
+       propiedad sin fotos dejaría un hueco enorme. Un max-height fijo no
+       servía — con 480px el rail seguía siendo la columna más alta.
+       El padding-right deja lugar al scrollbar para que no se monte encima
+       de las miniaturas. */
     .fotos-admin-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-        gap: 10px; min-height: 40px;
-        max-height: 480px; overflow-y: auto; padding-right: 4px;
+        gap: 10px;
+        flex: 0 1 auto; min-height: 40px;
+        overflow-y: auto; padding-right: 4px;
         overscroll-behavior: contain;
     }
     .fotos-admin-grid::-webkit-scrollbar { width: 5px; }
