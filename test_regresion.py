@@ -331,6 +331,14 @@ check('admin.css va versionado (cache-busting)', "admin.css') }}?v=" in base)
 
 listado = tpl('admin/index.html')
 check('el modal de propietarios permite crear', 'formNuevoPropietarioModal' in listado)
+# Propiedades es la pestaña de entrada del panel — y el <div> arranca visible
+# para que no parpadee otra hasta que corre el JS.
+check('el panel abre en Propiedades',
+      "get('tab') || 'propiedades'" in listado
+      and '<div id="tab-propiedades">' in listado
+      and '<div id="tab-interesados" style="display:none">' in listado)
+check('el sidebar marca la misma pestaña por defecto',
+      "get('tab') || 'propiedades'" in base)
 
 # Sitio público: la inmobiliaria hoy solo opera venta y nadie busca por barrio
 # en una ciudad chica. Y el carrusel dibuja un dot por foto — cuando eran 5

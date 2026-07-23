@@ -64,6 +64,7 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 - **Controles de la ficha**: switches en vez de checkbox + "Sí"/"No" (redundante); moneda como selector ARS/USD sobre el mismo booleano `es_usd`; labels con `--text-2` en vez de `--muted` (2.7:1 → 4.9:1 de contraste, WCAG AA pide 4.5:1); miniaturas de fotos a 2 por fila.
 - Auth por sesión (hashing Werkzeug, **CSRF**, rate-limit de login, cookies seguras en prod), setup del primer admin.
 - **Command palette** (Ctrl/Cmd+K), toasts, confirm modal, sidebar colapsable ("Portfolio / Inteligencia / Comunicación").
+- **El panel abre en Propiedades**, no en Interesados: es el portfolio, lo que se mira todos los días; Interesados se consulta cuando hay una consulta concreta puntual. El default vivía repetido en dos lugares que estaban desalineados (`admin/index.html` decía `interesados`, `admin/base.html` decía `clientes` — que ni siquiera es una pestaña, así que el sidebar no marcaba nada activo al entrar sin `?tab=`); ahora los dos dicen `propiedades`.
 - Config por entorno (dev SQLite / prod Postgres), deploy en PythonAnywhere.
 
 ---

@@ -83,7 +83,7 @@
 
 {% block page_topbar %}
 <div class="page-topbar">
-    <span class="page-topbar-title" id="topbar-tab-title">Interesados</span>
+    <span class="page-topbar-title" id="topbar-tab-title">Propiedades</span>
     <div class="topbar-actions">
         <button class="btn btn-gray" style="font-size:12px;padding:5px 11px" onclick="window.print()" title="Imprimir (Ctrl+P)">🖨 Imprimir</button>
         <button class="btn btn-gray" style="font-size:12px;padding:5px 11px" onclick="document.getElementById('palette-overlay').classList.add('active');document.getElementById('palette-input').focus()" title="Búsqueda rápida (Ctrl+K)">⌕ Buscar</button>
@@ -100,7 +100,7 @@
 <div class="container">
 
     <!-- ═══ TAB INTERESADOS ═══ -->
-    <div id="tab-interesados">
+    <div id="tab-interesados" style="display:none">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaInteresado()">+ Agregar interesado</button>
             <button class="btn btn-print" onclick="imprimirTabla('tablaInteresados', 'Interesados')">Imprimir</button>
@@ -162,7 +162,9 @@
     </div>
 
     <!-- ═══ TAB PROPIEDADES ═══ -->
-    <div id="tab-propiedades" style="display:none">
+    <!-- Sin display:none, al revés que las otras: es la pestaña por defecto,
+         así no parpadea Interesados hasta que corre el JS. -->
+    <div id="tab-propiedades">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="abrirModalNuevaPropiedad()">+ Agregar propiedad</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('propiedades')">↑ Importar CSV</button>
@@ -1440,7 +1442,10 @@
 
     // ── INIT ──────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
-        var tab = new URLSearchParams(window.location.search).get('tab') || 'interesados';
+        // Propiedades es la pestaña de entrada: es el portfolio, lo que se
+        // mira todos los días. Interesados se consulta cuando hay una consulta
+        // concreta, no al abrir el panel.
+        var tab = new URLSearchParams(window.location.search).get('tab') || 'propiedades';
         mostrarTab(tab);
         leerFiltrosDeURL();
         cargarClientes();
