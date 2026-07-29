@@ -436,6 +436,31 @@
 .dp-input:focus { outline: none; border-color: var(--accent); }
 .dp-input-row { display: flex; gap: 6px; }
 .dp-input-row .dp-input { flex: 1; }
+/* ── Investigación (workflow por pasos) ── */
+.inv-next {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.28);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 6px 9px; font-size: 12px;
+}
+.inv-next b { color: var(--col-investigar); font-weight: 700; }
+.inv-next.done { background: rgba(34,197,94,0.10); border-color: rgba(34,197,94,0.32); }
+.inv-progress { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+.inv-group-title {
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .6px; margin-top: 6px;
+}
+.inv-item { display: flex; gap: 7px; align-items: flex-start; padding: 2px 0; }
+.inv-chip {
+    flex-shrink: 0; width: 24px; height: 24px; border: none; cursor: pointer;
+    background: transparent; font-size: 15px; line-height: 24px; padding: 0;
+    border-radius: var(--radius-sm);
+}
+.inv-chip:hover { background: rgba(0,0,0,0.05); }
+.inv-item-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.inv-label { font-size: 12px; color: var(--text); padding-top: 3px; }
+.inv-item.inv-pendiente .inv-label { color: var(--muted); }
+.inv-item.inv-sin_dato .inv-label { color: #b45309; }
 .dp-textarea {
     width: 100%; padding: 6px 8px; min-height: 60px; resize: vertical;
     border: 1.5px solid var(--border); border-radius: var(--radius-sm);
@@ -885,6 +910,46 @@ var PIPELINE = [
     {key:'captada',     label:'Captada',     color:'#22c55e'},
     {key:'descartada',  label:'Descartada',  color:'#ef4444'},
 ];
+// Plantilla fija de investigación por tipo de lead. La etapa "Investigar"
+// guía qué averiguar y en qué orden; el estado se guarda por lead (JSON).
+var INV_TEMPLATES = {
+    campo: [
+        { grupo:'Dueño y contacto', items:[
+            { key:'dueno',        label:'Dueño (nombre)' },
+            { key:'contacto',     label:'Forma de contacto (tel/WhatsApp)' },
+            { key:'contacto_alt', label:'Otra vía de contacto' },
+        ]},
+        { grupo:'Plano y mediciones', items:[
+            { key:'plano',      label:'Plano / dibujo del lote' },
+            { key:'superficie', label:'Superficie total y mediciones' },
+        ]},
+        { grupo:'Uso del suelo', items:[
+            { key:'sembrable',  label:'Parte sembrable' },
+            { key:'tipo_suelo', label:'Tipo de suelo (potrero/monte)' },
+        ]},
+        { grupo:'Acceso y servicios', items:[
+            { key:'acceso',     label:'Acceso / camino' },
+            { key:'agua_luz',   label:'Agua y luz' },
+            { key:'alambrados', label:'Alambrados / aguadas' },
+        ]},
+    ],
+    urbano: [
+        { grupo:'Dueño y contacto', items:[
+            { key:'dueno',        label:'Dueño (nombre)' },
+            { key:'contacto',     label:'Forma de contacto' },
+            { key:'contacto_alt', label:'Otra vía de contacto' },
+        ]},
+        { grupo:'Datos', items:[
+            { key:'superficie', label:'Superficie / medidas' },
+            { key:'situacion',  label:'Situación (ocupada/libre)' },
+            { key:'motivo',     label:'Motivo de venta' },
+        ]},
+    ],
+};
+var INV_ESTADOS = ['pendiente','ok','sin_dato'];
+var INV_ICON = { pendiente:'⬜', ok:'✅', sin_dato:'⚠️' };
+var INV_TITLE = { pendiente:'Falta chequear', ok:'Conseguido', sin_dato:'Chequeado sin éxito' };
+
 var PRI = {baja:'#94a3b8', media:'#3b82f6', alta:'#f59e0b', urgente:'#ef4444'};
 var PRI_LABEL = {baja:'Baja', media:'Media', alta:'Alta', urgente:'Urgente'};
 var ACT_ICONS = {llamada:'📞', whatsapp:'💬', email:'✉️', reunion:'🤝', tasacion:'📋', nota:'📝', conversion:'✅'};
@@ -1168,6 +1233,11 @@ function renderDetailBody(lead) {
             '<textarea class="dp-textarea" id="dp-notas">'+esc(lead.notas)+'</textarea></div>' +
           '<button class="dp-save-btn" onclick="saveDetail()">Guardar cambios</button>' +
         '</div>' +
+        '<!-- Investigación -->' +
+        '<div class="dp-section">' +
+          '<div class="dp-section-title">Investigación</div>' +
+          '<div id="inv-body">' + invBodyHTML(lead) + '</div>' +
+        '</div>' +
         '<!-- Propietario -->' +
         '<div class="dp-section">' +
           '<div class="dp-section-title">Propietario</div>' +
@@ -1328,6 +1398,87 @@ function saveDetail() {
         activeLead = updated;
         render();
         toast('Guardado');
+    });
+}
+
+// ── Investigación (workflow por pasos) ──────────────────────────────────────
+function invTemplateFor(tipo) {
+    return (tipo === 'terreno' || tipo === 'campo') ? INV_TEMPLATES.campo : INV_TEMPLATES.urbano;
+}
+function invState(lead, key) {
+    var it = (lead.investigacion || {})[key];
+    if (!it || typeof it !== 'object') return { estado:'pendiente', valor:'' };
+    return { estado: INV_ESTADOS.indexOf(it.estado) === -1 ? 'pendiente' : it.estado, valor: it.valor || '' };
+}
+function invFlatItems(lead) {
+    var out = [];
+    invTemplateFor(lead.tipo_propiedad).forEach(function(g){ g.items.forEach(function(it){ out.push(it); }); });
+    return out;
+}
+function invBodyHTML(lead) {
+    var tpl = invTemplateFor(lead.tipo_propiedad);
+    var flat = invFlatItems(lead);
+    var total = flat.length, done = 0, pend = null, firstSinDato = null;
+    flat.forEach(function(it){
+        var s = invState(lead, it.key);
+        if (s.estado === 'ok') done++;
+        if (s.estado === 'pendiente' && !pend) pend = it;
+        if (s.estado === 'sin_dato' && !firstSinDato) firstSinDato = it;
+    });
+    var nextHTML;
+    if (pend) nextHTML = '<div class="inv-next">Próximo paso → <b>'+esc(pend.label)+'</b></div>';
+    else if (firstSinDato) nextHTML = '<div class="inv-next">Próximo paso → <b>Buscar alternativa: '+esc(firstSinDato.label)+'</b></div>';
+    else nextHTML = '<div class="inv-next done">✅ Investigación completa</div>';
+    var html = nextHTML + '<div class="inv-progress">'+done+'/'+total+' datos conseguidos</div>';
+    tpl.forEach(function(g){
+        html += '<div class="inv-group-title">'+esc(g.grupo)+'</div>';
+        g.items.forEach(function(it){
+            var s = invState(lead, it.key);
+            html += '<div class="inv-item inv-'+s.estado+'">' +
+                '<button class="inv-chip" title="'+INV_TITLE[s.estado]+' (click para cambiar)" onclick="cycleInv(\''+it.key+'\')">'+INV_ICON[s.estado]+'</button>' +
+                '<div class="inv-item-body">' +
+                    '<div class="inv-label">'+esc(it.label)+'</div>' +
+                    (s.estado !== 'pendiente'
+                        ? '<input class="dp-input inv-val" value="'+esc(s.valor)+'" placeholder="'+(s.estado==='ok'?'Dato…':'Qué pasó / por qué falló…')+'" onchange="setInvValor(\''+it.key+'\', this.value)">'
+                        : '') +
+                '</div>' +
+            '</div>';
+        });
+    });
+    return html;
+}
+function ensureInvObj(lead) {
+    if (!lead.investigacion || typeof lead.investigacion !== 'object') lead.investigacion = {};
+    return lead.investigacion;
+}
+function cycleInv(key) {
+    if (!activeLead) return;
+    var inv = ensureInvObj(activeLead);
+    var cur = invState(activeLead, key);
+    inv[key] = { estado: INV_ESTADOS[(INV_ESTADOS.indexOf(cur.estado) + 1) % INV_ESTADOS.length],
+                 valor: cur.valor || '', fecha: new Date().toISOString().slice(0,10) };
+    document.getElementById('inv-body').innerHTML = invBodyHTML(activeLead);
+    saveInvestigacion();
+}
+function setInvValor(key, val) {
+    if (!activeLead) return;
+    var inv = ensureInvObj(activeLead);
+    var cur = invState(activeLead, key);
+    inv[key] = { estado: cur.estado === 'pendiente' ? 'ok' : cur.estado,
+                 valor: val, fecha: new Date().toISOString().slice(0,10) };
+    saveInvestigacion();
+}
+function saveInvestigacion() {
+    if (!activeLead) return;
+    var id = activeLead.id;
+    fetch('/api/captacion/leads/'+id, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({ investigacion: activeLead.investigacion })
+    }).then(function(r){ return r.json(); }).then(function(updated){
+        var idx = allLeads.findIndex(function(l){ return l.id===id; });
+        if (idx !== -1) allLeads[idx] = updated;
+        if (activeLead && activeLead.id === id) activeLead.investigacion = updated.investigacion;
     });
 }
 
