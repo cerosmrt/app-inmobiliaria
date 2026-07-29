@@ -1447,6 +1447,8 @@ def update_lead(id):
         lead.proximo_seguimiento = datetime.fromisoformat(data['proximo_seguimiento']) if data['proximo_seguimiento'] else None
     if 'investigacion' in data:
         lead.investigacion_json = json.dumps(data['investigacion']) if data['investigacion'] else None
+    if 'candidatos' in data:
+        lead.candidatos_json = json.dumps(data['candidatos']) if data['candidatos'] else None
     lead.ultima_interaccion = datetime.utcnow()
     prop = data.get('propietario')
     if prop is not None:

@@ -461,6 +461,16 @@
 .inv-label { font-size: 12px; color: var(--text); padding-top: 3px; }
 .inv-item.inv-pendiente .inv-label { color: var(--muted); }
 .inv-item.inv-sin_dato .inv-label { color: #b45309; }
+/* ── Candidatos a propietario ── */
+.cand-empty { font-size: 11.5px; color: var(--muted); padding: 2px 0; }
+.cand-item { display: flex; gap: 6px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.cand-item.cand-verificado { background: rgba(34,197,94,0.06); }
+.cand-chip { flex-shrink: 0; width: 24px; height: 24px; border: none; background: transparent; cursor: pointer; font-size: 14px; line-height: 24px; padding: 0; border-radius: var(--radius-sm); }
+.cand-chip:hover { background: rgba(0,0,0,0.05); }
+.cand-fields { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.cand-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.dp-add-btn { margin-top: 6px; width: 100%; background: transparent; border: 1px dashed var(--border); color: var(--accent); border-radius: var(--radius-sm); padding: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.dp-add-btn:hover { background: rgba(0,0,0,0.04); }
 .dp-textarea {
     width: 100%; padding: 6px 8px; min-height: 60px; resize: vertical;
     border: 1.5px solid var(--border); border-radius: var(--radius-sm);
@@ -949,6 +959,10 @@ var INV_TEMPLATES = {
 var INV_ESTADOS = ['pendiente','ok','sin_dato'];
 var INV_ICON = { pendiente:'⬜', ok:'✅', sin_dato:'⚠️' };
 var INV_TITLE = { pendiente:'Falta chequear', ok:'Conseguido', sin_dato:'Chequeado sin éxito' };
+// Candidatos a propietario: nivel de confianza (ciclable). El verificado se promueve.
+var CONF_ORDER = ['sin_confirmar','probable','verificado'];
+var CONF_LABEL = { sin_confirmar:'Sin confirmar', probable:'Probable', verificado:'Verificado' };
+var CONF_ICON  = { sin_confirmar:'❔', probable:'🟡', verificado:'✅' };
 
 var PRI = {baja:'#94a3b8', media:'#3b82f6', alta:'#f59e0b', urgente:'#ef4444'};
 var PRI_LABEL = {baja:'Baja', media:'Media', alta:'Alta', urgente:'Urgente'};
@@ -1238,6 +1252,11 @@ function renderDetailBody(lead) {
           '<div class="dp-section-title">Investigación</div>' +
           '<div id="inv-body">' + invBodyHTML(lead) + '</div>' +
         '</div>' +
+        '<!-- Candidatos a propietario -->' +
+        '<div class="dp-section">' +
+          '<div class="dp-section-title">Candidatos a propietario</div>' +
+          '<div id="cand-body">' + candBodyHTML(lead) + '</div>' +
+        '</div>' +
         '<!-- Propietario -->' +
         '<div class="dp-section">' +
           '<div class="dp-section-title">Propietario</div>' +
@@ -1479,6 +1498,91 @@ function saveInvestigacion() {
         var idx = allLeads.findIndex(function(l){ return l.id===id; });
         if (idx !== -1) allLeads[idx] = updated;
         if (activeLead && activeLead.id === id) activeLead.investigacion = updated.investigacion;
+    });
+}
+
+// ── Candidatos a propietario ────────────────────────────────────────────────
+function candConf(c) { return CONF_ORDER.indexOf(c.confianza) === -1 ? 'sin_confirmar' : c.confianza; }
+function candBodyHTML(lead) {
+    var cands = Array.isArray(lead.candidatos) ? lead.candidatos : [];
+    var html = '';
+    if (!cands.length) html += '<div class="cand-empty">Sin candidatos todavía. Sumá los posibles dueños que vayas encontrando.</div>';
+    cands.forEach(function(c){
+        var conf = candConf(c);
+        html += '<div class="cand-item cand-'+conf+'">' +
+            '<button class="cand-chip" title="'+CONF_LABEL[conf]+' (click para cambiar)" onclick="cycleCandConfianza('+c.id+')">'+CONF_ICON[conf]+'</button>' +
+            '<div class="cand-fields">' +
+                '<input class="dp-input" value="'+esc(c.nombre||'')+'" placeholder="Nombre" onchange="setCandField('+c.id+',\'nombre\',this.value)">' +
+                '<div class="dp-input-row">' +
+                    '<input class="dp-input" value="'+esc(c.telefono||'')+'" placeholder="Teléfono" onchange="setCandField('+c.id+',\'telefono\',this.value)">' +
+                    '<input class="dp-input" value="'+esc(c.fuente||'')+'" placeholder="Fuente (vecino, cartel…)" onchange="setCandField('+c.id+',\'fuente\',this.value)">' +
+                '</div>' +
+            '</div>' +
+            '<div class="cand-actions">' +
+                '<button class="btn-dp" title="Promover a propietario del lead" onclick="promoverCandidato('+c.id+')">↑</button>' +
+                '<button class="btn-dp" title="Quitar candidato" onclick="delCandidato('+c.id+')">✕</button>' +
+            '</div>' +
+        '</div>';
+    });
+    html += '<button class="dp-add-btn" onclick="addCandidato()">+ Agregar candidato</button>';
+    return html;
+}
+function ensureCands(lead) { if (!Array.isArray(lead.candidatos)) lead.candidatos = []; return lead.candidatos; }
+function candById(id) { return (activeLead && activeLead.candidatos || []).find(function(c){ return c.id === id; }); }
+function refreshCandBody() { var el = document.getElementById('cand-body'); if (el) el.innerHTML = candBodyHTML(activeLead); }
+function addCandidato() {
+    if (!activeLead) return;
+    ensureCands(activeLead).push({ id: Date.now(), nombre:'', telefono:'', fuente:'', confianza:'sin_confirmar' });
+    refreshCandBody(); saveCandidatos();
+}
+function setCandField(id, field, val) { var c = candById(id); if (!c) return; c[field] = val; saveCandidatos(); }
+function cycleCandConfianza(id) {
+    var c = candById(id); if (!c) return;
+    var i = CONF_ORDER.indexOf(c.confianza); if (i === -1) i = 0;
+    c.confianza = CONF_ORDER[(i + 1) % CONF_ORDER.length];
+    refreshCandBody(); saveCandidatos();
+}
+function delCandidato(id) {
+    if (!activeLead) return;
+    activeLead.candidatos = (activeLead.candidatos || []).filter(function(c){ return c.id !== id; });
+    refreshCandBody(); saveCandidatos();
+}
+function saveCandidatos() {
+    if (!activeLead) return;
+    var id = activeLead.id;
+    fetch('/api/captacion/leads/'+id, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({ candidatos: activeLead.candidatos })
+    }).then(function(r){ return r.json(); }).then(function(updated){
+        var idx = allLeads.findIndex(function(l){ return l.id===id; });
+        if (idx !== -1) allLeads[idx] = updated;
+        if (activeLead && activeLead.id === id) activeLead.candidatos = updated.candidatos;
+    });
+}
+function promoverCandidato(id) {
+    var c = candById(id); if (!c || !activeLead) return;
+    if (!c.nombre && !c.telefono) { toast('Cargá al menos nombre o teléfono en el candidato.'); return; }
+    c.confianza = 'verificado';
+    var leadId = activeLead.id;
+    var pObs = (activeLead.propietario && activeLead.propietario.observaciones) || '';
+    var pEmail = (activeLead.propietario && activeLead.propietario.email) || '';
+    var nuevoEstado = (activeLead.estado === 'detectada' || activeLead.estado === 'investigar') ? 'contactar' : activeLead.estado;
+    fetch('/api/captacion/leads/'+leadId, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({
+            candidatos: activeLead.candidatos,
+            estado: nuevoEstado,
+            propietario: { nombre: c.nombre||'', telefono: c.telefono||'', whatsapp: c.telefono||'', email: pEmail, observaciones: pObs }
+        })
+    }).then(function(r){ return r.json(); }).then(function(updated){
+        var idx = allLeads.findIndex(function(l){ return l.id===leadId; });
+        if (idx !== -1) allLeads[idx] = updated;
+        activeLead = updated;
+        renderDetailBody(updated);
+        render();
+        toast(nuevoEstado === 'contactar' ? 'Promovido a propietario · lead pasa a Contactar' : 'Promovido a propietario');
     });
 }
 
