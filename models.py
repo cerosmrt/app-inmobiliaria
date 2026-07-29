@@ -205,7 +205,10 @@ class CaptacionLead(db.Model):
     # JSON [ {id, nombre, telefono, fuente, confianza} ]. confianza:
     # sin_confirmar|probable|verificado. El verificado se promueve al propietario.
     candidatos_json     = db.Column(db.Text, nullable=True)
+    # Parcela catastral vinculada (trae titular catastral y vecinos a la investigación).
+    parcela_id          = db.Column(db.Integer, db.ForeignKey('parcelas_catastrales.id'), nullable=True)
 
+    parcela      = db.relationship('ParcelaCatastral', foreign_keys=[parcela_id])
     propietario  = db.relationship('PropietarioLead', backref='lead', uselist=False, cascade='all, delete-orphan')
     actividades  = db.relationship('CaptacionActividad', backref='lead', cascade='all, delete-orphan',
                                    order_by='CaptacionActividad.fecha.desc()')
@@ -230,8 +233,30 @@ class CaptacionLead(db.Model):
             'created_by': self.created_by or '',
             'investigacion': json.loads(self.investigacion_json) if self.investigacion_json else {},
             'candidatos': json.loads(self.candidatos_json) if self.candidatos_json else [],
+            'parcela_id': self.parcela_id,
+            'parcela': self._parcela_summary(),
             'propietario': self.propietario.as_dict() if self.propietario else None,
             'actividades': [a.as_dict() for a in self.actividades],
+        }
+
+    def _parcela_summary(self):
+        p = self.parcela
+        if not p or p.deleted_at is not None:
+            return None
+        try:
+            vecinos = len(json.loads(p.neighbor_cache)) if p.neighbor_cache else 0
+        except Exception:
+            vecinos = 0
+        owners = [o.full_name for o in p.owners if o.full_name]
+        if p.propietario and p.propietario.nombre:
+            owners.append((p.propietario.nombre + ' ' + (p.propietario.apellido or '')).strip())
+        return {
+            'id': p.id,
+            'parcel_id': p.parcel_id or '',
+            'municipality': p.municipality or '',
+            'surface_area': p.surface_area,
+            'owners': owners,
+            'vecinos': vecinos,
         }
 
 

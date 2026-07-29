@@ -1449,6 +1449,8 @@ def update_lead(id):
         lead.investigacion_json = json.dumps(data['investigacion']) if data['investigacion'] else None
     if 'candidatos' in data:
         lead.candidatos_json = json.dumps(data['candidatos']) if data['candidatos'] else None
+    if 'parcela_id' in data:
+        lead.parcela_id = data['parcela_id'] or None
     lead.ultima_interaccion = datetime.utcnow()
     prop = data.get('propietario')
     if prop is not None:

@@ -471,6 +471,15 @@
 .cand-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 .dp-add-btn { margin-top: 6px; width: 100%; background: transparent; border: 1px dashed var(--border); color: var(--accent); border-radius: var(--radius-sm); padding: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
 .dp-add-btn:hover { background: rgba(0,0,0,0.04); }
+/* ── Parcela catastral vinculada ── */
+.parcela-linked { display: flex; flex-direction: column; gap: 3px; }
+.parcela-head { font-size: 12.5px; }
+.parcela-meta { font-size: 11.5px; color: var(--muted); }
+.parcela-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.parcela-results { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.parcela-opt { padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
+.parcela-opt:hover { background: rgba(0,0,0,0.04); }
+.parcela-empty { font-size: 11.5px; color: var(--muted); padding: 4px 0; }
 .dp-textarea {
     width: 100%; padding: 6px 8px; min-height: 60px; resize: vertical;
     border: 1.5px solid var(--border); border-radius: var(--radius-sm);
@@ -1252,6 +1261,11 @@ function renderDetailBody(lead) {
           '<div class="dp-section-title">Investigación</div>' +
           '<div id="inv-body">' + invBodyHTML(lead) + '</div>' +
         '</div>' +
+        '<!-- Parcela catastral -->' +
+        '<div class="dp-section">' +
+          '<div class="dp-section-title">Parcela catastral</div>' +
+          '<div id="parcela-body">' + parcelaBodyHTML(lead) + '</div>' +
+        '</div>' +
         '<!-- Candidatos a propietario -->' +
         '<div class="dp-section">' +
           '<div class="dp-section-title">Candidatos a propietario</div>' +
@@ -1584,6 +1598,74 @@ function promoverCandidato(id) {
         render();
         toast(nuevoEstado === 'contactar' ? 'Promovido a propietario · lead pasa a Contactar' : 'Promovido a propietario');
     });
+}
+
+// ── Parcela catastral ───────────────────────────────────────────────────────
+function parcelaBodyHTML(lead) {
+    var pc = lead.parcela;
+    if (pc) {
+        var owners = (pc.owners && pc.owners.length) ? pc.owners.map(esc).join(', ') : '—';
+        var sup = pc.surface_area != null ? esc(String(pc.surface_area)) + ' m²' : '—';
+        return '<div class="parcela-linked">' +
+            '<div class="parcela-head">📍 <b>Parcela '+esc(pc.parcel_id||('#'+pc.id))+'</b>'+(pc.municipality?' · '+esc(pc.municipality):'')+'</div>' +
+            '<div class="parcela-meta">Titular catastral: '+owners+'</div>' +
+            '<div class="parcela-meta">Superficie: '+sup+' · Vecinos linderos: '+(pc.vecinos||0)+'</div>' +
+            '<div class="parcela-actions">' +
+                ((pc.owners && pc.owners.length) ? '<button class="btn-dp" onclick="titularToCandidato()">+ Titular a candidatos</button>' : '') +
+                '<a class="btn-dp" href="/admin/catastro" target="_blank" style="text-decoration:none;line-height:26px">Ver en mapa</a>' +
+                '<button class="btn-dp" onclick="desvincularParcela()">Desvincular</button>' +
+            '</div>' +
+        '</div>';
+    }
+    return '<input class="dp-input" id="parcela-search" placeholder="Buscar parcela por ID / partida…" onkeyup="buscarParcela(this.value)">' +
+           '<div id="parcela-results" class="parcela-results"></div>';
+}
+var _parcelaTimer = null;
+function buscarParcela(q) {
+    clearTimeout(_parcelaTimer);
+    var res = document.getElementById('parcela-results');
+    q = (q || '').trim();
+    if (q.length < 2) { if (res) res.innerHTML = ''; return; }
+    _parcelaTimer = setTimeout(function(){
+        fetch('/api/catastro/parcelas?q='+encodeURIComponent(q), { credentials:'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(list){
+                if (!res) return;
+                if (!list.length) { res.innerHTML = '<div class="parcela-empty">Sin resultados.</div>'; return; }
+                res.innerHTML = list.slice(0,8).map(function(p){
+                    return '<div class="parcela-opt" onclick="vincularParcela('+p.id+')">' +
+                        '<b>'+esc(p.parcel_id||('#'+p.id))+'</b>'+(p.municipality?' · '+esc(p.municipality):'')+'</div>';
+                }).join('');
+            });
+    }, 250);
+}
+function vincularParcela(id) { patchParcela(id); }
+function desvincularParcela() { patchParcela(null); }
+function patchParcela(pid) {
+    if (!activeLead) return;
+    var leadId = activeLead.id;
+    fetch('/api/captacion/leads/'+leadId, {
+        method:'PATCH', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({ parcela_id: pid })
+    }).then(function(r){ return r.json(); }).then(function(updated){
+        var idx = allLeads.findIndex(function(l){ return l.id===leadId; });
+        if (idx !== -1) allLeads[idx] = updated;
+        activeLead = updated;
+        var el = document.getElementById('parcela-body');
+        if (el) el.innerHTML = parcelaBodyHTML(updated);
+        toast(pid ? 'Parcela vinculada' : 'Parcela desvinculada');
+    });
+}
+function titularToCandidato() {
+    if (!activeLead || !activeLead.parcela || !(activeLead.parcela.owners || []).length) return;
+    var cands = ensureCands(activeLead);
+    activeLead.parcela.owners.forEach(function(name){
+        cands.push({ id: Date.now() + Math.floor(Math.random()*1000), nombre:name, telefono:'', fuente:'catastro', confianza:'probable' });
+    });
+    refreshCandBody();
+    saveCandidatos();
+    toast('Titular agregado a candidatos');
 }
 
 function convertirLead() {
