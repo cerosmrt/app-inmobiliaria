@@ -1,3 +1,4 @@
+import json
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -197,6 +198,9 @@ class CaptacionLead(db.Model):
     proximo_seguimiento = db.Column(db.DateTime, nullable=True)
     created_by          = db.Column(db.String, nullable=True)
     deleted_at          = db.Column(db.DateTime, nullable=True)
+    # Estado del workflow de investigación por pasos (etapa "Investigar"):
+    # JSON { clave_item: {estado, valor, fecha} }. La plantilla vive en el front.
+    investigacion_json  = db.Column(db.Text, nullable=True)
 
     propietario  = db.relationship('PropietarioLead', backref='lead', uselist=False, cascade='all, delete-orphan')
     actividades  = db.relationship('CaptacionActividad', backref='lead', cascade='all, delete-orphan',
@@ -220,6 +224,7 @@ class CaptacionLead(db.Model):
             'ultima_interaccion': self.ultima_interaccion.strftime('%d/%m/%Y %H:%M') if self.ultima_interaccion else None,
             'proximo_seguimiento': self.proximo_seguimiento.strftime('%Y-%m-%d') if self.proximo_seguimiento else None,
             'created_by': self.created_by or '',
+            'investigacion': json.loads(self.investigacion_json) if self.investigacion_json else {},
             'propietario': self.propietario.as_dict() if self.propietario else None,
             'actividades': [a.as_dict() for a in self.actividades],
         }

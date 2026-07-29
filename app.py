@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import io
+import json
 import hmac
 import secrets
 import time
@@ -1444,6 +1445,8 @@ def update_lead(id):
             setattr(lead, f, data[f])
     if 'proximo_seguimiento' in data:
         lead.proximo_seguimiento = datetime.fromisoformat(data['proximo_seguimiento']) if data['proximo_seguimiento'] else None
+    if 'investigacion' in data:
+        lead.investigacion_json = json.dumps(data['investigacion']) if data['investigacion'] else None
     lead.ultima_interaccion = datetime.utcnow()
     prop = data.get('propietario')
     if prop is not None:
