@@ -103,10 +103,9 @@
     <div id="tab-interesados" style="display:none">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaInteresado()">+ Agregar interesado</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosInteresados()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
-            <input type="text" id="filtroInteresadosTexto" placeholder="Nombre o Apellido" onkeyup="filtrarInteresados()" style="min-width:200px">
+            <input type="text" id="filtroInteresadosTexto" placeholder="Interesado" onkeyup="filtrarInteresados()" style="min-width:200px">
             <div class="sep"></div>
             <select id="filtroInteresadosOperacion" onchange="filtrarInteresados()">
                 <option value="">Todas las operaciones</option>
@@ -140,10 +139,9 @@
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaPropietario()">+ Agregar propietario</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('clientes')">↑ Importar CSV</button>
-            <button class="btn btn-gray"  onclick="resetFiltrosPropietarios()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
-            <input type="text" id="filtroPropietariosTexto" placeholder="Nombre o Apellido" onkeyup="filtrarPropietarios()" style="min-width:200px">
+            <input type="text" id="filtroPropietariosTexto" placeholder="Propietario" onkeyup="filtrarPropietarios()" style="min-width:200px">
         </div>
         <div class="table-wrap">
             <table id="tablaPropietarios">
@@ -627,20 +625,6 @@
         });
         agregarEventosEdicionTextoPersonas();
         agregarEventosEdicionSelectPersonas();
-    }
-
-    function resetFiltrosInteresados() {
-        ['filtroInteresadosTexto','filtroInteresadosOperacion','filtroInteresadosAmbientes'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.value = '';
-        });
-        filtrarInteresados();
-    }
-
-    function resetFiltrosPropietarios() {
-        var el = document.getElementById('filtroPropietariosTexto');
-        if (el) el.value = '';
-        filtrarPropietarios();
     }
 
     function agregarFilaInteresado() {
