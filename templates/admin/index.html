@@ -103,7 +103,6 @@
     <div id="tab-interesados" style="display:none">
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaInteresado()">+ Agregar interesado</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaInteresados', 'Interesados')">Imprimir</button>
             <button class="btn btn-gray"  onclick="resetFiltrosInteresados()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
@@ -141,7 +140,6 @@
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="agregarFilaPropietario()">+ Agregar propietario</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('clientes')">↑ Importar CSV</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaPropietarios', 'Propietarios')">Imprimir</button>
             <button class="btn btn-gray"  onclick="resetFiltrosPropietarios()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
@@ -168,7 +166,6 @@
         <div class="toolbar no-print">
             <button class="btn btn-green" onclick="abrirModalNuevaPropiedad()">+ Agregar propiedad</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('propiedades')">↑ Importar CSV</button>
-            <button class="btn btn-print" onclick="imprimirTabla('tablaPropiedades', 'Propiedades')">Imprimir</button>
             <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
         </div>
         <div class="filterbox no-print">
@@ -535,29 +532,6 @@
             if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * s.dir;
             return String(va).localeCompare(String(vb), 'es', { numeric: true }) * s.dir;
         });
-    }
-
-    // ── PRINT ─────────────────────────────────────────────────────────────────
-    function imprimirTabla(tablaId, titulo) {
-        const tabla = document.getElementById(tablaId).outerHTML;
-        const fecha = new Date().toLocaleDateString('es-AR');
-        const v = window.open('', '_blank');
-        v.document.write('<html><head><title>' + titulo + ' — ' + fecha + '</title>' +
-        '<style>' +
-        'body { font-family: Arial, sans-serif; font-size: 11px; }' +
-        'h2 { font-size: 14px; margin-bottom: 2px; }' +
-        'p  { color: #64748b; margin: 0 0 10px; font-size: 11px; }' +
-        'table { width: 100%; border-collapse: collapse; }' +
-        'th { background: #1a1a1a; color: white; padding: 5px 7px; text-align: left; font-size: 10px; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-        'td { padding: 4px 7px; border-bottom: 1px solid #e2e8f0; }' +
-        'tr:nth-child(even) td { background: #f8fafc; }' +
-        '.no-print { display: none; }' +
-        '.badge { border: 1px solid currentColor; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; text-transform: uppercase; }' +
-        'a { color: black; text-decoration: none; }' +
-        '.wa-link { display: none; }' +
-        '</style></head>' +
-        '<body><h2>' + titulo + '</h2><p>' + fecha + '</p>' + tabla + '</body></html>');
-        v.document.close(); v.print();
     }
 
     // ── MODALS ────────────────────────────────────────────────────────────────

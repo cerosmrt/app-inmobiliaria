@@ -316,8 +316,6 @@ button:focus:not(:focus-visible) { outline: none; }
 .btn-green:hover { background: var(--accent-dk); border-color: var(--accent-dk); }
 .btn-blue  { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
 .btn-blue:hover  { background: var(--surface-2); }
-.btn-print { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-.btn-print:hover { background: var(--surface-2); }
 
 .btn-action {
     font-size: 11.5px; padding: 3px 9px; border: 1px solid transparent;
