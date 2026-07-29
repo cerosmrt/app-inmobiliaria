@@ -78,6 +78,9 @@
     .disp-item:last-child { border-bottom: none; }
     .disp-item:hover { background: var(--accent-lt); }
     .disp-empty { padding: 10px; font-size: 12px; color: var(--muted); text-align: center; }
+    /* Fila de alta desde el buscador cuando no hay coincidencias */
+    .create-row td { cursor: pointer; color: var(--accent); font-weight: 600; text-align: center; padding: 12px; transition: background var(--tx); }
+    .create-row:hover td { background: var(--accent-lt); }
 </style>
 {% endblock %}
 
@@ -101,9 +104,6 @@
 
     <!-- ═══ TAB INTERESADOS ═══ -->
     <div id="tab-interesados" style="display:none">
-        <div class="toolbar no-print">
-            <button class="btn btn-green" onclick="agregarFilaInteresado()">+ Agregar interesado</button>
-        </div>
         <div class="filterbox no-print">
             <input type="text" id="filtroInteresadosTexto" placeholder="Interesado" onkeyup="filtrarInteresados()" style="min-width:200px">
             <div class="sep"></div>
@@ -137,7 +137,6 @@
     <!-- ═══ TAB PROPIETARIOS ═══ -->
     <div id="tab-propietarios" style="display:none">
         <div class="toolbar no-print">
-            <button class="btn btn-green" onclick="agregarFilaPropietario()">+ Agregar propietario</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('clientes')">↑ Importar CSV</button>
         </div>
         <div class="filterbox no-print">
@@ -581,7 +580,8 @@
             return matchTexto && matchOp && matchAmb;
         });
         filtrados = applySort(filtrados, sortInteresados);
-        renderClientesTabla('tablaInteresados', filtrados, 'interesado');
+        var raw = (document.getElementById('filtroInteresadosTexto') || {value:''}).value.trim();
+        renderClientesTabla('tablaInteresados', filtrados, 'interesado', raw);
         guardarFiltrosEnURL();
     }
 
@@ -592,11 +592,34 @@
             return c.nombre.toLowerCase().includes(texto) || c.apellido.toLowerCase().includes(texto);
         });
         filtrados = applySort(filtrados, sortPropietarios);
-        renderClientesTabla('tablaPropietarios', filtrados, 'propietario');
+        var raw = (document.getElementById('filtroPropietariosTexto') || {value:''}).value.trim();
+        renderClientesTabla('tablaPropietarios', filtrados, 'propietario', raw);
         guardarFiltrosEnURL();
     }
 
-    function renderClientesTabla(tablaId, filtrados, tipo) {
+    // Alta desde el buscador: si lo tipeado no coincide con nadie, ofrece
+    // "+ Crear «X»" como fila al pie; crea al toque y queda editable inline.
+    function crearDesdeBuscador(tipo, texto) {
+        var q = (texto || '').trim();
+        if (!q) return;
+        var parts = q.split(/\s+/);
+        var cliente = { nombre: parts[0] || '', apellido: parts.slice(1).join(' ') || '', tipo: tipo, descripcion: '' };
+        if (!cliente.nombre) { toast('Escribí un nombre.', 'error'); return; }
+        fetch('/api/clientes', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cliente)
+        }).then(function(r) { return r.json(); })
+          .then(function() {
+              toast((tipo === 'propietario' ? 'Propietario' : 'Interesado') + ' creado', 'success');
+              var fid = tipo === 'propietario' ? 'filtroPropietariosTexto' : 'filtroInteresadosTexto';
+              var el = document.getElementById(fid);
+              if (el) el.value = '';
+              cargarClientes();
+          })
+          .catch(function(e) { console.error('Error al crear cliente', e); });
+    }
+
+    function renderClientesTabla(tablaId, filtrados, tipo, raw) {
         var tbody = document.querySelector('#' + tablaId + ' tbody');
         if (!tbody) return;
         tbody.innerHTML = '';
@@ -623,80 +646,19 @@
                 '<td class="no-print"><button class="btn-action btn-cancel" onclick="eliminarCliente(' + c.id + ')">&#x2715;</button></td>';
             tbody.appendChild(row);
         });
+        if (raw && filtrados.length === 0) {
+            var nCols = document.querySelectorAll('#' + tablaId + ' thead th').length || 1;
+            var tr = document.createElement('tr');
+            tr.className = 'create-row';
+            var td = document.createElement('td');
+            td.colSpan = nCols;
+            td.innerHTML = '+ Crear &laquo;' + esc(raw) + '&raquo;';
+            td.onclick = function() { crearDesdeBuscador(tipo, raw); };
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        }
         agregarEventosEdicionTextoPersonas();
         agregarEventosEdicionSelectPersonas();
-    }
-
-    function agregarFilaInteresado() {
-        var tbody = document.querySelector('#tablaInteresados tbody');
-        var row = document.createElement('tr');
-        row.classList.add('new-row');
-        row.innerHTML =
-            '<td data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>' +
-            '<td data-field="telefono"><input type="text" placeholder="Teléfono"></td>' +
-            '<td data-field="email"><input type="text" placeholder="Email"></td>' +
-            '<td>—</td>' +
-            '<td data-field="rango_min"><input type="number" placeholder="Min"></td>' +
-            '<td data-field="rango_max"><input type="number" placeholder="Max"></td>' +
-            '<td><input type="checkbox" data-field="es_usd"></td>' +
-            '<td data-field="ambientes"><input type="number" placeholder="Amb"></td>' +
-            '<td data-field="operacion"><select><option value="venta">Venta</option><option value="renta">Renta</option><option value="ambas">Ambas</option></select></td>' +
-            '<td class="no-print">' +
-                '<button class="btn-action btn-save" onclick="guardarNuevoCliente(this, \'interesado\')">&#x2714;</button>' +
-                '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
-            '</td>';
-        tbody.insertBefore(row, tbody.firstChild);
-    }
-
-    function agregarFilaPropietario() {
-        var tbody = document.querySelector('#tablaPropietarios tbody');
-        var row = document.createElement('tr');
-        row.classList.add('new-row');
-        row.innerHTML =
-            '<td data-field="nombre"><input type="text" placeholder="Nombre Apellido"></td>' +
-            '<td data-field="telefono"><input type="text" placeholder="Teléfono"></td>' +
-            '<td data-field="email"><input type="text" placeholder="Email"></td>' +
-            '<td>—</td>' +
-            '<td class="no-print">' +
-                '<button class="btn-action btn-save" onclick="guardarNuevoCliente(this, \'propietario\')">&#x2714;</button>' +
-                '<button class="btn-action btn-cancel" onclick="this.closest(\'tr\').remove()">&#x2715;</button>' +
-            '</td>';
-        tbody.insertBefore(row, tbody.firstChild);
-    }
-
-    function guardarNuevoCliente(btn, tipo) {
-        const row = btn.closest('tr');
-        const nombreCompleto = row.querySelector('[data-field="nombre"] input').value.split(' ');
-        const telEl      = row.querySelector('[data-field="telefono"] input');
-        const emailEl    = row.querySelector('[data-field="email"] input');
-        const rangoMinEl = row.querySelector('[data-field="rango_min"] input');
-        const rangoMaxEl = row.querySelector('[data-field="rango_max"] input');
-        const esUsdEl    = row.querySelector('[data-field="es_usd"]');
-        const ambEl      = row.querySelector('[data-field="ambientes"] input');
-        const opEl       = row.querySelector('[data-field="operacion"] select');
-        const cliente = {
-            nombre:      nombreCompleto[0] || '',
-            apellido:    nombreCompleto.slice(1).join(' ') || '',
-            telefono:    telEl   ? telEl.value   : '',
-            email:       emailEl ? (emailEl.value || null) : null,
-            tipo:        tipo || 'interesado',
-            rango_min:   rangoMinEl ? (parseFloat(rangoMinEl.value) || null) : null,
-            rango_max:   rangoMaxEl ? (parseFloat(rangoMaxEl.value) || null) : null,
-            es_usd:      esUsdEl ? esUsdEl.checked : false,
-            ambientes:   ambEl ? (parseInt(ambEl.value) || null) : null,
-            operacion:   opEl  ? opEl.value : 'venta',
-            descripcion: ''
-        };
-        if (!cliente.nombre || !cliente.apellido || !cliente.telefono) {
-            toast('Completá Nombre, Apellido y Teléfono.', 'error');
-            return;
-        }
-        fetch('/api/clientes', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cliente)
-        }).then(function(r) { return r.json(); })
-          .then(function() { toast('Cliente agregado', 'success'); cargarClientes(); })
-          .catch(function(e) { console.error('Error al guardar cliente', e); });
     }
 
     function eliminarCliente(id) {
