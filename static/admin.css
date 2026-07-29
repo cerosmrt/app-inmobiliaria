@@ -264,10 +264,12 @@ body.sb-collapsed .sb-reopen { display: flex; }
 .stat-chip {
     display: flex; align-items: center; gap: 8px;
     padding: 9px 18px; border-right: 1px solid var(--border);
-    flex-shrink: 0; cursor: default;
+    flex-shrink: 0; cursor: pointer;
     transition: background var(--tx);
 }
 .stat-chip:hover { background: var(--surface-2); }
+.stat-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.stat-chip.active { background: var(--surface-2); box-shadow: inset 0 -2px 0 var(--accent); }
 .stat-chip:last-child { border-right: none; }
 .chip-num {
     font-size: 17px; font-weight: 600; line-height: 1;

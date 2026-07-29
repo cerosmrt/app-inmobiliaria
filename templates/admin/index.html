@@ -841,6 +841,7 @@
         agregarEventosEdicionTextoPropiedades();
         agregarEventosEdicionSelectPropiedades();
         guardarFiltrosEnURL();
+        syncChipsActivas();
     }
 
     function togglePublicada(id, actual) {
@@ -1093,23 +1094,77 @@
         fetch('/api/stats')
             .then(function(r) { return r.json(); })
             .then(function(s) {
+                // Cada chip es clickeable: las de estado y "Publicadas" filtran la
+                // pestaña Propiedades; "Clientes" abre Propietarios; "Sin leer",
+                // Consultas. El data-attr define la acción (ver statChipClick).
                 var defs = [
-                    { label: 'Disponibles', val: s.disponibles,         cls: 'green'  },
-                    { label: 'Reservadas',  val: s.reservadas,          cls: 'amber'  },
-                    { label: 'Vendidas',    val: s.vendidas,            cls: 'red'    },
-                    { label: 'Rentadas',    val: s.rentadas,            cls: 'orange' },
-                    { label: 'Cerradas',    val: s.cerradas,            cls: 'slate'  },
-                    { label: 'Publicadas',  val: s.publicadas,          cls: 'blue'   },
-                    { label: 'Clientes',    val: s.clientes,            cls: 'navy'   },
-                    { label: 'Sin leer',    val: s.consultas_no_leidas, cls: 'red'    },
+                    { label: 'Disponibles', val: s.disponibles,         cls: 'green',  estado: 'disponible' },
+                    { label: 'Reservadas',  val: s.reservadas,          cls: 'amber',  estado: 'reservada'  },
+                    { label: 'Vendidas',    val: s.vendidas,            cls: 'red',    estado: 'vendida'    },
+                    { label: 'Rentadas',    val: s.rentadas,            cls: 'orange', estado: 'rentada'    },
+                    { label: 'Cerradas',    val: s.cerradas,            cls: 'slate',  estado: 'cerrada'    },
+                    { label: 'Publicadas',  val: s.publicadas,          cls: 'blue',   pub: true            },
+                    { label: 'Clientes',    val: s.clientes,            cls: 'navy',   tab: 'propietarios'  },
+                    { label: 'Sin leer',    val: s.consultas_no_leidas, cls: 'red',    href: '/admin/consultas' },
                 ];
-                document.getElementById('stats-strip').innerHTML = defs.map(function(d) {
-                    return '<div class="stat-chip chip-' + d.cls + '">' +
+                var strip = document.getElementById('stats-strip');
+                strip.innerHTML = defs.map(function(d) {
+                    var attrs = 'class="stat-chip chip-' + d.cls + '" role="button" tabindex="0"';
+                    if (d.estado) attrs += ' data-estado="' + d.estado + '"';
+                    if (d.pub)    attrs += ' data-pub="1"';
+                    if (d.tab)    attrs += ' data-tab="' + d.tab + '"';
+                    if (d.href)   attrs += ' data-href="' + d.href + '"';
+                    return '<div ' + attrs + ' title="' + esc(d.label) + '">' +
                         '<span class="chip-num">' + d.val + '</span>' +
                         '<span class="chip-lbl">' + esc(d.label) + '</span>' +
                     '</div>';
                 }).join('');
+                strip.querySelectorAll('.stat-chip').forEach(function(el) {
+                    el.addEventListener('click', function() { statChipClick(el); });
+                    el.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); statChipClick(el); }
+                    });
+                });
+                syncChipsActivas();
             }).catch(function() {});
+    }
+
+    // Acción de cada chip de la barra de stats (ver cargarStats).
+    function statChipClick(el) {
+        if (el.dataset.href) { window.location.href = el.dataset.href; return; }
+        if (el.dataset.tab)  { mostrarTab(el.dataset.tab); return; }
+
+        var estadoEl = document.getElementById('filtroEstado');
+        var pubEl    = document.getElementById('filtroPublicadas');
+        // Toggle: si el filtro de esta chip ya está aplicado, se limpia.
+        var yaActivo = (el.dataset.estado && estadoEl.value === el.dataset.estado)
+                    || (el.dataset.pub && pubEl.checked);
+
+        mostrarTab('propiedades');
+        resetFiltrosPropiedades();          // deja una vista limpia (y re-renderiza)
+        if (!yaActivo) {
+            if (el.dataset.estado) estadoEl.value = el.dataset.estado;
+            if (el.dataset.pub)    pubEl.checked = true;
+            filtrarPropiedades();
+        }
+        syncChipsActivas();
+    }
+
+    // Resalta la chip cuyo filtro está aplicado en la pestaña Propiedades.
+    function syncChipsActivas() {
+        var estadoEl = document.getElementById('filtroEstado');
+        var pubEl    = document.getElementById('filtroPublicadas');
+        var estado   = estadoEl ? estadoEl.value : '';
+        var pub      = pubEl ? pubEl.checked : false;
+        var tabProp  = document.getElementById('tab-propiedades');
+        var onProp   = tabProp && tabProp.style.display !== 'none';
+        document.querySelectorAll('#stats-strip .stat-chip').forEach(function(el) {
+            var act = onProp && (
+                (el.dataset.estado && el.dataset.estado === estado) ||
+                (el.dataset.pub && pub)
+            );
+            el.classList.toggle('active', !!act);
+        });
     }
 
     // ── ARCHIVADOS ────────────────────────────────────────────────────────────
