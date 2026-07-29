@@ -1604,13 +1604,63 @@ def import_leads():
 
 # ── Propiedades: Bulk Import CSV ──────────────────────────────────────────────
 
+# Propiedades y propietarios están vinculados: un mismo CSV puede traer
+# ambas puntas y estos helpers crean/reusan el otro lado y los enlazan, para
+# no cargar dos veces. Reusan por coincidencia (teléfono, o nombre+apellido;
+# dirección para la propiedad) en vez de duplicar.
+def _imp_norm(s):
+    return (s or '').strip()
+
+def _find_or_create_cliente(nombre, apellido, telefono, email=None, tipo='propietario'):
+    nombre, apellido, telefono = _imp_norm(nombre), _imp_norm(apellido), _imp_norm(telefono)
+    email = _imp_norm(email) or None
+    if not nombre and not apellido and not telefono:
+        return None
+    q = Cliente.query.filter(Cliente.deleted_at.is_(None))
+    existing = None
+    if telefono:
+        existing = q.filter(Cliente.telefono == telefono).first()
+    if existing is None and (nombre or apellido):
+        existing = q.filter(
+            db.func.lower(Cliente.nombre) == nombre.lower(),
+            db.func.lower(Cliente.apellido) == apellido.lower(),
+        ).first()
+    if existing is not None:
+        return existing
+    cli = Cliente(nombre=nombre or apellido or telefono, apellido=apellido,
+                  telefono=telefono, email=email, tipo=tipo)
+    db.session.add(cli)
+    return cli
+
+def _find_or_create_propiedad(direccion, row=None):
+    direccion = _imp_norm(direccion)
+    if not direccion:
+        return None
+    existing = Propiedad.query.filter(
+        Propiedad.deleted_at.is_(None),
+        db.func.lower(Propiedad.direccion) == direccion.lower(),
+    ).first()
+    if existing is not None:
+        return existing
+    row = row or {}
+    prop = Propiedad(
+        direccion=direccion,
+        tipo=_imp_norm(row.get('propiedad_tipo')) or 'otro',
+        operacion=_imp_norm(row.get('propiedad_operacion')) or None,
+        estado='disponible',
+    )
+    db.session.add(prop)
+    return prop
+
 @app.route('/api/propiedades/import/template')
 @login_required
 def propiedades_import_template():
     csv_content = (
         "direccion,barrio,tipo,operacion,estado,rango_min,rango_max,es_usd,"
-        "ambientes,superficie_terreno,superficie_cubierta,codigo,descripcion,publicada\n"
-        "Av. Ejemplo 123,Centro,casa,venta,disponible,50000,70000,true,3,200,150,P001,Descripcion,false\n"
+        "ambientes,superficie_terreno,superficie_cubierta,codigo,descripcion,publicada,"
+        "propietario_nombre,propietario_apellido,propietario_telefono,propietario_email\n"
+        "Av. Ejemplo 123,Centro,casa,venta,disponible,50000,70000,true,3,200,150,P001,Descripcion,false,"
+        "Juan,García,2235551234,juan@ejemplo.com\n"
     )
     return Response(
         csv_content,
@@ -1662,6 +1712,12 @@ def import_propiedades():
                 publicada=_bool(row.get('publicada', 'false')),
             )
             db.session.add(prop)
+            # Propietario en la misma fila → crear/vincular (cubre ambas puntas)
+            cli = _find_or_create_cliente(
+                row.get('propietario_nombre', ''), row.get('propietario_apellido', ''),
+                row.get('propietario_telefono', ''), row.get('propietario_email', ''))
+            if cli is not None and cli not in prop.propietarios:
+                prop.propietarios.append(cli)
             created += 1
         except Exception as e:
             errors.append(f"Fila {i+2}: {e}")
@@ -1674,8 +1730,10 @@ def import_propiedades():
 @login_required
 def clientes_import_template():
     csv_content = (
-        "nombre,apellido,telefono,email,tipo,rango_min,rango_max,es_usd,ambientes,operacion,descripcion\n"
-        "Juan,García,2235551234,juan@ejemplo.com,propietario,,,false,,,\n"
+        "nombre,apellido,telefono,email,tipo,rango_min,rango_max,es_usd,ambientes,operacion,descripcion,"
+        "propiedad_direccion,propiedad_tipo,propiedad_operacion\n"
+        "Juan,García,2235551234,juan@ejemplo.com,propietario,,,false,,,,"
+        "Av. Ejemplo 123,casa,venta\n"
     )
     return Response(
         csv_content,
@@ -1726,6 +1784,10 @@ def import_clientes():
                 descripcion=row.get('descripcion', '').strip() or None,
             )
             db.session.add(cliente)
+            # Propiedad en la misma fila → crear/vincular (cubre ambas puntas)
+            prop = _find_or_create_propiedad(row.get('propiedad_direccion', ''), row)
+            if prop is not None and (cliente.tipo or 'propietario') == 'propietario' and cliente not in prop.propietarios:
+                prop.propietarios.append(cliente)
             created += 1
         except Exception as e:
             errors.append(f"Fila {i+2}: {e}")
