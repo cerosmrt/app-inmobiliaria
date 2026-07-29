@@ -172,7 +172,7 @@
             <input type="text" id="filtroDireccion" placeholder="Propietario o dirección" onkeyup="filtrarPropiedades()" style="min-width:200px">
             <div class="sep"></div>
             <select id="filtroTipo" onchange="filtrarPropiedades()">
-                <option value="">Todos los tipos</option>
+                <option value="">Tipo</option>
                 <option value="casa">Casa</option>
                 <option value="departamento">Departamento</option>
                 <option value="local">Local</option>
@@ -181,7 +181,7 @@
                 <option value="otro">Otro</option>
             </select>
             <select id="filtroEstado" onchange="filtrarPropiedades()">
-                <option value="">Todos los estados</option>
+                <option value="">Estado</option>
                 <option value="disponible">Disponible</option>
                 <option value="reservada">Reservada</option>
                 <option value="vendida">Vendida</option>
@@ -190,7 +190,7 @@
             </select>
             <input type="number" id="filtroAmbientesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()" style="width:90px">
             <div class="sep"></div>
-            <label><input type="checkbox" id="filtroPublicadas" onchange="filtrarPropiedades()"> Solo publicadas</label>
+            <label><input type="checkbox" id="filtroPublicadas" onchange="filtrarPropiedades()"> Publicadas</label>
         </div>
         <div class="table-wrap">
             <table id="tablaPropiedades">
