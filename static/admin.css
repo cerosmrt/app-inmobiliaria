@@ -536,9 +536,13 @@ a:hover { color: var(--text); text-decoration: underline; }
 .btn-map:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); text-decoration: none; }
 
 /* ── Print ───────────────────────────────────────────────────────────────── */
+/* Número de teléfono: solo texto en papel; en pantalla vive el ícono de WhatsApp */
+.tel-print { display: none; }
+
 @media print {
     .sidebar, .page-topbar, .stats-strip, .toolbar,
-    .filterbox, .btn-action, .no-print, .sb-toggle { display: none !important; }
+    .filterbox, .btn-action, .no-print, .sb-toggle, .wa-icon { display: none !important; }
+    .tel-print { display: inline !important; }
     .main-area { margin-left: 0; }
     body { background: white; font-size: 11px; }
     .table-wrap { border: 1px solid #ccc; border-radius: 0; }
