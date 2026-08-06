@@ -352,6 +352,33 @@ def admin_setup():
             return redirect(url_for('admin_login'))
     return render_template('admin/setup.html', error=error)
 
+@app.route('/admin/_import_uploads', methods=['POST'])
+def _import_uploads_temp():
+    # TEMPORAL: migración one-time de fotos al volumen. Protegido con SECRET_KEY.
+    # ELIMINAR después de migrar.
+    key = request.headers.get('X-Import-Key', '')
+    if not key or not hmac.compare_digest(key, app.config.get('SECRET_KEY') or ''):
+        return jsonify({'error': 'forbidden'}), 403
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'error': 'no file'}), 400
+    import zipfile as _zip, io as _io3
+    base = os.path.realpath(app.config['UPLOAD_FOLDER'])
+    os.makedirs(base, exist_ok=True)
+    count = 0
+    with _zip.ZipFile(_io3.BytesIO(f.read())) as z:
+        for name in z.namelist():
+            if name.endswith('/'):
+                continue
+            dest = os.path.realpath(os.path.join(base, name))
+            if dest != base and not dest.startswith(base + os.sep):
+                continue  # anti zip-slip
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with z.open(name) as fsrc, open(dest, 'wb') as fout:
+                fout.write(fsrc.read())
+            count += 1
+    return jsonify({'imported': count})
+
 @app.route('/cliente/<int:id>')
 @login_required
 def cliente_perfil(id):
