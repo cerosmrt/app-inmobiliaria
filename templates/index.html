@@ -430,9 +430,9 @@
     <div class="hero-bg"></div>
     <div class="hero-grain"></div>
     <div class="hero-content">
-        <div class="hero-eyebrow">Más de 30 años de experiencia</div>
-        <h1>Tu próxima propiedad<br>te está <em>esperando</em></h1>
-        <p class="hero-sub">Propiedades en venta en Buenos Aires.<br>Te acompañamos en cada paso del proceso.</p>
+        <div class="hero-eyebrow">{{ textos.hero_eyebrow }}</div>
+        <h1{% if textos.hero_titulo_size %} style="font-size:{{ textos.hero_titulo_size }}px"{% endif %}>{{ textos.hero_titulo | nl2br }}</h1>
+        <p class="hero-sub">{{ textos.hero_sub | nl2br }}</p>
         <div class="hero-actions">
             <a href="#propiedades" class="hero-cta">
                 Ver propiedades

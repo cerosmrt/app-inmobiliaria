@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response, send_file, abort, g
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento, Adjunto, ADMIN_SECCIONES
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento, Adjunto, ADMIN_SECCIONES, SiteConfig
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -360,6 +360,41 @@ def _contacto():
         'contacto_email':    app.config.get('CONTACTO_EMAIL', ''),
     }
 
+# ── Textos editables del sitio (panel de textos) ───────────────────────────────
+# Registro de campos editables: clave, label, default y tipo (text/textarea/px).
+SITE_TEXTOS = [
+    {'clave': 'hero_eyebrow',     'label': 'Home · texto chico de arriba',   'tipo': 'text',
+     'default': 'Más de 30 años de experiencia'},
+    {'clave': 'hero_titulo',      'label': 'Home · título principal',        'tipo': 'textarea',
+     'default': 'Tu próxima propiedad\nte está esperando'},
+    {'clave': 'hero_titulo_size', 'label': 'Home · tamaño del título (px, opcional)', 'tipo': 'px',
+     'default': ''},
+    {'clave': 'hero_sub',         'label': 'Home · subtítulo',               'tipo': 'textarea',
+     'default': 'Propiedades en venta en Buenos Aires.\nTe acompañamos en cada paso del proceso.'},
+]
+
+def get_textos():
+    """Dict clave→valor de los textos del sitio (con fallback al default)."""
+    try:
+        guardados = {c.clave: c.valor for c in SiteConfig.query.all()}
+    except Exception:
+        guardados = {}
+    out = {}
+    for f in SITE_TEXTOS:
+        v = guardados.get(f['clave'])
+        out[f['clave']] = v if (v is not None and v != '') else f['default']
+    return out
+
+@app.context_processor
+def inject_textos():
+    return {'textos': get_textos()}
+
+@app.template_filter('nl2br')
+def _nl2br(s):
+    # Escapa el HTML y convierte saltos de línea en <br> (seguro para textos editables).
+    from markupsafe import Markup, escape
+    return Markup('<br>'.join(escape(s or '').split('\n')))
+
 # ── Public pages ──────────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -531,6 +566,31 @@ def delete_admin(id):
     db.session.delete(admin)
     db.session.commit()
     return jsonify({"status": "ok"})
+
+# ── Panel de textos del sitio (solo dueño) ─────────────────────────────────────
+
+@app.route('/admin/textos')
+@dueno_required
+def admin_textos():
+    valores = get_textos()
+    campos = [dict(f, valor=valores.get(f['clave'], '')) for f in SITE_TEXTOS]
+    return render_template('admin/textos.html', campos=campos)
+
+@app.route('/api/textos', methods=['POST'])
+@api_dueno_required
+def guardar_textos():
+    data = request.get_json(silent=True) or {}
+    claves_validas = {f['clave'] for f in SITE_TEXTOS}
+    for clave, valor in data.items():
+        if clave not in claves_validas:
+            continue
+        fila = db.session.get(SiteConfig, clave)
+        if fila is None:
+            fila = SiteConfig(clave=clave)
+            db.session.add(fila)
+        fila.valor = (valor or '').strip()
+    db.session.commit()
+    return jsonify({"status": "ok", "textos": get_textos()})
 
 @app.route('/cliente/<int:id>')
 @login_required

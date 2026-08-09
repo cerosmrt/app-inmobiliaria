@@ -5,6 +5,13 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+
+class SiteConfig(db.Model):
+    """Clave-valor para textos editables del sitio público (panel de textos)."""
+    __tablename__ = 'site_config'
+    clave = db.Column(db.String(80), primary_key=True)
+    valor = db.Column(db.Text, nullable=True)
+
 interesados_propiedades = db.Table('interesados_propiedades',
     db.Column('propiedad_id', db.Integer, db.ForeignKey('propiedades.id'), primary_key=True),
     db.Column('cliente_id', db.Integer, db.ForeignKey('clientes.id'), primary_key=True)
