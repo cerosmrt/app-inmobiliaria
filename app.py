@@ -323,6 +323,23 @@ def dueno_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def api_dueno_required(f):
+    """API solo-dueño: 401 sin sesión, 403 si no es dueño; valida CSRF en mutaciones."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'admin_id' not in session:
+            return jsonify({"error": "No autorizado"}), 401
+        if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            token = request.headers.get('X-CSRFToken', '')
+            stored = session.get('csrf_token', '')
+            if not token or not stored or not hmac.compare_digest(token, stored):
+                return jsonify({"error": "Token CSRF inválido"}), 403
+        a = current_admin()
+        if not a or not a.es_dueno:
+            return jsonify({"error": "Solo el dueño puede gestionar administradores"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
 # ── Context processor ─────────────────────────────────────────────────────────
 
 @app.context_processor
@@ -443,6 +460,66 @@ def admin_registro():
                 db.session.commit()
                 return redirect(url_for('admin_login'))
     return render_template('admin/registro.html', error=error)
+
+# ── Gestor de administradores (solo dueño) ─────────────────────────────────────
+
+@app.route('/admin/usuarios')
+@dueno_required
+def admin_usuarios():
+    return render_template('admin/usuarios.html')
+
+@app.route('/api/admins', methods=['GET'])
+@api_dueno_required
+def get_admins():
+    admins = Admin.query.order_by(Admin.id).all()
+    return jsonify([a.as_dict() for a in admins])
+
+@app.route('/api/admins', methods=['POST'])
+@api_dueno_required
+def create_admin():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    if not email:
+        return jsonify({"error": "El email es requerido"}), 400
+    if Admin.query.filter(db.func.lower(Admin.email) == email).first():
+        return jsonify({"error": "Ya existe un administrador con ese email"}), 409
+    permisos = data.get('permisos') or {}
+    limpio = {s: bool(permisos.get(s)) for s in ADMIN_SECCIONES}
+    admin = Admin(email=email, es_dueno=False, permisos_json=json.dumps(limpio))
+    # Sin password_hash: queda "pendiente" hasta que el invitado se registre.
+    db.session.add(admin)
+    db.session.commit()
+    return jsonify(admin.as_dict()), 201
+
+@app.route('/api/admins/<int:id>', methods=['PUT'])
+@api_dueno_required
+def update_admin(id):
+    admin = db.session.get(Admin, id)
+    if not admin:
+        return jsonify({"error": "No encontrado"}), 404
+    if admin.es_dueno:
+        return jsonify({"error": "El dueño tiene acceso total; no se editan sus permisos"}), 400
+    data = request.get_json(silent=True) or {}
+    if 'permisos' in data:
+        permisos = data.get('permisos') or {}
+        admin.permisos_json = json.dumps({s: bool(permisos.get(s)) for s in ADMIN_SECCIONES})
+    db.session.commit()
+    return jsonify(admin.as_dict())
+
+@app.route('/api/admins/<int:id>', methods=['DELETE'])
+@api_dueno_required
+def delete_admin(id):
+    admin = db.session.get(Admin, id)
+    if not admin:
+        return jsonify({"error": "No encontrado"}), 404
+    if admin.es_dueno:
+        return jsonify({"error": "No se puede eliminar al dueño"}), 400
+    a = current_admin()
+    if a and admin.id == a.id:
+        return jsonify({"error": "No te podés eliminar a vos mismo"}), 400
+    db.session.delete(admin)
+    db.session.commit()
+    return jsonify({"status": "ok"})
 
 @app.route('/cliente/<int:id>')
 @login_required
