@@ -167,17 +167,55 @@ class Cliente(db.Model):
             'propiedades_interesado': propiedades_interesado,
         }
 
+# Secciones del admin sobre las que se dan permisos por usuario.
+ADMIN_SECCIONES = ['propiedades', 'propietarios', 'interesados', 'captacion', 'catastro', 'consultas']
+
 class Admin(db.Model):
     __tablename__ = 'admins'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=True)
+    # Login por email (los invitados entran con el email que habilitó el dueño).
+    email = db.Column(db.String(200), unique=True, nullable=True)
+    # Nullable: un invitado existe (email habilitado) antes de fijar su contraseña.
+    password_hash = db.Column(db.String(200), nullable=True)
+    # Dueño: acceso total + gestiona administradores. Los demás, permisos por sección.
+    es_dueno = db.Column(db.Boolean, default=False)
+    permisos_json = db.Column(db.Text, nullable=True)   # JSON {seccion: bool}
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        return bool(self.password_hash) and check_password_hash(self.password_hash, password)
+
+    def permisos(self):
+        if self.es_dueno:
+            return {s: True for s in ADMIN_SECCIONES}
+        try:
+            data = json.loads(self.permisos_json) if self.permisos_json else {}
+        except Exception:
+            data = {}
+        return {s: bool(data.get(s)) for s in ADMIN_SECCIONES}
+
+    def puede(self, seccion):
+        return self.es_dueno or bool(self.permisos().get(seccion))
+
+    @property
+    def activo(self):
+        # Un invitado sin contraseña todavía no activó su cuenta.
+        return bool(self.password_hash)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username or '',
+            'email': self.email or '',
+            'es_dueno': bool(self.es_dueno),
+            'activo': self.activo,
+            'permisos': self.permisos(),
+            'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
+        }
 
 class CaptacionLead(db.Model):
     __tablename__ = 'captacion_leads'
