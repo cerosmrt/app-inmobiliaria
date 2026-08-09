@@ -61,7 +61,7 @@ XSS = '<img src=x onerror=alert(1)>'
 
 with A.app.app_context():
     db.create_all()
-    adm = Admin(username='test')
+    adm = Admin(username='test', es_dueno=True)  # dueño: acceso total a todas las secciones
     adm.set_password('test-1234')
     db.session.add(adm)
     prop = Propiedad(direccion='Sarmiento 450', barrio='Centro', tipo='casa',

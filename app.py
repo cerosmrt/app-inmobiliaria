@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response, send_file, abort
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response, send_file, abort, g
 from flask_migrate import Migrate
-from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento, Adjunto
+from models import db, Propiedad, Cliente, Admin, Consulta, CaptacionLead, PropietarioLead, CaptacionActividad, ParcelaCatastral, OportunidadTerreno, InvestigacionPropietario, PropietarioCatastral, ActividadParcela, Evento, Adjunto, ADMIN_SECCIONES
 from config import config as app_config
 from functools import wraps
 from dotenv import load_dotenv
@@ -270,11 +270,69 @@ def api_login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def current_admin():
+    """Admin logueado (cacheado por request). None si no hay sesión."""
+    if 'admin_id' not in session:
+        return None
+    if not hasattr(g, '_admin'):
+        g._admin = db.session.get(Admin, session['admin_id'])
+    return g._admin
+
+def permiso_required(seccion):
+    """Página: exige permiso sobre la sección; si no, manda al admin."""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if 'admin_id' not in session:
+                return redirect(url_for('admin_login'))
+            a = current_admin()
+            if not a or not a.puede(seccion):
+                return redirect(url_for('admin_index'))
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper
+
+def api_permiso_required(seccion):
+    """API: 401 si no hay sesión, 403 si no tiene permiso; valida CSRF en mutaciones."""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if 'admin_id' not in session:
+                return jsonify({"error": "No autorizado"}), 401
+            if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+                token = request.headers.get('X-CSRFToken', '')
+                stored = session.get('csrf_token', '')
+                if not token or not stored or not hmac.compare_digest(token, stored):
+                    return jsonify({"error": "Token CSRF inválido"}), 403
+            a = current_admin()
+            if not a or not a.puede(seccion):
+                return jsonify({"error": "Sin permiso para esta sección"}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper
+
+def dueno_required(f):
+    """Solo el dueño (gestiona administradores)."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'admin_id' not in session:
+            return redirect(url_for('admin_login'))
+        a = current_admin()
+        if not a or not a.es_dueno:
+            return redirect(url_for('admin_index'))
+        return f(*args, **kwargs)
+    return decorated
+
 # ── Context processor ─────────────────────────────────────────────────────────
 
 @app.context_processor
 def inject_admin_context():
-    return {'admin_username': session.get('admin_username', '')}
+    a = current_admin()
+    return {
+        'admin_username': session.get('admin_username', ''),
+        'admin_permisos': a.permisos() if a else {},
+        'admin_es_dueno': bool(a and a.es_dueno),
+    }
 
 # ── Contacto helper ───────────────────────────────────────────────────────────
 
@@ -314,14 +372,18 @@ def admin_login():
             return render_template('admin/login.html', error='Error de validación. Intentá de nuevo.')
         if not _check_login_rate(request.remote_addr):
             return render_template('admin/login.html', error='Demasiados intentos. Esperá un minuto.')
-        username = request.form.get('username', '').strip()
+        # Acepta email o usuario (el owner viejo entra con usuario; los invitados con email).
+        ident = (request.form.get('email', '') or request.form.get('username', '')).strip()
         password = request.form.get('password', '')
-        admin = Admin.query.filter_by(username=username).first()
+        admin = Admin.query.filter(db.or_(
+            db.func.lower(Admin.email) == ident.lower(),
+            Admin.username == ident,
+        )).first() if ident else None
         if admin and admin.check_password(password):
             session['admin_id']       = admin.id
-            session['admin_username'] = admin.username
+            session['admin_username'] = admin.username or admin.email
             return redirect(url_for('admin_index'))
-        return render_template('admin/login.html', error='Usuario o contraseña incorrectos')
+        return render_template('admin/login.html', error='Email o contraseña incorrectos')
     return render_template('admin/login.html')
 
 @app.route('/admin/logout')
@@ -330,7 +392,7 @@ def admin_logout():
     return redirect(url_for('admin_login'))
 
 @app.route('/admin/consultas')
-@login_required
+@permiso_required('consultas')
 def admin_consultas():
     return render_template('admin/consultas.html')
 
@@ -340,17 +402,47 @@ def admin_setup():
         return redirect(url_for('admin_login'))
     error = None
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        username = request.form.get('username', '').strip() or None
+        email    = request.form.get('email', '').strip() or None
         password = request.form.get('password', '')
-        if not username or not password:
-            error = 'Completá usuario y contraseña'
+        if not password or not (email or username):
+            error = 'Completá email y contraseña'
         else:
-            admin = Admin(username=username)
+            # El primero es el dueño: acceso total + gestiona administradores.
+            admin = Admin(username=username, email=email, es_dueno=True)
             admin.set_password(password)
             db.session.add(admin)
             db.session.commit()
             return redirect(url_for('admin_login'))
     return render_template('admin/setup.html', error=error)
+
+@app.route('/admin/registro', methods=['GET', 'POST'])
+def admin_registro():
+    """Auto-registro del invitado: entra con el email que habilitó el dueño y fija su contraseña."""
+    if 'admin_id' in session:
+        return redirect(url_for('admin_index'))
+    get_csrf_token()
+    error = None
+    if request.method == 'POST':
+        form_token = request.form.get('csrf_token', '')
+        stored     = session.get('csrf_token', '')
+        if not form_token or not stored or not hmac.compare_digest(form_token, stored):
+            return render_template('admin/registro.html', error='Error de validación. Intentá de nuevo.')
+        email    = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        if not email or not password:
+            error = 'Completá email y contraseña'
+        else:
+            admin = Admin.query.filter(db.func.lower(Admin.email) == email.lower()).first()
+            if not admin:
+                error = 'Ese email no está habilitado. Pedile al administrador que te agregue.'
+            elif admin.password_hash:
+                error = 'Esa cuenta ya tiene contraseña. Iniciá sesión.'
+            else:
+                admin.set_password(password)
+                db.session.commit()
+                return redirect(url_for('admin_login'))
+    return render_template('admin/registro.html', error=error)
 
 @app.route('/cliente/<int:id>')
 @login_required
@@ -1361,7 +1453,7 @@ def get_stats():
 # ── Captacion admin page ─────────────────────────────────────────────────────
 
 @app.route('/admin/captacion')
-@login_required
+@permiso_required('captacion')
 def admin_captacion():
     return render_template('admin/captacion.html')
 
@@ -1799,7 +1891,7 @@ def import_clientes():
 # ── Catastro admin page ──────────────────────────────────────────────────────
 
 @app.route('/admin/catastro')
-@login_required
+@permiso_required('catastro')
 def admin_catastro():
     return render_template('admin/catastro.html')
 

@@ -3,28 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración inicial — Moret Inmobiliaria</title>
+    <title>Crear cuenta — Moret Inmobiliaria</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        /* Sans, no Georgia: es una pantalla del admin, y los remates ensucian
-           labels chicos e inputs. Era la última página del panel con serif. */
         body {
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: #FFFFFF;
-            color: #333333;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #FFFFFF; color: #333333; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
         }
         .card {
-            background: #F8F9FA;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(17,17,17,0.08);
-            border: 1px solid #E5E7EB;
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
+            background: #F8F9FA; border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(17,17,17,0.08); border: 1px solid #E5E7EB;
+            padding: 40px; width: 100%; max-width: 400px;
         }
         .brand { text-align: center; margin-bottom: 24px; }
         .brand .moret { font-size: 32px; font-weight: 700; color: #C41230; }
@@ -41,26 +31,28 @@
         .btn { width: 100%; padding: 12px; background: #C41230; color: white; border: none; border-radius: 7px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
         .btn:hover { background: #a50e28; }
         .error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
+        .foot { text-align: center; margin-top: 16px; font-size: 13px; }
+        .foot a { color: #C41230; text-decoration: none; }
     </style>
 </head>
 <body>
 <div class="card">
     <div class="brand">
         <div class="moret">Moret</div>
-        <div class="sub">Inmobiliaria — Configuración inicial</div>
+        <div class="sub">Inmobiliaria — Crear cuenta</div>
     </div>
-    <h2>Crear cuenta de administrador</h2>
-    <p>Este formulario solo está disponible si no hay administradores registrados.</p>
+    <h2>Activá tu cuenta</h2>
+    <p>Usá el email que te habilitó el administrador y elegí tu contraseña.</p>
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Email</label>
         <input type="email" name="email" placeholder="tu@email.com" autofocus required>
-        <label>Usuario (opcional)</label>
-        <input type="text" name="username" placeholder="Ej: roberto">
         <label>Contraseña</label>
-        <input type="password" name="password" placeholder="Contraseña segura" required>
+        <input type="password" name="password" placeholder="Elegí una contraseña" required>
         <button type="submit" class="btn">Crear cuenta</button>
     </form>
+    <div class="foot"><a href="/admin/login">Ya tengo cuenta — iniciar sesión</a></div>
 </div>
 </body>
 </html>

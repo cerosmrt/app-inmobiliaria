@@ -96,7 +96,7 @@
     {% endif %}
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label for="login-usuario">Usuario</label>
+        <label for="login-usuario">Email o usuario</label>
         <input id="login-usuario" type="text" name="username" autocomplete="username" autofocus required>
         <label for="login-password">Contraseña</label>
         <input id="login-password" type="password" name="password" autocomplete="current-password" required>
