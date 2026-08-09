@@ -1,0 +1,142 @@
+{% extends "admin/base.html" %}
+{% block title %}Captar{% endblock %}
+
+{% block head %}
+<style>
+    .cap-wrap { padding: 18px; max-width: 900px; }
+    .cap-hint { font-size: 12.5px; color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+    .cap-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
+    .cap-card h3 { font-size: 13px; margin: 0 0 12px; }
+    .cap-group-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 4px 0 8px; }
+    .cap-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .cap-grid .f { display: flex; flex-direction: column; gap: 4px; }
+    .cap-grid label { font-size: 10.5px; color: var(--muted); }
+    .cap-grid input, .cap-grid select {
+        padding: 8px 11px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+        font-size: 13px; font-family: inherit; color: var(--text); background: var(--surface); min-width: 150px;
+    }
+    .cap-grid input:focus, .cap-grid select:focus { outline: none; border-color: var(--accent); }
+    .cap-grid .wide input { min-width: 260px; }
+    .cap-actions { margin-top: 14px; }
+    table.cap-table { width: 100%; border-collapse: collapse; }
+    table.cap-table th, table.cap-table td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+    table.cap-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+    .cap-empty { color: var(--muted); font-size: 12.5px; padding: 12px 0; }
+    .cap-count { font-size: 11px; color: var(--muted); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block page_topbar %}
+<div class="page-topbar">
+    <span class="page-topbar-title">Captar</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="cap-wrap">
+    <p class="cap-hint">
+        Cargá lo que tengas — la dirección, el dueño, o los dos. Se crea la propiedad como
+        <b>borrador (no publicada)</b> y el propietario, y quedan <b>vinculados</b> y visibles en
+        las pestañas Propiedades y Propietarios. Después completás y publicás.
+    </p>
+
+    <div class="cap-card">
+        <h3>Cargar desde cualquier dato</h3>
+
+        <div class="cap-group-title">Propiedad (opcional)</div>
+        <div class="cap-grid">
+            <div class="f wide"><label>Dirección</label><input type="text" id="c-direccion" placeholder="Ej: Belgrano 450 / Campo s/ Ruta 12"></div>
+            <div class="f"><label>Tipo</label>
+                <select id="c-tipo">
+                    <option value="">—</option>
+                    <option value="casa">Casa</option>
+                    <option value="departamento">Departamento</option>
+                    <option value="local">Local</option>
+                    <option value="terreno">Terreno / Campo</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+            <div class="f"><label>Operación</label>
+                <select id="c-operacion">
+                    <option value="">—</option>
+                    <option value="venta">Venta</option>
+                    <option value="alquiler">Alquiler</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="cap-group-title" style="margin-top:14px">Dueño (opcional)</div>
+        <div class="cap-grid">
+            <div class="f"><label>Nombre</label><input type="text" id="c-nombre" placeholder="Nombre"></div>
+            <div class="f"><label>Apellido</label><input type="text" id="c-apellido" placeholder="Apellido"></div>
+            <div class="f"><label>Teléfono</label><input type="text" id="c-telefono" placeholder="Teléfono"></div>
+        </div>
+
+        <div class="cap-actions">
+            <button class="btn btn-green" onclick="capturar()">Captar y vincular</button>
+        </div>
+    </div>
+
+    <div class="cap-card">
+        <h3>En captación <span class="cap-count" id="cap-count"></span></h3>
+        <p class="cap-hint" style="margin:0 0 10px">Propiedades cargadas todavía sin publicar. Abrí cada una para completar y publicar.</p>
+        <table class="cap-table">
+            <thead><tr><th>Propiedad</th><th>Tipo</th><th>Dueño</th><th></th></tr></thead>
+            <tbody id="cap-body"><tr><td colspan="4" class="cap-empty">Cargando…</td></tr></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function cargarEnCaptacion() {
+        fetch('/api/propiedades').then(function(r){ return r.json(); }).then(function(list) {
+            var draft = (Array.isArray(list) ? list : []).filter(function(p){ return !p.publicada; });
+            var tb = document.getElementById('cap-body');
+            document.getElementById('cap-count').textContent = draft.length ? '(' + draft.length + ')' : '';
+            if (!draft.length) {
+                tb.innerHTML = '<tr><td colspan="4" class="cap-empty">Nada en captación. Cargá algo arriba.</td></tr>';
+                return;
+            }
+            tb.innerHTML = draft.map(function(p) {
+                var duenos = (p.propietarios || []).map(function(c){ return esc((c.nombre + ' ' + c.apellido).trim()); }).join(', ') || '—';
+                return '<tr>' +
+                    '<td><a href="/admin/propiedad/' + p.id + '">' + esc(p.direccion || ('#' + p.id)) + '</a></td>' +
+                    '<td>' + esc(p.tipo || '—') + '</td>' +
+                    '<td>' + duenos + '</td>' +
+                    '<td class="no-print"><a class="btn-action" style="text-decoration:none" href="/admin/propiedad/' + p.id + '">Abrir</a></td>' +
+                '</tr>';
+            }).join('');
+        });
+    }
+
+    function capturar() {
+        var payload = {
+            direccion:  (document.getElementById('c-direccion').value || '').trim(),
+            tipo:       document.getElementById('c-tipo').value,
+            operacion:  document.getElementById('c-operacion').value,
+            propietario_nombre:   (document.getElementById('c-nombre').value || '').trim(),
+            propietario_apellido: (document.getElementById('c-apellido').value || '').trim(),
+            propietario_telefono: (document.getElementById('c-telefono').value || '').trim(),
+        };
+        if (!payload.direccion && !payload.propietario_nombre && !payload.propietario_telefono) {
+            toast('Cargá al menos la dirección o el dueño.', 'error'); return;
+        }
+        fetch('/api/captacion/capturar', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
+          .then(function(res) {
+              if (!res.ok) { toast((res.d && res.d.error) || 'Error al captar', 'error'); return; }
+              toast('Captado y vinculado ✓', 'success');
+              ['c-direccion','c-tipo','c-operacion','c-nombre','c-apellido','c-telefono'].forEach(function(id){
+                  document.getElementById(id).value = '';
+              });
+              cargarEnCaptacion();
+          });
+    }
+
+    cargarEnCaptacion();
+</script>
+{% endblock %}

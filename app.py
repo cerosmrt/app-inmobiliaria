@@ -1605,6 +1605,49 @@ def get_stats():
 def admin_captacion():
     return render_template('admin/captacion.html')
 
+@app.route('/admin/captar')
+@permiso_required('captacion')
+def admin_captar():
+    return render_template('admin/captar.html')
+
+@app.route('/api/captacion/capturar', methods=['POST'])
+@api_permiso_required('captacion')
+def captar_desde_dato():
+    """Captación "desde cualquier dato": crea/reusa Propiedad (borrador) y/o
+    Propietario y los vincula. Todo opcional; con una punta alcanza."""
+    data = request.get_json(silent=True) or {}
+    direccion  = (data.get('direccion') or '').strip()
+    p_nombre   = (data.get('propietario_nombre') or '').strip()
+    p_apellido = (data.get('propietario_apellido') or '').strip()
+    p_tel      = (data.get('propietario_telefono') or '').strip()
+    parcela_id = data.get('parcela_id')
+    if not (direccion or p_nombre or p_tel or parcela_id):
+        return jsonify({"error": "Cargá al menos un dato (dirección, dueño o parcela)."}), 400
+
+    prop = cli = None
+    if direccion:
+        # Borrador: no publicada hasta que la revises/publiques.
+        prop = _find_or_create_propiedad(direccion, {
+            'propiedad_tipo': data.get('tipo'),
+            'propiedad_operacion': data.get('operacion'),
+        })
+    if p_nombre or p_tel:
+        cli = _find_or_create_cliente(p_nombre, p_apellido, p_tel, data.get('propietario_email'))
+    if prop is not None and cli is not None and cli not in prop.propietarios:
+        prop.propietarios.append(cli)
+    if parcela_id and cli is not None:
+        try:
+            par = db.session.get(ParcelaCatastral, int(parcela_id))
+            if par and not par.propietario_id:
+                par.propietario_id = cli.id
+        except (ValueError, TypeError):
+            pass
+    db.session.commit()
+    return jsonify({
+        "propiedad": prop.as_dict() if prop else None,
+        "cliente":   cli.as_dict() if cli else None,
+    }), 201
+
 # ── Captacion API: Leads ──────────────────────────────────────────────────────
 
 @app.route('/api/captacion/leads', methods=['GET'])
