@@ -375,6 +375,17 @@ def propiedad_publica(id):
 @app.route('/admin')
 @login_required
 def admin_index():
+    # Si el usuario no tiene ninguna sección del portfolio, lo mandamos a su
+    # primera sección permitida (el index es el listado de propiedades/personas).
+    a = current_admin()
+    if a and not a.es_dueno:
+        tiene_portfolio = a.puede('propiedades') or a.puede('propietarios') or a.puede('interesados')
+        if not tiene_portfolio:
+            for sec, endpoint in [('captacion', 'admin_captacion'),
+                                  ('catastro', 'admin_catastro'),
+                                  ('consultas', 'admin_consultas')]:
+                if a.puede(sec):
+                    return redirect(url_for(endpoint))
     return render_template('admin/index.html')
 
 @app.route('/admin/login', methods=['GET', 'POST'])
