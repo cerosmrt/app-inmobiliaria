@@ -75,6 +75,17 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
+### 🌿 Rama `pendientes` — trabajo hecho autónomo, PARA REVISAR (2026-08-09)
+Tres features construidas en la rama `pendientes` (no en `master`, no tocan producción). Cada una con su commit y su test:
+- **Gestor de administradores** — login por email; auto-registro de invitados (`/admin/registro`); permisos por sección (propiedades/propietarios/interesados/captación/catastro/consultas); panel `/admin/usuarios` (solo dueño) para invitar/editar/eliminar; sidebar oculta secciones según permisos. El admin más viejo queda como "dueño" (acceso total). Migración `037e2f2c8443`.
+- **Panel de textos** — `/admin/textos` (solo dueño) edita textos del sitio + tamaño de fuente; modelo `SiteConfig`; el hero del home sale de `textos.*`. (Pendiente: sumar más textos editables además del hero.)
+- **Captación · "Cargar desde cualquier dato"** — `/admin/captar` + `POST /api/captacion/capturar`: crea Propiedad borrador + Propietario y los vincula desde cualquier punta. **Aditivo** (no removió el kanban). *Falta decidir con el usuario:* reemplazar el kanban por esta vista y mudar el panel de investigación a la ficha de la propiedad.
+
+**Para deployar esta rama a prod (hacer JUNTOS):**
+- **Auto-deploy roto** → arreglarlo primero: Railway → `app-inmobiliaria` → Settings → Source → **Disconnect** y **reconectar** el repo (NO usar "Eject": forkea el repo). Verificado que hoy los push NO se despliegan solos.
+- **Migración en prod:** la base de Railway se creó con `create_all()` sin stampear Alembic. Antes de correr la migración de admins hay que `alembic stamp f498a2a5780f` en prod y después `db upgrade` (aplica `037e2f2c8443`). La tabla `site_config` la crea `create_all()` sola. *Requiere backup de la DB antes.*
+- Apagar el **"Public Access" del Postgres** (se abrió para migrar los datos).
+
 ### 🔴 Crítico — estabilidad y seguridad de producción
 1. ~~Config peligrosa en prod (SECRET_KEY efímera / DEBUG por defecto).~~ ✅ **Hecho.** *Nota de deploy: asegurarse de que PythonAnywhere tenga `FLASK_ENV=production` y `SECRET_KEY` seteadas en el WSGI/panel.*
 2. ~~Credenciales hardcodeadas en `load_demo.py`.~~ ✅ **Hecho.**
