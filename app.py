@@ -340,6 +340,35 @@ def api_dueno_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def administrador_required(f):
+    """Página solo para administradores (dueño o admin de acceso total)."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'admin_id' not in session:
+            return redirect(url_for('admin_login'))
+        a = current_admin()
+        if not a or not a.es_administrador:
+            return redirect(url_for('admin_index'))
+        return f(*args, **kwargs)
+    return decorated
+
+def api_administrador_required(f):
+    """API solo-administrador: 401 sin sesión, 403 si no es admin/dueño; CSRF en mutaciones."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'admin_id' not in session:
+            return jsonify({"error": "No autorizado"}), 401
+        if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            token = request.headers.get('X-CSRFToken', '')
+            stored = session.get('csrf_token', '')
+            if not token or not stored or not hmac.compare_digest(token, stored):
+                return jsonify({"error": "Token CSRF inválido"}), 403
+        a = current_admin()
+        if not a or not a.es_administrador:
+            return jsonify({"error": "Solo un administrador puede gestionar usuarios"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
 # ── Context processor ─────────────────────────────────────────────────────────
 
 @app.context_processor
@@ -349,6 +378,7 @@ def inject_admin_context():
         'admin_username': session.get('admin_username', ''),
         'admin_permisos': a.permisos() if a else {},
         'admin_es_dueno': bool(a and a.es_dueno),
+        'admin_es_administrador': bool(a and a.es_administrador),
     }
 
 # ── Contacto helper ───────────────────────────────────────────────────────────
@@ -510,18 +540,18 @@ def admin_registro():
 # ── Gestor de administradores (solo dueño) ─────────────────────────────────────
 
 @app.route('/admin/usuarios')
-@dueno_required
+@administrador_required
 def admin_usuarios():
     return render_template('admin/usuarios.html')
 
 @app.route('/api/admins', methods=['GET'])
-@api_dueno_required
+@api_administrador_required
 def get_admins():
     admins = Admin.query.order_by(Admin.id).all()
     return jsonify([a.as_dict() for a in admins])
 
 @app.route('/api/admins', methods=['POST'])
-@api_dueno_required
+@api_administrador_required
 def create_admin():
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
@@ -529,23 +559,31 @@ def create_admin():
         return jsonify({"error": "El email es requerido"}), 400
     if Admin.query.filter(db.func.lower(Admin.email) == email).first():
         return jsonify({"error": "Ya existe un administrador con ese email"}), 409
+    # nivel: 'admin' (acceso total) o 'usuario' (permisos por sección).
+    nivel = data.get('nivel') or 'usuario'
+    es_admin = (nivel == 'admin')
     permisos = data.get('permisos') or {}
     limpio = {s: bool(permisos.get(s)) for s in ADMIN_SECCIONES}
-    admin = Admin(email=email, es_dueno=False, permisos_json=json.dumps(limpio))
+    admin = Admin(email=email, es_dueno=False, es_admin=es_admin,
+                  permisos_json=json.dumps(limpio))
     # Sin password_hash: queda "pendiente" hasta que el invitado se registre.
     db.session.add(admin)
     db.session.commit()
+    # Mail de invitación con el link para activar la cuenta (no rompe si falla).
+    _send_invite_email(email, request.host_url)
     return jsonify(admin.as_dict()), 201
 
 @app.route('/api/admins/<int:id>', methods=['PUT'])
-@api_dueno_required
+@api_administrador_required
 def update_admin(id):
     admin = db.session.get(Admin, id)
     if not admin:
         return jsonify({"error": "No encontrado"}), 404
     if admin.es_dueno:
-        return jsonify({"error": "El dueño tiene acceso total; no se editan sus permisos"}), 400
+        return jsonify({"error": "El dueño es el administrador principal; no se puede editar"}), 400
     data = request.get_json(silent=True) or {}
+    if 'nivel' in data:
+        admin.es_admin = (data.get('nivel') == 'admin')
     if 'permisos' in data:
         permisos = data.get('permisos') or {}
         admin.permisos_json = json.dumps({s: bool(permisos.get(s)) for s in ADMIN_SECCIONES})
@@ -553,7 +591,7 @@ def update_admin(id):
     return jsonify(admin.as_dict())
 
 @app.route('/api/admins/<int:id>', methods=['DELETE'])
-@api_dueno_required
+@api_administrador_required
 def delete_admin(id):
     admin = db.session.get(Admin, id)
     if not admin:
@@ -570,14 +608,14 @@ def delete_admin(id):
 # ── Panel de textos del sitio (solo dueño) ─────────────────────────────────────
 
 @app.route('/admin/textos')
-@dueno_required
+@administrador_required
 def admin_textos():
     valores = get_textos()
     campos = [dict(f, valor=valores.get(f['clave'], '')) for f in SITE_TEXTOS]
     return render_template('admin/textos.html', campos=campos)
 
 @app.route('/api/textos', methods=['POST'])
-@api_dueno_required
+@api_administrador_required
 def guardar_textos():
     data = request.get_json(silent=True) or {}
     claves_validas = {f['clave'] for f in SITE_TEXTOS}
@@ -692,6 +730,39 @@ def _send_consulta_email(data, prop_info, host_url):
             srv.send_message(msg)
     except Exception:
         pass
+
+def _send_invite_email(email, host_url):
+    """Manda el mail de invitación en un thread. Si no hay SMTP, no hace nada."""
+    smtp_host = app.config.get('MAIL_SMTP', '')
+    smtp_user = app.config.get('MAIL_USER', '')
+    smtp_pass = app.config.get('MAIL_PASS', '')
+    if not all([smtp_host, smtp_user, smtp_pass, email]):
+        return
+
+    def _worker():
+        registro_url = f"{host_url}admin/registro"
+        body = (
+            "Te invitaron al panel de Moret Inmobiliaria.\n"
+            f"{'─'*44}\n\n"
+            "Para activar tu cuenta:\n"
+            f"1. Entrá a: {registro_url}\n"
+            f"2. Usá este email ({email}) y elegí tu contraseña.\n\n"
+            "Después ingresás desde el panel con ese email y contraseña.\n"
+        )
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = "Invitación al panel de Moret Inmobiliaria"
+        msg['From'] = smtp_user
+        msg['To'] = email
+        try:
+            ctx = ssl.create_default_context()
+            with smtplib.SMTP(smtp_host, app.config.get('MAIL_PORT', 587)) as srv:
+                srv.starttls(context=ctx)
+                srv.login(smtp_user, smtp_pass)
+                srv.send_message(msg)
+        except Exception:
+            pass
+
+    threading.Thread(target=_worker, daemon=True).start()
 
 @app.route('/api/public/consultas', methods=['POST'])
 def api_public_consultas():

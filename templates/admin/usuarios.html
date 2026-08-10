@@ -3,55 +3,60 @@
 
 {% block head %}
 <style>
-    .usuarios-wrap { padding: 18px; max-width: 1000px; }
+    .usuarios-wrap { padding: 18px; max-width: 1040px; }
     .u-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
     .u-card h3 { font-size: 14px; margin: 0 0 4px; }
     .u-hint { font-size: 12px; color: var(--muted); margin: 0 0 12px; line-height: 1.5; }
     .u-hint code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
-    .u-perms { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 8px 0; }
+    .u-perms { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 8px 0 0; }
     .u-perms label { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text); cursor: pointer; }
     .u-row-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .u-row-form input[type=email] { flex: 1; min-width: 220px; padding: 8px 11px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; }
+    .u-nivel { display: flex; gap: 14px; margin: 12px 0 2px; flex-wrap: wrap; }
+    .u-nivel label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+    select.u-nivel-sel { padding: 5px 8px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 12.5px; font-family: inherit; background: var(--surface); color: var(--text); }
     table.u-table { width: 100%; border-collapse: collapse; }
-    table.u-table th, table.u-table td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: top; }
+    table.u-table th, table.u-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: top; }
     table.u-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
     .u-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700; text-transform: uppercase; }
     .u-badge.activo { background: rgba(34,197,94,.12); color: #15803d; }
     .u-badge.pend { background: rgba(245,158,11,.14); color: #b45309; }
     .u-badge.dueno { background: rgba(59,130,246,.14); color: #1d4ed8; }
+    .u-badge.admin { background: rgba(139,92,246,.14); color: #6d28d9; }
     .u-empty { color: var(--muted); font-size: 12.5px; padding: 12px 0; }
+    .u-mut { color: var(--muted); font-size: 12px; }
 </style>
 {% endblock %}
 
 {% block page_topbar %}
-<div class="page-topbar">
-    <span class="page-topbar-title">Administradores</span>
-</div>
+<div class="page-topbar"><span class="page-topbar-title">Administradores</span></div>
 {% endblock %}
 
 {% block content %}
 <div class="usuarios-wrap">
 
     <div class="u-card">
-        <h3>Invitar un administrador</h3>
+        <h3>Invitar</h3>
         <p class="u-hint">
-            Agregá el email de la persona y marcá a qué secciones tiene acceso.
-            Después ella entra a <code>/admin/registro</code>, usa ese email y elige su contraseña.
+            Agregá el email y elegí el nivel. Le llega un mail (si el envío está configurado) con el link para
+            activar su cuenta en <code>/admin/registro</code>; ahí elige su contraseña.
         </p>
         <div class="u-row-form">
             <input type="email" id="nuevo-email" placeholder="email@ejemplo.com">
             <button class="btn btn-green" onclick="invitar()">+ Invitar</button>
         </div>
+        <div class="u-nivel">
+            <label><input type="radio" name="nuevo-nivel" value="admin" onchange="toggleNuevoPerms()"> <b>Administrador</b> · acceso total</label>
+            <label><input type="radio" name="nuevo-nivel" value="usuario" checked onchange="toggleNuevoPerms()"> <b>Usuario</b> · por sección</label>
+        </div>
         <div class="u-perms" id="nuevo-perms"></div>
     </div>
 
     <div class="u-card">
-        <h3>Administradores</h3>
+        <h3>Administradores y usuarios</h3>
         <table class="u-table">
-            <thead><tr>
-                <th>Email</th><th>Estado</th><th>Permisos</th><th></th>
-            </tr></thead>
-            <tbody id="admins-body"><tr><td colspan="4" class="u-empty">Cargando…</td></tr></tbody>
+            <thead><tr><th>Email</th><th>Nivel</th><th>Estado</th><th>Acceso</th><th></th></tr></thead>
+            <tbody id="admins-body"><tr><td colspan="5" class="u-empty">Cargando…</td></tr></tbody>
         </table>
     </div>
 
@@ -66,50 +71,65 @@
         ['catastro', 'Catastro'], ['consultas', 'Consultas'],
     ];
 
-    // Checkboxes de permisos para el form de invitar
     function renderNuevoPerms() {
         document.getElementById('nuevo-perms').innerHTML = SECCIONES.map(function(s) {
             return '<label><input type="checkbox" data-sec="' + s[0] + '"> ' + s[1] + '</label>';
         }).join('');
     }
-
+    function nivelNuevo() {
+        var r = document.querySelector('input[name=nuevo-nivel]:checked');
+        return r ? r.value : 'usuario';
+    }
+    function toggleNuevoPerms() {
+        document.getElementById('nuevo-perms').style.display = (nivelNuevo() === 'usuario') ? 'flex' : 'none';
+    }
     function permisosDe(container) {
         var out = {};
-        container.querySelectorAll('input[type=checkbox][data-sec]').forEach(function(cb) {
-            out[cb.dataset.sec] = cb.checked;
-        });
+        container.querySelectorAll('input[type=checkbox][data-sec]').forEach(function(cb) { out[cb.dataset.sec] = cb.checked; });
         return out;
+    }
+
+    function nivelBadge(a) {
+        if (a.nivel === 'dueno') return '<span class="u-badge dueno">Dueño</span>';
+        if (a.nivel === 'admin') return '<span class="u-badge admin">Administrador</span>';
+        return '<span class="u-mut">Usuario</span>';
     }
 
     function cargarAdmins() {
         fetch('/api/admins').then(function(r){ return r.json(); }).then(function(list) {
             var tb = document.getElementById('admins-body');
             if (!Array.isArray(list) || !list.length) {
-                tb.innerHTML = '<tr><td colspan="4" class="u-empty">Sin administradores.</td></tr>';
-                return;
+                tb.innerHTML = '<tr><td colspan="5" class="u-empty">Sin administradores.</td></tr>'; return;
             }
             tb.innerHTML = list.map(function(a) {
-                var estado = a.es_dueno
-                    ? '<span class="u-badge dueno">Dueño</span>'
-                    : (a.activo ? '<span class="u-badge activo">Activo</span>'
-                                : '<span class="u-badge pend">Pendiente</span>');
-                var permisos;
-                if (a.es_dueno) {
-                    permisos = '<span style="color:var(--muted);font-size:12px">Acceso total</span>';
+                var estado = a.activo ? '<span class="u-badge activo">Activo</span>' : '<span class="u-badge pend">Pendiente</span>';
+                var nivelCell, accesoCell, accionCell;
+                if (a.nivel === 'dueno') {
+                    nivelCell = nivelBadge(a);
+                    accesoCell = '<span class="u-mut">Acceso total</span>';
+                    accionCell = '';
                 } else {
-                    permisos = '<div class="u-perms" data-admin="' + a.id + '">' + SECCIONES.map(function(s) {
-                        var on = a.permisos && a.permisos[s[0]] ? ' checked' : '';
-                        return '<label><input type="checkbox" data-sec="' + s[0] + '"' + on +
-                               ' onchange="guardarPermisos(' + a.id + ')"> ' + s[1] + '</label>';
-                    }).join('') + '</div>';
+                    nivelCell = '<select class="u-nivel-sel" onchange="cambiarNivel(' + a.id + ', this.value)">' +
+                        '<option value="admin"' + (a.nivel === 'admin' ? ' selected' : '') + '>Administrador</option>' +
+                        '<option value="usuario"' + (a.nivel === 'usuario' ? ' selected' : '') + '>Usuario</option>' +
+                    '</select>';
+                    if (a.nivel === 'admin') {
+                        accesoCell = '<span class="u-mut">Acceso total</span>';
+                    } else {
+                        accesoCell = '<div class="u-perms" data-admin="' + a.id + '">' + SECCIONES.map(function(s) {
+                            var on = a.permisos && a.permisos[s[0]] ? ' checked' : '';
+                            return '<label><input type="checkbox" data-sec="' + s[0] + '"' + on +
+                                   ' onchange="guardarPermisos(' + a.id + ')"> ' + s[1] + '</label>';
+                        }).join('') + '</div>';
+                    }
+                    accionCell = '<button class="btn-action btn-cancel" title="Eliminar" onclick="eliminarAdmin(' + a.id + ')">&#x2715;</button>';
                 }
-                var acciones = a.es_dueno ? '' :
-                    '<button class="btn-action btn-cancel" title="Eliminar" onclick="eliminarAdmin(' + a.id + ')">&#x2715;</button>';
                 return '<tr>' +
                     '<td>' + esc(a.email || a.username || '—') + '</td>' +
+                    '<td>' + nivelCell + '</td>' +
                     '<td>' + estado + '</td>' +
-                    '<td>' + permisos + '</td>' +
-                    '<td class="no-print">' + acciones + '</td>' +
+                    '<td>' + accesoCell + '</td>' +
+                    '<td class="no-print">' + accionCell + '</td>' +
                 '</tr>';
             }).join('');
         });
@@ -118,26 +138,31 @@
     function invitar() {
         var email = (document.getElementById('nuevo-email').value || '').trim();
         if (!email) { toast('Ingresá un email.', 'error'); return; }
-        var permisos = permisosDe(document.getElementById('nuevo-perms'));
+        var payload = { email: email, nivel: nivelNuevo() };
+        if (payload.nivel === 'usuario') payload.permisos = permisosDe(document.getElementById('nuevo-perms'));
         fetch('/api/admins', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, permisos: permisos })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         }).then(function(r) { return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
           .then(function(res) {
               if (!res.ok) { toast(res.d.error || 'Error al invitar', 'error'); return; }
-              toast('Invitado. Ahora se registra en /admin/registro', 'success');
+              toast('Invitado ✓', 'success');
               document.getElementById('nuevo-email').value = '';
-              renderNuevoPerms();
+              renderNuevoPerms(); toggleNuevoPerms();
               cargarAdmins();
           });
+    }
+
+    function cambiarNivel(id, nivel) {
+        fetch('/api/admins/' + id, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nivel: nivel })
+        }).then(function(r) { if (r.ok) { toast('Nivel actualizado', 'success'); cargarAdmins(); } });
     }
 
     function guardarPermisos(id) {
         var cont = document.querySelector('.u-perms[data-admin="' + id + '"]');
         if (!cont) return;
         fetch('/api/admins/' + id, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ permisos: permisosDe(cont) })
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permisos: permisosDe(cont) })
         }).then(function(r) { if (r.ok) toast('Permisos actualizados', 'success'); });
     }
 
@@ -153,7 +178,7 @@
         });
     }
 
-    renderNuevoPerms();
+    renderNuevoPerms(); toggleNuevoPerms();
     cargarAdmins();
 </script>
 {% endblock %}

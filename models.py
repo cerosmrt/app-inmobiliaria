@@ -185,8 +185,11 @@ class Admin(db.Model):
     email = db.Column(db.String(200), unique=True, nullable=True)
     # Nullable: un invitado existe (email habilitado) antes de fijar su contraseña.
     password_hash = db.Column(db.String(200), nullable=True)
-    # Dueño: acceso total + gestiona administradores. Los demás, permisos por sección.
+    # Dueño: el primer admin, protegido (no se elimina ni baja de nivel).
     es_dueno = db.Column(db.Boolean, default=False)
+    # Administrador: acceso total + gestiona usuarios (puede haber varios).
+    es_admin = db.Column(db.Boolean, default=False)
+    # Usuario (ni dueño ni admin): permisos por sección.
     permisos_json = db.Column(db.Text, nullable=True)   # JSON {seccion: bool}
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -196,8 +199,21 @@ class Admin(db.Model):
     def check_password(self, password):
         return bool(self.password_hash) and check_password_hash(self.password_hash, password)
 
-    def permisos(self):
+    @property
+    def es_administrador(self):
+        """Acceso total: el dueño o cualquier administrador."""
+        return bool(self.es_dueno or self.es_admin)
+
+    @property
+    def nivel(self):
         if self.es_dueno:
+            return 'dueno'
+        if self.es_admin:
+            return 'admin'
+        return 'usuario'
+
+    def permisos(self):
+        if self.es_administrador:
             return {s: True for s in ADMIN_SECCIONES}
         try:
             data = json.loads(self.permisos_json) if self.permisos_json else {}
@@ -206,7 +222,7 @@ class Admin(db.Model):
         return {s: bool(data.get(s)) for s in ADMIN_SECCIONES}
 
     def puede(self, seccion):
-        return self.es_dueno or bool(self.permisos().get(seccion))
+        return self.es_administrador or bool(self.permisos().get(seccion))
 
     @property
     def activo(self):
@@ -219,6 +235,9 @@ class Admin(db.Model):
             'username': self.username or '',
             'email': self.email or '',
             'es_dueno': bool(self.es_dueno),
+            'es_admin': bool(self.es_admin),
+            'es_administrador': self.es_administrador,
+            'nivel': self.nivel,
             'activo': self.activo,
             'permisos': self.permisos(),
             'created_at': self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
