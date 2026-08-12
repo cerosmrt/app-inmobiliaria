@@ -75,9 +75,18 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
+### 👤 Pasar la cuenta principal a la casilla del negocio
+Hoy la cuenta principal (la protegida, la única que puede sacar administradores) es **`fmoret`**, una persona. Debería ser **`moretinmobiliaria.admin@gmail.com`**, que es la casilla del negocio: si mañana alguien se va, la llave sigue siendo de la inmobiliaria y no de un individuo.
+
+**No urge** — la regla de que un administrador no puede sacar a otro ya está aplicada y no depende de qué cuenta sea la principal.
+
+**Camino seguro (nunca queda un momento sin acceso):** (1) invitar `moretinmobiliaria.admin@gmail.com` como Administrador desde `/admin/usuarios`; (2) activar la contraseña desde ese Gmail vía `/admin/registro`; (3) **comprobar que entra**; (4) recién ahí mover el flag `es_dueno`, dejando a `fmoret` como Administrador común. El paso 4 no tiene UI (la cuenta principal no es editable a propósito), así que va por script.
+
+*Nota:* la cuenta principal actual no tiene email cargado — la migración solo marcó `es_dueno` sobre el admin más viejo. Entra por usuario y contraseña.
+
 ### 🌿 Rama `pendientes` — ✅ **MERGEADA A `master` Y EN PRODUCCIÓN (2026-08-12)**
 Las tres features ya están vivas en https://moretinmobiliaria.com. Verificado en prod: la migración corrió (un `POST /admin/registro` con un email inexistente responde "ese email no está habilitado", o sea que las columnas nuevas de `admins` existen), el sitio público sigue en 200 y las 3 propiedades publicadas están intactas. *Queda por revisar con el usuario el punto abierto de Captación (ver abajo).*
-- **Gestor de administradores** — login por email; auto-registro de invitados (`/admin/registro`); permisos por sección (propiedades/propietarios/interesados/captación/catastro/consultas); panel `/admin/usuarios` (solo dueño) para invitar/editar/eliminar; sidebar oculta secciones según permisos. El admin más viejo queda como "dueño" (acceso total). Migración `037e2f2c8443`.
+- **Gestor de administradores** — login por email; auto-registro de invitados (`/admin/registro`); permisos por sección (propiedades/propietarios/interesados/captación/catastro/consultas); panel `/admin/usuarios` para invitar/editar/eliminar; sidebar oculta secciones según permisos. El admin más viejo queda como "dueño" (acceso total). Migración `037e2f2c8443`.
 - **Panel de textos** — `/admin/textos` (solo dueño) edita textos del sitio + tamaño de fuente; modelo `SiteConfig`; el hero del home sale de `textos.*`. (Pendiente: sumar más textos editables además del hero.)
 - **Captación · "Cargar desde cualquier dato"** — `/admin/captar` + `POST /api/captacion/capturar`: crea Propiedad borrador + Propietario y los vincula desde cualquier punta. **Aditivo** (no removió el kanban). *Falta decidir con el usuario:* reemplazar el kanban por esta vista y mudar el panel de investigación a la ficha de la propiedad.
 
