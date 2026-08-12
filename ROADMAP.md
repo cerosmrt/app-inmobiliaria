@@ -82,8 +82,11 @@ Tres features construidas en la rama `pendientes` (no en `master`, no tocan prod
 - **Captación · "Cargar desde cualquier dato"** — `/admin/captar` + `POST /api/captacion/capturar`: crea Propiedad borrador + Propietario y los vincula desde cualquier punta. **Aditivo** (no removió el kanban). *Falta decidir con el usuario:* reemplazar el kanban por esta vista y mudar el panel de investigación a la ficha de la propiedad.
 
 **Para deployar esta rama a prod (hacer JUNTOS):**
-- **Auto-deploy roto** → arreglarlo primero: Railway → `app-inmobiliaria` → Settings → Source → **Disconnect** y **reconectar** el repo (NO usar "Eject": forkea el repo). Verificado que hoy los push NO se despliegan solos.
-- **Migración en prod:** la base de Railway se creó con `create_all()` sin stampear Alembic. Antes de correr la migración de admins hay que `alembic stamp f498a2a5780f` en prod y después `db upgrade` (aplica `037e2f2c8443`). La tabla `site_config` la crea `create_all()` sola. *Requiere backup de la DB antes.*
+- ~~**Auto-deploy roto.**~~ ❌ **Era falso.** Verificado en el panel (12/08/2026): Settings → Source tiene branch `master` y "Auto deploys when pushed to GitHub" **habilitado**, y el último deploy (`bbbb573`) figura como *successful, via GitHub*. No hay nada que reconectar. Ojo: el botón **"Check for updates"** del *Upstream Repo* es sincronización de template, **no** es el auto-deploy — el auto-deploy anda por webhook, al instante, sin polling.
+- **Migración en prod — orden importante.** La base de Railway se creó con `create_all()` sin stampear Alembic (no tiene `alembic_version`), así que un `db upgrade` a secas intentaría correr todo desde cero contra tablas existentes y fallaría. Lo resuelve **`release.py`**: stampea en `f498a2a5780f` si detecta ese caso y después aplica lo que falte. Son **dos** migraciones, no una: `037e2f2c8443` y `e7ac4aca1821`. La tabla `site_config` la crea `create_all()` sola.
+  - **Verificado que la migración es retrocompatible:** el código de `master` funciona contra la base ya migrada (las columnas nuevas no le molestan). Por eso el orden seguro es **migrar primero, pushear después**, y no queda ninguna ventana con la app rota.
+  - Secuencia: (1) backup en Railway → pestaña **Backups**; (2) `python release.py` desde la pestaña **Console** del servicio; (3) merge `pendientes` → `master` + push, que dispara el deploy solo.
+  - El admin más viejo queda como **dueño** en la migración, así que no te quedás sin acceso.
 - Apagar el **"Public Access" del Postgres** (se abrió para migrar los datos).
 
 ### 🔴 Crítico — estabilidad y seguridad de producción
