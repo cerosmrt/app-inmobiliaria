@@ -75,19 +75,18 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
-### 🌿 Rama `pendientes` — trabajo hecho autónomo, PARA REVISAR (2026-08-09)
-Tres features construidas en la rama `pendientes` (no en `master`, no tocan producción). Cada una con su commit y su test:
+### 🌿 Rama `pendientes` — ✅ **MERGEADA A `master` Y EN PRODUCCIÓN (2026-08-12)**
+Las tres features ya están vivas en https://moretinmobiliaria.com. Verificado en prod: la migración corrió (un `POST /admin/registro` con un email inexistente responde "ese email no está habilitado", o sea que las columnas nuevas de `admins` existen), el sitio público sigue en 200 y las 3 propiedades publicadas están intactas. *Queda por revisar con el usuario el punto abierto de Captación (ver abajo).*
 - **Gestor de administradores** — login por email; auto-registro de invitados (`/admin/registro`); permisos por sección (propiedades/propietarios/interesados/captación/catastro/consultas); panel `/admin/usuarios` (solo dueño) para invitar/editar/eliminar; sidebar oculta secciones según permisos. El admin más viejo queda como "dueño" (acceso total). Migración `037e2f2c8443`.
 - **Panel de textos** — `/admin/textos` (solo dueño) edita textos del sitio + tamaño de fuente; modelo `SiteConfig`; el hero del home sale de `textos.*`. (Pendiente: sumar más textos editables además del hero.)
 - **Captación · "Cargar desde cualquier dato"** — `/admin/captar` + `POST /api/captacion/capturar`: crea Propiedad borrador + Propietario y los vincula desde cualquier punta. **Aditivo** (no removió el kanban). *Falta decidir con el usuario:* reemplazar el kanban por esta vista y mudar el panel de investigación a la ficha de la propiedad.
 
-**Para deployar esta rama a prod (hacer JUNTOS):**
-- **Auto-deploy: sin veredicto todavía.** Panel al 12/08/2026: Settings → Source tiene branch `master` y "Auto deploys when pushed to GitHub" **habilitado**, y el último deploy (`bbbb573`) cerró *successful*. Pero ese deploy se disparó a mano con **"Check for updates"** del *Upstream Repo* (que es sincronización de template, no el webhook de push), así que **no está probado que un `git push` dispare solo**. Sigue en pie la sospecha de que el servicio, al haberse creado desde un template, ignore el webhook. **No reconectar el repo preventivamente**: el próximo push a `master` es la prueba: si en ~1 min no arranca un build, ahí sí Disconnect + reconectar (NO "Eject": forkea el repo).
-- **Migración en prod — orden importante.** La base de Railway se creó con `create_all()` sin stampear Alembic (no tiene `alembic_version`), así que un `db upgrade` a secas intentaría correr todo desde cero contra tablas existentes y fallaría. Lo resuelve **`release.py`**: stampea en `f498a2a5780f` si detecta ese caso y después aplica lo que falte. Son **dos** migraciones, no una: `037e2f2c8443` y `e7ac4aca1821`. La tabla `site_config` la crea `create_all()` sola.
-  - **Verificado que la migración es retrocompatible:** el código de `master` funciona contra la base ya migrada (las columnas nuevas no le molestan). Por eso el orden seguro es **migrar primero, pushear después**, y no queda ninguna ventana con la app rota.
-  - Secuencia: (1) backup en Railway → pestaña **Backups**; (2) `python release.py` desde la pestaña **Console** del servicio; (3) merge `pendientes` → `master` + push, que dispara el deploy solo.
-  - El admin más viejo queda como **dueño** en la migración, así que no te quedás sin acceso.
-- Apagar el **"Public Access" del Postgres** (se abrió para migrar los datos).
+**Cómo se deployó (2026-08-12) — referencia para la próxima vez:**
+- **Las migraciones ahora corren solas en cada deploy.** `railway.json` declara `preDeployCommand: ["python release.py"]`, así que Railway migra la base **entre el build y el arranque de gunicorn**. Si la migración falla, aborta el deploy y deja viva la versión anterior: nunca queda código nuevo contra un esquema viejo. Ya no hace falta entrar a la consola a mano.
+- **`release.py`** resuelve que la base se creó con `create_all()` y nunca tuvo `alembic_version`: detecta ese caso, stampea en `f498a2a5780f` y recién ahí aplica lo pendiente. Es idempotente. Probado contra una réplica de la base de prod antes de tocar nada.
+- **Auto-deploy: sigue sin veredicto.** El push a `master` (`e57fc7a`) terminó publicado, pero **no quedó registrado si lo disparó el webhook o un "Check for updates" a mano**. La duda es si el servicio, por haberse creado desde un template (bloque *Upstream Repo*), ignora el webhook. Para saberlo: en el próximo push, mirar **Deployments** y ver si arranca un build solo en ~1 min. Solo si no arranca, Disconnect + reconectar el repo (NO "Eject": forkea el repo).
+- ⚠️ **Se deployó sin backup previo.** Salió bien, pero el próximo cambio de esquema merece pasar antes por la pestaña **Backups**.
+- Apagar el **"Public Access" del Postgres** (se abrió para migrar los datos) — **sigue pendiente**.
 
 ### 🔴 Crítico — estabilidad y seguridad de producción
 1. ~~Config peligrosa en prod (SECRET_KEY efímera / DEBUG por defecto).~~ ✅ **Hecho.** *Nota de deploy: asegurarse de que PythonAnywhere tenga `FLASK_ENV=production` y `SECRET_KEY` seteadas en el WSGI/panel.*
