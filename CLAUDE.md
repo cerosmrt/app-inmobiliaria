@@ -93,4 +93,4 @@ python audit_test.py
 - **NO** servir uploads por Flask en prod si se pueden mapear como estáticos.
 
 ## Estado y prioridades
-Ver **`ROADMAP.md`**. Lo urgente hoy: fixes de config/seguridad de producción (DEBUG por defecto, `SECRET_KEY` efímera, credenciales hardcodeadas), luego el rediseño de la ficha admin y la performance del mapa de catastro.
+Ver **`ROADMAP.md`** (qué falta hacer) e **`INFRA.md`** (dónde vive cada cosa: dominio, Railway, base, cuentas, qué hacer si se rompe). Lo urgente hoy: fixes de config/seguridad de producción (DEBUG por defecto, `SECRET_KEY` efímera, credenciales hardcodeadas), luego el rediseño de la ficha admin y la performance del mapa de catastro.
