@@ -89,10 +89,19 @@
         return out;
     }
 
+    // Solo hay dos niveles a la vista: Administrador y Usuario. La cuenta principal
+    // es un Administrador más; lo único que la distingue es que nadie puede tocarla.
+    var SOY_PRINCIPAL = {{ 'true' if admin_es_dueno else 'false' }};
+
     function nivelBadge(a) {
-        if (a.nivel === 'dueno') return '<span class="u-badge dueno">Dueño</span>';
-        if (a.nivel === 'admin') return '<span class="u-badge admin">Administrador</span>';
+        if (a.es_administrador) return '<span class="u-badge admin">Administrador</span>';
         return '<span class="u-mut">Usuario</span>';
+    }
+
+    // Un administrador gestiona usuarios, pero no puede tocar a otro administrador.
+    function puedoTocar(a) {
+        if (a.nivel === 'dueno') return false;
+        return SOY_PRINCIPAL || !a.es_administrador;
     }
 
     function cargarAdmins() {
@@ -104,9 +113,14 @@
             tb.innerHTML = list.map(function(a) {
                 var estado = a.activo ? '<span class="u-badge activo">Activo</span>' : '<span class="u-badge pend">Pendiente</span>';
                 var nivelCell, accesoCell, accionCell;
-                if (a.nivel === 'dueno') {
+                if (!puedoTocar(a)) {
+                    // Se muestra igual, pero sin controles que el backend va a rechazar.
                     nivelCell = nivelBadge(a);
-                    accesoCell = '<span class="u-mut">Acceso total</span>';
+                    accesoCell = a.es_administrador
+                        ? '<span class="u-mut">Acceso total</span>'
+                        : '<span class="u-mut">' + SECCIONES.filter(function(s) {
+                              return a.permisos && a.permisos[s[0]];
+                          }).map(function(s) { return s[1]; }).join(', ') + '</span>';
                     accionCell = '';
                 } else {
                     nivelCell = '<select class="u-nivel-sel" onchange="cambiarNivel(' + a.id + ', this.value)">' +

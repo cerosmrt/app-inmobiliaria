@@ -311,35 +311,6 @@ def api_permiso_required(seccion):
         return decorated
     return wrapper
 
-def dueno_required(f):
-    """Solo el dueño (gestiona administradores)."""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'admin_id' not in session:
-            return redirect(url_for('admin_login'))
-        a = current_admin()
-        if not a or not a.es_dueno:
-            return redirect(url_for('admin_index'))
-        return f(*args, **kwargs)
-    return decorated
-
-def api_dueno_required(f):
-    """API solo-dueño: 401 sin sesión, 403 si no es dueño; valida CSRF en mutaciones."""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'admin_id' not in session:
-            return jsonify({"error": "No autorizado"}), 401
-        if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
-            token = request.headers.get('X-CSRFToken', '')
-            stored = session.get('csrf_token', '')
-            if not token or not stored or not hmac.compare_digest(token, stored):
-                return jsonify({"error": "Token CSRF inválido"}), 403
-        a = current_admin()
-        if not a or not a.es_dueno:
-            return jsonify({"error": "Solo el dueño puede gestionar administradores"}), 403
-        return f(*args, **kwargs)
-    return decorated
-
 def administrador_required(f):
     """Página solo para administradores (dueño o admin de acceso total)."""
     @wraps(f)
@@ -537,7 +508,7 @@ def admin_registro():
                 return redirect(url_for('admin_login'))
     return render_template('admin/registro.html', error=error)
 
-# ── Gestor de administradores (solo dueño) ─────────────────────────────────────
+# ── Gestor de administradores (acceso total) ─────────────────────────────────────
 
 @app.route('/admin/usuarios')
 @administrador_required
@@ -580,7 +551,12 @@ def update_admin(id):
     if not admin:
         return jsonify({"error": "No encontrado"}), 404
     if admin.es_dueno:
-        return jsonify({"error": "El dueño es el administrador principal; no se puede editar"}), 400
+        return jsonify({"error": "La cuenta principal no se puede editar"}), 400
+    # Regla estándar: nadie modifica a alguien de su mismo nivel. Un administrador
+    # gestiona usuarios; tocar a otro administrador es cosa de la cuenta principal.
+    yo = current_admin()
+    if admin.es_admin and not (yo and yo.es_dueno):
+        return jsonify({"error": "Un administrador no puede cambiarle el nivel a otro administrador"}), 403
     data = request.get_json(silent=True) or {}
     if 'nivel' in data:
         admin.es_admin = (data.get('nivel') == 'admin')
@@ -597,15 +573,18 @@ def delete_admin(id):
     if not admin:
         return jsonify({"error": "No encontrado"}), 404
     if admin.es_dueno:
-        return jsonify({"error": "No se puede eliminar al dueño"}), 400
+        return jsonify({"error": "La cuenta principal no se puede eliminar"}), 400
     a = current_admin()
     if a and admin.id == a.id:
         return jsonify({"error": "No te podés eliminar a vos mismo"}), 400
+    # Misma regla que en el PUT: un administrador no puede sacar a un par.
+    if admin.es_admin and not (a and a.es_dueno):
+        return jsonify({"error": "Un administrador no puede eliminar a otro administrador"}), 403
     db.session.delete(admin)
     db.session.commit()
     return jsonify({"status": "ok"})
 
-# ── Panel de textos del sitio (solo dueño) ─────────────────────────────────────
+# ── Panel de textos del sitio (acceso total) ─────────────────────────────────────
 
 @app.route('/admin/textos')
 @administrador_required

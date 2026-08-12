@@ -443,6 +443,67 @@ check('el sitio público no busca por barrio', 'f-barrio' not in pub_index)
 check('sin barra de solapas', 'tabs-bar' not in pub_index and 'setTab' not in pub_index)
 check('el carrusel no recorta los dots', 'fotos.slice(0, 5)' not in pub_index)
 
+seccion('8. Niveles — un administrador no puede sacar a otro administrador')
+
+# El problema que motivó esto: cualquier administrador podía eliminar o degradar
+# a un par, así que un error (o un enojo) dejaba a la inmobiliaria sin acceso.
+# Regla estándar: se gestiona hacia abajo, nunca a un igual.
+with A.app.app_context():
+    otro = Admin(email='otro-admin@test.com', es_admin=True)
+    otro.set_password('x-1234')
+    usuario = Admin(email='usuario@test.com', es_admin=False,
+                    permisos_json='{"propiedades": true}')
+    usuario.set_password('x-1234')
+    db.session.add_all([otro, usuario])
+    db.session.commit()
+    OTRO_ID, USUARIO_ID, PRINCIPAL_ID = otro.id, usuario.id, ADMIN_ID
+
+# Sesión de un administrador común (no es la cuenta principal).
+with cli_http.session_transaction() as s:
+    s['admin_id'] = OTRO_ID
+    s['admin_username'] = 'otro-admin@test.com'
+    s['csrf_token'] = 'token-de-test'
+
+r = cli_http.delete('/api/admins/%d' % PRINCIPAL_ID, headers=H)
+check('un admin no puede eliminar la cuenta principal', r.status_code == 400, r.status_code)
+
+with A.app.app_context():
+    tercero = Admin(email='tercero@test.com', es_admin=True)
+    tercero.set_password('x-1234')
+    db.session.add(tercero)
+    db.session.commit()
+    TERCERO_ID = tercero.id
+
+r = cli_http.delete('/api/admins/%d' % TERCERO_ID, headers=H)
+check('un admin no puede eliminar a otro admin', r.status_code == 403, r.status_code)
+
+r = cli_http.put('/api/admins/%d' % TERCERO_ID, json={'nivel': 'usuario'}, headers=H)
+check('un admin no puede degradar a otro admin', r.status_code == 403, r.status_code)
+
+with A.app.app_context():
+    check('el otro admin sigue existiendo y sigue siendo admin',
+          bool(db.session.get(Admin, TERCERO_ID)) and db.session.get(Admin, TERCERO_ID).es_admin)
+
+# Lo que sí puede: gestionar usuarios comunes.
+r = cli_http.put('/api/admins/%d' % USUARIO_ID, json={'nivel': 'usuario',
+                 'permisos': {'catastro': True}}, headers=H)
+check('un admin sí puede editar a un usuario', r.status_code == 200, r.status_code)
+r = cli_http.delete('/api/admins/%d' % USUARIO_ID, headers=H)
+check('un admin sí puede eliminar a un usuario', r.status_code == 200, r.status_code)
+
+# La cuenta principal sí manda sobre los administradores.
+login()
+r = cli_http.put('/api/admins/%d' % TERCERO_ID, json={'nivel': 'usuario'}, headers=H)
+check('la cuenta principal sí puede degradar a un admin', r.status_code == 200, r.status_code)
+r = cli_http.delete('/api/admins/%d' % OTRO_ID, headers=H)
+check('la cuenta principal sí puede eliminar a un admin', r.status_code == 200, r.status_code)
+
+# La UI no debe ofrecer botones que el backend va a rechazar, ni mostrar un
+# tercer rango: en pantalla solo existen Administrador y Usuario.
+usuarios_tpl = tpl('admin/usuarios.html')
+check('la UI decide con puedoTocar()', 'function puedoTocar' in usuarios_tpl)
+check('la UI ya no muestra el rango "Dueño"', '>Dueño<' not in usuarios_tpl)
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 shutil.rmtree(_TMP, ignore_errors=True)
 print('\n' + '=' * 62)
