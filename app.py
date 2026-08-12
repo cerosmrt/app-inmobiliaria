@@ -400,7 +400,7 @@ SITE_TEXTOS = [
     {'clave': 'hero_titulo_size', 'label': 'Home · tamaño del título (px, opcional)', 'tipo': 'px',
      'default': ''},
     {'clave': 'hero_sub',         'label': 'Home · subtítulo',               'tipo': 'textarea',
-     'default': 'Propiedades en venta en Buenos Aires.\nTe acompañamos en cada paso del proceso.'},
+     'default': 'Propiedades en venta en Entre Ríos.\nTe acompañamos en cada paso del proceso.'},
 ]
 
 def get_textos():
