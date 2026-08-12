@@ -1,7 +1,7 @@
 # ROADMAP — Moret Inmobiliaria
 
 CRM inmobiliario (Flask + SQLAlchemy + Leaflet) para la inmobiliaria familiar.
-En producción en `moretinmobiliaria.pythonanywhere.com`.
+En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 > **Forma de trabajo:** todo lo nuevo entra primero acá como **Pendiente**. Se avanza de a **una modificación por vez**, recapitulando con el usuario (multiple-choice) antes de tocar código. Al completar un ítem, se mueve a **Hecho**.
 
@@ -69,7 +69,7 @@ En producción en `moretinmobiliaria.pythonanywhere.com`.
 - Auth por sesión (hashing Werkzeug, **CSRF**, rate-limit de login, cookies seguras en prod), setup del primer admin.
 - **Command palette** (Ctrl/Cmd+K), toasts, confirm modal, sidebar colapsable ("Portfolio / Inteligencia / Comunicación").
 - **El panel abre en Propiedades**, no en Interesados: es el portfolio, lo que se mira todos los días; Interesados se consulta cuando hay una consulta concreta puntual. El default vivía repetido en dos lugares que estaban desalineados (`admin/index.html` decía `interesados`, `admin/base.html` decía `clientes` — que ni siquiera es una pestaña, así que el sidebar no marcaba nada activo al entrar sin `?tab=`); ahora los dos dicen `propiedades`.
-- Config por entorno (dev SQLite / prod Postgres), deploy en PythonAnywhere.
+- Config por entorno (dev SQLite / prod Postgres), deploy en Railway.
 
 ---
 
@@ -98,7 +98,7 @@ Las tres features ya están vivas en https://moretinmobiliaria.com. Verificado e
 - Apagar el **"Public Access" del Postgres** (se abrió para migrar los datos) — **sigue pendiente**.
 
 ### 🔴 Crítico — estabilidad y seguridad de producción
-1. ~~Config peligrosa en prod (SECRET_KEY efímera / DEBUG por defecto).~~ ✅ **Hecho.** *Nota de deploy: asegurarse de que PythonAnywhere tenga `FLASK_ENV=production` y `SECRET_KEY` seteadas en el WSGI/panel.*
+1. ~~Config peligrosa en prod (SECRET_KEY efímera / DEBUG por defecto).~~ ✅ **Hecho.** *Nota de deploy: `FLASK_ENV=production` y `SECRET_KEY` van en las Variables del servicio en Railway.*
 2. ~~Credenciales hardcodeadas en `load_demo.py`.~~ ✅ **Hecho.**
 3. **Doble sistema de esquema.** Alembic (`migrations/`) conviviendo con un bloque de `ALTER TABLE` crudos + `db.create_all()` en cada arranque (`app.py:1960-2012`), todo en `try/except: pass`. *Por qué importa: el esquema depende del orden de arranque, hay carreras entre workers y los errores se silencian. Requiere backup de la DB de prod antes de tocar.*
 4. **Validación de entrada — parcial.** ✅ Guards aplicados a `add_propiedad`, `bulk-estado` y `add_cliente`. Falta extender el patrón `_json_body()`/`_missing()` al resto de endpoints de escritura (edición de clientes, captación, catastro). *Por qué importa: todavía quedan rutas que pueden tirar 500 por body ausente.*
@@ -138,7 +138,7 @@ Las tres features ya están vivas en https://moretinmobiliaria.com. Verificado e
 6c. **Galería de fotos en 2×2 + modal de gestión.** *(decidido el 23/07/2026, revierte parte de lo hecho ese mismo día)* En el rail se ven **4 miniaturas (2×2)** y la cuarta lleva el contador **«+N»**; el manejo real —reordenar por drag & drop, subir y borrar— se muda a un **modal grande**, que da mucho más lugar para arrastrar. Reemplaza el scroll interno con techo elástico que quedó hoy. *Costo: agrega un clic para cualquier cambio en las fotos. Ojo: el techo del rail (`100vh - 95px`) sigue haciendo falta para el resto del card.*
 
 
-6e. **Captación como canvas de nodos — etapa 1: visualización.** *(decidido: las dos etapas, pero primero esta)* Cada lead es un nodo en un lienzo libre con zoom, pan y minimapa, arrastrable entre etapas; es el Kanban actual en otro formato, apoyado en datos que ya existen (`CaptacionLead.estado`, propietario, potencial, días en etapa). Se suma como una vista más al conmutador que ya está (`setView()`: Kanban / Lista / Seguimientos). **Sin React ni build step**: SVG + JS vanilla, o una librería que cargue por CDN (Drawflow / jsPlumb). *Descartado React Flow a propósito: exige React + bundler, y el deploy en PythonAnywhere es `git pull` + Reload, sin build.*
+6e. **Captación como canvas de nodos — etapa 1: visualización.** *(decidido: las dos etapas, pero primero esta)* Cada lead es un nodo en un lienzo libre con zoom, pan y minimapa, arrastrable entre etapas; es el Kanban actual en otro formato, apoyado en datos que ya existen (`CaptacionLead.estado`, propietario, potencial, días en etapa). Se suma como una vista más al conmutador que ya está (`setView()`: Kanban / Lista / Seguimientos). **Sin React ni build step**: SVG + JS vanilla, o una librería que cargue por CDN (Drawflow / jsPlumb). *Descartado React Flow a propósito: exige React + bundler, y el proyecto no tiene build step.*
 
 6f. **Captación — etapa 2: motor de automatizaciones.** *(sólo después de 6e, y es un proyecto aparte, no una pantalla)* Diseñar flujos que los leads recorran solos: nodos de condición («¿respondió en 48hs?»), de acción («investigar dueño», «asignar agente») y de salida. **Requiere** motor de ejecución en el backend, scheduler (hoy no hay ninguno) y, para el auto-WhatsApp, la **API de WhatsApp Business** — con un link `wa.me` no se puede mandar solo. *Por qué importa: es la diferencia entre dibujar el flujo y que el flujo funcione.*
 

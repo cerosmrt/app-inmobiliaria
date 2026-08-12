@@ -22,7 +22,7 @@ Tres realidades definen la estrategia:
 - **D. Feed personalizado + alertas** (retención: que el comprador vuelva sin que le insistas).
 - **E. Productividad del agente + analytics** (que tu viejo trabaje menos y decida con datos).
 
-**Cómo se construyen las "features de IA" acá (realidad técnica):** no entrenás modelos. **Llamás a la API de Claude** para lo generativo/clasificatorio (descripciones, scoring cualitativo, chat, matching semántico) y usás **heurísticas + tus propios datos históricos** para lo numérico. Barato, rápido, sin infra de ML. La restricción es PythonAnywhere (CPU limitada, sin GPU, procesos cortos) → todo lo pesado va como job/cron o llamada a API externa.
+**Cómo se construyen las "features de IA" acá (realidad técnica):** no entrenás modelos. **Llamás a la API de Claude** para lo generativo/clasificatorio (descripciones, scoring cualitativo, chat, matching semántico) y usás **heurísticas + tus propios datos históricos** para lo numérico. Barato, rápido, sin infra de ML. La restricción es el plan chico de Railway (CPU/RAM acotadas, sin GPU) → todo lo pesado va como job/cron o llamada a API externa.
 
 **Lo que NO vamos a construir (y por qué):** ratings de escuelas, índices de crimen, walkability, AVM entrenado, análisis de commute → **no hay datos confiables para Gualeguay** y sería humo. Si algún día hay volumen y datos, se reevalúa.
 
@@ -266,7 +266,7 @@ Orden = retorno esperado sobre esfuerzo, para *este* negocio (inmobiliaria chica
 
 ## 5. Restricciones y riesgos a tener presentes
 - **Datos:** los AVM/scoring numéricos mejoran con volumen; al principio son heurísticas honestas con "nivel de confianza" visible. Nada de precisión falsa.
-- **Infra (PythonAnywhere free):** CPU limitada, sin procesos largos ni GPU → lo pesado va como cron/job o llamada a API externa (Claude). Evaluar si algún feature obliga a subir de plan.
+- **Infra (Railway, plan Hobby ~USD5/mes):** CPU/RAM acotadas y sin GPU → lo pesado va como cron/job o llamada a API externa (Claude). Evaluar si algún feature obliga a subir de plan.
 - **IA = API de Claude,** no modelos propios: costo por request bajo y predecible, pero hay que cachear y limitar para no disparar gasto (ej. no regenerar descripciones en cada view).
 - **Privacidad/legal:** los datos de dueños catastrales y el scoring de vendedores son sensibles — uso interno, con cuidado en cómo se contacta (no spam). Definir política antes de escalar A1/A2.
 - **WhatsApp:** el salto de "links wa.me" a **automatización real** (bot que envía) requiere WhatsApp Business API (costo + aprobación). El chat web (B3) no depende de eso y se hace primero.

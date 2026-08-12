@@ -3,7 +3,7 @@
 Contexto para cualquier sesión de Claude Code que trabaje en este proyecto. Leer antes de tocar código.
 
 ## Qué es
-CRM inmobiliario para la inmobiliaria familiar (Moret, Gualeguay, Entre Ríos). Reemplaza una carpeta impresa de propiedades. Tiene un **sitio público** (de cara al cliente) y un **back-office admin** para gestionar propiedades, personas, consultas, captación de leads y catastro geoespacial. UI en **español**. En producción en `moretinmobiliaria.pythonanywhere.com`.
+CRM inmobiliario para la inmobiliaria familiar (Moret, Gualeguay, Entre Ríos). Reemplaza una carpeta impresa de propiedades. Tiene un **sitio público** (de cara al cliente) y un **back-office admin** para gestionar propiedades, personas, consultas, captación de leads y catastro geoespacial. UI en **español**. En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 ## Cómo trabajar en este proyecto (regla de colaboración — IMPORTANTE)
 - **Una modificación por vez.** No avanzar en varias cosas juntas ni en batch.
@@ -18,7 +18,7 @@ CRM inmobiliario para la inmobiliaria familiar (Moret, Gualeguay, Entre Ríos). 
 - **Frontend:** Jinja2 + **JS vanilla, sin build step ni framework**. Las páginas llegan casi vacías y se rellenan con `fetch` a APIs JSON.
 - **Mapas:** Leaflet 1.9.4 vía CDN (+ Leaflet.draw, togeojson, turf, shpjs donde aplica).
 - **Imágenes:** Pillow (WebP + thumbnails).
-- **Prod:** gunicorn (Procfile, estilo Railway) — pero el deploy real es **PythonAnywhere** (WSGI propio).
+- **Prod:** **Railway** — gunicorn vía `Procfile`, Postgres gestionado, volumen montado en `/app/static/uploads` para las fotos (el disco es efímero), y **Cloudflare** al frente para el dominio propio.
 
 ## Estructura
 ```
@@ -80,7 +80,7 @@ python test_regresion.py
 # Ojo: requiere `requests`, que no está en el venv, y credenciales reales.
 python audit_test.py
 ```
-**Deploy (PythonAnywhere):** `git push` desde local → en PythonAnywhere `git pull` en el directorio del proyecto → **Reload** del web app desde el panel. Env vars (`SECRET_KEY`, `FLASK_ENV=production`, `DATABASE_URL`, contacto, SMTP) se setean en el panel/WSGI, no en git. El `.env` nunca se commitea.
+**Deploy (Railway):** `git push` a **`master`** y listo — Railway buildea y publica. **Las migraciones corren solas**: `railway.json` declara `preDeployCommand: ["python release.py"]`, que se ejecuta entre el build y el arranque de gunicorn; si falla, el deploy se aborta y queda viva la versión anterior. Env vars (`SECRET_KEY`, `FLASK_ENV=production`, `DATABASE_URL`, contacto, SMTP) se setean en el panel de Railway, no en git. El `.env` nunca se commitea. Antes de un cambio de esquema, backup desde la pestaña **Backups**.
 
 ## Reglas SÍ / NO de este proyecto
 - **SÍ** escapar siempre el HTML que se inyecta por `innerHTML` (hoy hay interpolación sin escapar en la ficha pública → XSS latente).
