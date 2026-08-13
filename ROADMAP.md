@@ -86,6 +86,27 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ### 📬 Buzón — falta el destinatario del aviso
 El formulario ya está hecho (ver *Hecho › Sitio público*). Queda **una decisión tomada y sin implementar**: cuando el aviso por mail vuelva a andar, tiene que salir a **los admins con email cargado y permiso sobre *Consultas***, no a la casilla única `MAIL_TO` que usa hoy `_send_consulta_email`. Así al sumar gente al panel se entera sola, sin tocar variables en Railway. Va pegado al arreglo de SMTP de acá abajo: implementarlo antes no se puede probar.
 
+### 🎨 Pulido visual de la ficha pública (revisión de diseño 13/08/2026)
+Lista traída por el usuario. Agrupada para hacerla de a tandas, no toda junta.
+
+**a. Tipografía y aire**
+- "Descripción" pesa demasiado contra el cuerpo: bajar tamaño o peso.
+- Subir el `line-height` de la descripción; hoy se lee apretada.
+- "¿Te interesa esta propiedad? Consultanos acá" compite con el título de la propiedad: más chico o más liviano.
+
+**b. Grilla y tarjetas**
+- Alinear el borde superior de la foto con el de la tarjeta del buzón.
+- El gap entre la foto y la barra de miniaturas es menor que el padding interno de las tarjetas: unificar la escala de espaciado.
+- Sombras disparejas entre tarjetas (el buzón tiene sombra marcada, la descripción apenas un borde): una sola elevación para todas.
+- Miniaturas sin esquinas redondeadas y sin feedback: redondear igual que la foto y agregar hover.
+
+**c. Color** — *ojo acá*
+- Rojo más apagado/borgoña: **no es un ajuste de la ficha, es cambio de identidad.** El `--red` vive en el landing, el logo y el admin; cambiarlo por una pantalla desalinea el resto.
+- Botón de WhatsApp en verde pleno: se come la atención del botón *Enviar consulta*. Pasarlo a outline sí es local y razonable.
+- Chapitas sobre la foto con fondo translúcido/blur en vez de colores plenos.
+
+**Descartado:** "que la descripción ocupe dos columnas" — la columna derecha es la del buzón, que es justamente lo que queremos que se vea primero.
+
 ### 📲 Aviso por WhatsApp al entrar una consulta
 Sin resolver, a propósito. Las tres vías y su costo real:
 - **API oficial (WhatsApp Cloud API de Meta)** — confiable, gratis en volumen bajo, pero pide cuenta de WhatsApp Business, verificación del negocio y plantillas de mensaje aprobadas.

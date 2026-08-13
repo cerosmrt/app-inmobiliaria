@@ -190,10 +190,15 @@
         .spec-item .spec-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #999999; margin-bottom: 5px; font-weight: 600; }
         .spec-item .spec-value { font-size: 15px; font-weight: 600; color: #111111; }
 
-        .prop-desc { font-size: 14px; line-height: 1.8; color: #555555; white-space: pre-wrap; }
+        .prop-desc { font-size: 14px; line-height: 1.95; color: #555555; white-space: pre-wrap; }
 
         /* ── CONTACT CARD ── */
-        .contact-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #111111; text-align: center; }
+        /* Más liviano que el título de la propiedad a propósito: es la etiqueta
+           del formulario, no el encabezado de la página. */
+        .contact-card h3 {
+            font-size: 13px; font-weight: 500; margin-bottom: 14px;
+            color: #666666; text-align: center; letter-spacing: 0.01em;
+        }
         .contact-btns { display: flex; flex-direction: row; gap: 10px; }
         .btn-wa, .btn-gmail {
             flex: 1; display: flex; align-items: center; justify-content: center;
@@ -565,7 +570,7 @@
             ${gal}
             ${p.descripcion ? `
             <div class="detail-card" style="margin-top:20px">
-                <h3 style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin-bottom:14px;color:var(--ink)">Descripción</h3>
+                <h3 style="font-family:'DM Serif Display',serif;font-size:15.5px;font-weight:400;margin-bottom:12px;color:#555555">Descripción</h3>
                 <p class="prop-desc">${escHtml(p.descripcion)}</p>
             </div>` : ''}
         </div>
