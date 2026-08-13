@@ -79,10 +79,15 @@
         .layout { display: grid; grid-template-columns: minmax(0,1fr) 420px; gap: 36px; align-items: start; }
 
         /* ── GALLERY ── */
-        .gallery { border-radius: 12px; overflow: hidden; border: 1px solid #EBEBEB; background: #F2F2F2; }
+        /* Las miniaturas van al costado, en vertical: abajo se comían alto de
+           la página y la ficha no entraba de una. */
+        .gallery {
+            border-radius: 12px; overflow: hidden; border: 1px solid #EBEBEB;
+            background: #F2F2F2; display: flex; align-items: stretch;
+        }
         .gallery-main {
-            position: relative; aspect-ratio: 16/9; background: #F2F2F2;
-            cursor: pointer; overflow: hidden;
+            position: relative; flex: 1; min-width: 0; aspect-ratio: 16/9;
+            background: #F2F2F2; cursor: pointer; overflow: hidden;
         }
         .gallery-main img {
             width: 100%; height: 100%; object-fit: cover; display: block;
@@ -109,14 +114,8 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.16); transition: all 0.15s;
         }
         .nav-btn:hover { background: white; transform: scale(1.08); }
-        .gallery-count {
-            position: absolute; bottom: 14px; right: 14px;
-            background: rgba(0,0,0,0.46); color: rgba(255,255,255,0.88);
-            font-size: 11px; font-weight: 500; padding: 5px 13px; border-radius: 100px;
-            letter-spacing: 0.3px;
-        }
         .gallery-expand {
-            position: absolute; bottom: 14px; left: 14px;
+            position: absolute; bottom: 14px; right: 14px;
             background: rgba(0,0,0,0.38); color: rgba(255,255,255,0.85); border: none;
             font-size: 11px; font-weight: 500; padding: 5px 11px; border-radius: 6px;
             cursor: pointer; transition: background 0.15s; letter-spacing: 0.02em;
@@ -124,14 +123,14 @@
         }
         .gallery-expand:hover { background: rgba(0,0,0,0.62); }
         .gallery-thumbs {
-            display: flex; gap: 6px; padding: 10px;
-            overflow-x: auto; background: #F8F8F8;
-            border-top: 1px solid #EBEBEB;
+            display: flex; flex-direction: column; gap: 6px; padding: 8px;
+            overflow-y: auto; background: #F8F8F8;
+            border-left: 1px solid #EBEBEB;
         }
-        .gallery-thumbs::-webkit-scrollbar { height: 3px; }
+        .gallery-thumbs::-webkit-scrollbar { width: 3px; }
         .gallery-thumbs::-webkit-scrollbar-thumb { background: #DDDDDD; border-radius: 2px; }
         .thumb {
-            flex-shrink: 0; width: 80px; height: 58px; border-radius: 6px;
+            flex-shrink: 0; width: 74px; height: 54px; border-radius: 6px;
             overflow: hidden; cursor: pointer; border: 2px solid transparent;
             transition: all 0.15s; opacity: 0.6;
         }
@@ -337,7 +336,7 @@
             .header { position: static; box-shadow: none; border-bottom: 2px solid var(--red); background: white; }
             .header-inner { height: auto; padding: 14px 20px; }
             #btn-share, .back-btn,
-            .gallery-nav, .gallery-expand, .gallery-thumbs, .gallery-count,
+            .gallery-nav, .gallery-expand, .gallery-thumbs,
             .lightbox, #similares-section,
             .btn-wa, .btn-gmail, #form-consulta,
             .breadcrumb { display: none !important; }
@@ -361,6 +360,12 @@
             .container { padding: 20px 16px 60px; }
             .breadcrumb { margin-bottom: 20px; }
             .gallery-main { aspect-ratio: 4/3; }
+            /* En el celular no hay ancho para la barra al costado: vuelve abajo */
+            .gallery { flex-direction: column; }
+            .gallery-thumbs {
+                flex-direction: row; overflow-x: auto; overflow-y: hidden;
+                border-left: none; border-top: 1px solid #EBEBEB;
+            }
             .prop-specs { grid-template-columns: repeat(2, 1fr); }
             .prop-price { font-size: 34px; }
             .prop-address { font-size: 20px; }
@@ -607,15 +612,6 @@
                 </div>
                 <div class="print-only">📞 ${TELEFONO} &nbsp;·&nbsp; Roberto Moret Inmobiliaria</div>
             </div>
-
-            <div class="detail-card">
-                <div class="prop-price">${formatPrecio(p)}</div>
-                <div class="prop-address">${escHtml(p.direccion)}</div>
-                ${p.barrio ? `<div class="prop-barrio">📍 ${escHtml(p.barrio)}</div>` : ''}
-                ${p.ambientes ? `<div class="prop-specs">
-                    <div class="spec-item"><div class="spec-label">Ambientes</div><div class="spec-value">${escHtml(p.ambientes)}</div></div>
-                </div>` : ''}
-            </div>
         </div>`;
 
         bindGalleryEvents();
@@ -692,7 +688,6 @@
                     <button class="nav-btn" onclick="setFoto(fotoActual - 1)">‹</button>
                     <button class="nav-btn" onclick="setFoto(fotoActual + 1)">›</button>
                 </div>` : ''}
-                <div class="gallery-count" id="gallery-count">📷 1 / ${fotos.length}</div>
                 <button class="gallery-expand" onclick="openLightbox(fotoActual)">⤢ Ampliar</button>
             </div>
             ${fotos.length > 1 ? `<div class="gallery-thumbs">${thumbs}</div>` : ''}
@@ -717,8 +712,6 @@
         const img = document.getElementById('main-img');
         if (img) img.src = '/' + fotos[fotoActual];
         document.querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('active', i === fotoActual));
-        const cnt = document.getElementById('gallery-count');
-        if (cnt) cnt.textContent = `📷 ${fotoActual + 1} / ${fotos.length}`;
     }
 
     function lbUpdateCounter() {
