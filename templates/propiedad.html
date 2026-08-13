@@ -206,6 +206,47 @@
         }
         .btn-gmail:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); border-color: #CCCCCC; }
 
+        /* Buzón. Mismo formulario que el landing, pero la consulta viaja con
+           el propiedad_id: en la bandeja se ve por cuál propiedad escribieron. */
+        .cf-sep {
+            display: flex; align-items: center; gap: 10px; margin: 4px 0 16px;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #AAAAAA; font-weight: 600;
+        }
+        .cf-sep::before, .cf-sep::after { content: ''; flex: 1; height: 1px; background: #EBEBEB; }
+        .cf-field { margin-bottom: 10px; }
+        .cf-field label {
+            display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+            color: #999999; font-weight: 600; margin-bottom: 6px;
+        }
+        .cf-field input, .cf-field textarea {
+            width: 100%; background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 9px;
+            padding: 11px 13px; color: #111111; font-family: inherit; font-size: 14px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .cf-field input::placeholder, .cf-field textarea::placeholder { color: #BBBBBB; }
+        .cf-field input:focus, .cf-field textarea:focus {
+            outline: none; background: #FFFFFF; border-color: var(--red);
+        }
+        .cf-field textarea { min-height: 86px; resize: vertical; line-height: 1.55; }
+        .cf-hint { font-size: 11.5px; color: #999999; margin: -4px 0 12px; }
+        .cf-send {
+            width: 100%; background: var(--red); color: #FFFFFF; border: none; border-radius: 9px;
+            padding: 13px; font-family: inherit; font-size: 13.5px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .cf-send:hover { background: #A30F28; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(196,18,48,0.28); }
+        .cf-send:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+        .cf-msg { min-height: 16px; margin-top: 10px; font-size: 12.5px; text-align: center; color: #888888; }
+        .cf-msg.err { color: var(--red); }
+        .cf-ok { text-align: center; padding: 14px 4px; }
+        .cf-ok-icon {
+            width: 40px; height: 40px; margin: 0 auto 12px; border-radius: 50%;
+            background: rgba(34,197,94,0.1); color: #16a34a; font-size: 19px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .cf-ok-title { font-size: 15px; font-weight: 600; color: #111111; margin-bottom: 5px; }
+        .cf-ok-text { font-size: 13px; color: #777777; line-height: 1.6; }
+
 
         /* ── LIGHTBOX ── */
         .lightbox {
@@ -290,7 +331,7 @@
             #btn-share, #btn-print, .back-btn,
             .gallery-nav, .gallery-expand, .gallery-thumbs, .gallery-count,
             .lightbox, #similares-section,
-            .btn-wa, .btn-gmail,
+            .btn-wa, .btn-gmail, #form-consulta,
             .breadcrumb { display: none !important; }
             .container { padding: 16px; }
             .layout { grid-template-columns: 1fr; gap: 16px; }
@@ -409,6 +450,53 @@
     const WA_NUM   = '{{ contacto_wa }}';
     const EMAIL    = '{{ contacto_email }}';
 
+    // Buzón de la ficha. Mismas tres reglas que valida el back
+    // (`api_public_consultas` en app.py) y que el formulario del landing;
+    // acá además viaja el propiedad_id, así la bandeja muestra por cuál
+    // propiedad escribieron sin tener que deducirlo del mensaje.
+    function enviarConsulta(ev) {
+        ev.preventDefault();
+        const caja = document.getElementById('cf-msg');
+        const btn  = document.getElementById('cf-send');
+        const datos = {
+            nombre:   document.getElementById('cf-nombre').value.trim(),
+            email:    document.getElementById('cf-email').value.trim(),
+            telefono: document.getElementById('cf-telefono').value.trim(),
+            mensaje:  document.getElementById('cf-mensaje').value.trim(),
+            propiedad_id: propiedadId
+        };
+        let error = '';
+        if (!datos.nombre)                        error = 'Escribinos tu nombre.';
+        else if (!datos.mensaje)                  error = 'Contanos qué necesitás.';
+        else if (!datos.email && !datos.telefono) error = 'Dejanos un email o un teléfono para poder responderte.';
+        if (error) { caja.className = 'cf-msg err'; caja.textContent = error; return; }
+
+        btn.disabled = true;
+        caja.className = 'cf-msg';
+        caja.textContent = 'Enviando…';
+        fetch('/api/public/consultas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        })
+            .then(r => r.json().catch(() => ({})).then(d => ({ ok: r.ok, d })))
+            .then(({ ok, d }) => {
+                if (!ok) throw new Error(d.error || '');
+                // HTML fijo, sin nada que haya tipeado el visitante.
+                document.getElementById('form-consulta').innerHTML =
+                    '<div class="cf-ok">' +
+                    '<div class="cf-ok-icon">✓</div>' +
+                    '<div class="cf-ok-title">Recibimos tu consulta</div>' +
+                    '<div class="cf-ok-text">Te respondemos a la brevedad. Si es urgente, escribinos por WhatsApp.</div>' +
+                    '</div>';
+            })
+            .catch(e => {
+                btn.disabled = false;
+                caja.className = 'cf-msg err';
+                caja.textContent = e.message || 'No pudimos enviar la consulta. Probá de nuevo o escribinos por WhatsApp.';
+            });
+    }
+
     function formatPrecio(p) {
         if (p.precio_a_consultar || !p.rango_min) return `<span class="consultar">$ consultar</span>`;
         const moneda = p.es_usd ? 'USD' : '$';
@@ -502,6 +590,28 @@
                         </svg>
                     </a>
                 </div>
+                <form id="form-consulta" novalidate onsubmit="enviarConsulta(event)">
+                    <div class="cf-sep">o escribinos</div>
+                    <div class="cf-field">
+                        <label for="cf-nombre">Nombre</label>
+                        <input type="text" id="cf-nombre" maxlength="120" autocomplete="name" placeholder="Cómo te llamás">
+                    </div>
+                    <div class="cf-field">
+                        <label for="cf-email">Email</label>
+                        <input type="email" id="cf-email" maxlength="120" autocomplete="email" placeholder="tunombre@mail.com">
+                    </div>
+                    <div class="cf-field">
+                        <label for="cf-telefono">Teléfono</label>
+                        <input type="tel" id="cf-telefono" maxlength="40" autocomplete="tel" placeholder="3444 000000">
+                    </div>
+                    <p class="cf-hint">Dejanos al menos uno de los dos para poder responderte.</p>
+                    <div class="cf-field">
+                        <label for="cf-mensaje">Mensaje</label>
+                        <textarea id="cf-mensaje" maxlength="2000">${escHtml(msgDefecto)}</textarea>
+                    </div>
+                    <button type="submit" class="cf-send" id="cf-send">Enviar consulta</button>
+                    <div class="cf-msg" id="cf-msg" role="status" aria-live="polite"></div>
+                </form>
                 <div class="print-only">📞 ${TELEFONO} &nbsp;·&nbsp; Roberto Moret Inmobiliaria</div>
             </div>
         </div>`;
