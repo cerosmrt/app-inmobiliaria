@@ -633,10 +633,17 @@ check("WA en pagina publica contiene 543444460856", "543444460856" in r.text, "W
 
 # Test public consulta form endpoint
 r_c = requests.post(f"{BASE}/api/public/consultas",
-                    json={"nombre": "Test Contacto", "mensaje": "Test de contacto audit", "propiedad_id": None},
+                    json={"nombre": "Test Contacto", "mensaje": "Test de contacto audit",
+                          "email": "test.contacto@example.com", "propiedad_id": None},
                     headers={"Content-Type": "application/json"})
 check("POST consulta publica 201", r_c.status_code == 201, str(r_c.status_code))
 check("Consulta mensaje guardado", "correctamente" in r_c.json().get("message", ""), str(r_c.json()))
+
+# Sin email ni telefono la consulta seria irrespondible: el back la rechaza
+r_c2 = requests.post(f"{BASE}/api/public/consultas",
+                     json={"nombre": "Test Sin Contacto", "mensaje": "No dejo forma de responder"},
+                     headers={"Content-Type": "application/json"})
+check("POST consulta sin contacto 400", r_c2.status_code == 400, str(r_c2.status_code))
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n=== FASE 17: STATS EXPANDIDOS ===")

@@ -354,20 +354,54 @@
             font-size: 16px; font-weight: 300; color: rgba(244,239,232,0.42);
             margin-bottom: 52px; line-height: 1.65;
         }
-        .contact-cards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-        .contact-card {
-            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 14px; padding: 24px 30px; min-width: 176px;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            transition: all var(--tx);
+        /* Buzón: el formulario manda, los canales directos quedan de apoyo */
+        .contact-inner p.contact-sub { margin-bottom: 40px; }
+        .contact-form { max-width: 560px; margin: 0 auto; text-align: left; }
+        .cf-row { display: flex; gap: 14px; }
+        .cf-field { flex: 1; margin-bottom: 14px; }
+        .cf-field label {
+            display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 3px;
+            color: rgba(244,239,232,0.32); font-weight: 600; margin-bottom: 8px;
         }
-        .contact-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.16); transform: translateY(-3px); }
-        .contact-card .c-icon { font-size: 22px; margin-bottom: 8px; }
-        .contact-card .c-label { font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: rgba(244,239,232,0.3); font-weight: 600; }
-        .contact-card .c-value { font-size: 14px; font-weight: 600; color: #F4EFE8; margin-top: 3px; }
-        .contact-card.wa { border-color: rgba(37,211,102,0.18); }
-        .contact-card.wa:hover { background: rgba(37,211,102,0.07); border-color: rgba(37,211,102,0.3); }
-        .contact-card.wa .c-value { color: #4ade80; }
+        .cf-field input, .cf-field textarea {
+            width: 100%; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+            padding: 13px 15px; color: #F4EFE8; font-family: inherit; font-size: 15px;
+            transition: border-color var(--tx-f), background var(--tx-f);
+        }
+        .cf-field input::placeholder, .cf-field textarea::placeholder { color: rgba(244,239,232,0.22); }
+        .cf-field input:focus, .cf-field textarea:focus {
+            outline: none; background: rgba(255,255,255,0.07); border-color: rgba(196,18,48,0.55);
+        }
+        .cf-field textarea { min-height: 116px; resize: vertical; line-height: 1.55; }
+        .cf-hint { font-size: 12.5px; color: rgba(244,239,232,0.3); margin: -4px 0 16px; }
+        .cf-send {
+            width: 100%; background: var(--red); color: #FFFFFF; border: none; border-radius: 10px;
+            padding: 15px; font-family: inherit; font-size: 14px; font-weight: 600;
+            letter-spacing: 0.3px; cursor: pointer; transition: all var(--tx);
+        }
+        .cf-send:hover { background: #A30F28; transform: translateY(-2px); box-shadow: 0 10px 30px rgba(196,18,48,0.3); }
+        .cf-send:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+        .cf-msg { min-height: 18px; margin-top: 12px; font-size: 13.5px; text-align: center; color: rgba(244,239,232,0.45); }
+        .cf-msg.err { color: #FF8098; }
+        .cf-ok { text-align: center; padding: 30px 10px; }
+        .cf-ok-icon {
+            width: 46px; height: 46px; margin: 0 auto 16px; border-radius: 50%;
+            background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.3);
+            color: #4ade80; font-size: 22px; display: flex; align-items: center; justify-content: center;
+        }
+        .cf-ok-title { font-family: 'DM Serif Display', Georgia, serif; font-size: 25px; color: #F4EFE8; margin-bottom: 8px; }
+        .cf-ok-text { font-size: 14.5px; font-weight: 300; color: rgba(244,239,232,0.45); line-height: 1.6; }
+        .contact-alt {
+            margin-top: 34px; display: flex; flex-wrap: wrap;
+            gap: 10px 28px; justify-content: center; font-size: 13.5px;
+        }
+        .contact-alt a {
+            color: rgba(244,239,232,0.4); display: inline-flex; align-items: center;
+            gap: 8px; transition: color var(--tx-f);
+        }
+        .contact-alt a:hover { color: #F4EFE8; }
+        .contact-alt a.wa:hover { color: #4ade80; }
 
         /* ── FOOTER ── */
         footer {
@@ -399,8 +433,8 @@
             .listings { padding: 28px 16px 80px; }
             .listings-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; gap: 18px; }
             .contact-section { padding: 72px 20px; }
-            .contact-cards { flex-direction: column; align-items: center; }
-            .contact-card { width: 100%; max-width: 320px; }
+            .cf-row { flex-direction: column; gap: 0; }
+            .contact-alt { flex-direction: column; align-items: center; gap: 14px; }
         }
         @media (min-width: 769px) and (max-width: 1100px) {
             .listings-grid { grid-template-columns: repeat(2, 1fr); }
@@ -509,23 +543,41 @@
     <div class="contact-inner">
         <div class="contact-label">Estamos para vos</div>
         <h2>¿Tenés alguna <em>consulta</em>?</h2>
-        <p>Contactanos por el medio que prefieras. Respondemos a la brevedad.</p>
-        <div class="contact-cards">
-            <a href="https://wa.me/{{ contacto_wa }}" target="_blank" class="contact-card wa">
-                <div class="c-icon">💬</div>
-                <div class="c-label">WhatsApp</div>
-                <div class="c-value">{{ contacto_telefono }}</div>
-            </a>
-            <a href="tel:{{ contacto_telefono }}" class="contact-card">
-                <div class="c-icon">📞</div>
-                <div class="c-label">Teléfono</div>
-                <div class="c-value">{{ contacto_telefono }}</div>
-            </a>
-            <a href="mailto:{{ contacto_email }}" class="contact-card">
-                <div class="c-icon">✉</div>
-                <div class="c-label">Email</div>
-                <div class="c-value">{{ contacto_email }}</div>
-            </a>
+        <p class="contact-sub">Escribinos acá y te respondemos a la brevedad.</p>
+
+        <!-- Buzón. Antes esto eran tres tarjetas (WhatsApp/Teléfono/Email): le
+             pasaban la decisión al visitante y el que dudaba se iba sin dejar
+             rastro. Ahora escribe y la consulta cae en /admin/consultas. Los
+             canales directos quedan abajo, en chico: mucha gente prefiere
+             mandar un WhatsApp y listo, y un formulario solo pierde a esos. -->
+        <form class="contact-form" id="form-consulta" novalidate onsubmit="enviarConsulta(event)">
+            <div class="cf-field">
+                <label for="cf-nombre">Nombre</label>
+                <input type="text" id="cf-nombre" maxlength="120" autocomplete="name" placeholder="Cómo te llamás">
+            </div>
+            <div class="cf-row">
+                <div class="cf-field">
+                    <label for="cf-email">Email</label>
+                    <input type="email" id="cf-email" maxlength="120" autocomplete="email" placeholder="tunombre@mail.com">
+                </div>
+                <div class="cf-field">
+                    <label for="cf-telefono">Teléfono</label>
+                    <input type="tel" id="cf-telefono" maxlength="40" autocomplete="tel" placeholder="3444 000000">
+                </div>
+            </div>
+            <p class="cf-hint">Dejanos al menos uno de los dos para poder responderte.</p>
+            <div class="cf-field">
+                <label for="cf-mensaje">Mensaje</label>
+                <textarea id="cf-mensaje" maxlength="2000" placeholder="Contanos qué estás buscando"></textarea>
+            </div>
+            <button type="submit" class="cf-send" id="cf-send">Enviar consulta</button>
+            <div class="cf-msg" id="cf-msg" role="status" aria-live="polite"></div>
+        </form>
+
+        <div class="contact-alt">
+            <a href="https://wa.me/{{ contacto_wa }}" target="_blank" rel="noopener" class="wa">💬 WhatsApp {{ contacto_telefono }}</a>
+            <a href="tel:{{ contacto_telefono }}">📞 {{ contacto_telefono }}</a>
+            <a href="mailto:{{ contacto_email }}">✉ {{ contacto_email }}</a>
         </div>
     </div>
 </section>
@@ -586,6 +638,50 @@
                 body: JSON.stringify({ tipo, propiedad_id, meta, session_id: _sid(), path: location.pathname })
             }).catch(() => {});
         } catch (e) {}
+    }
+
+    // Buzón de consultas. Las mismas tres reglas las valida también el back
+    // (`api_public_consultas` en app.py): esto es comodidad, no la defensa.
+    function enviarConsulta(ev) {
+        ev.preventDefault();
+        const caja = document.getElementById('cf-msg');
+        const btn  = document.getElementById('cf-send');
+        const datos = {
+            nombre:   document.getElementById('cf-nombre').value.trim(),
+            email:    document.getElementById('cf-email').value.trim(),
+            telefono: document.getElementById('cf-telefono').value.trim(),
+            mensaje:  document.getElementById('cf-mensaje').value.trim()
+        };
+        let error = '';
+        if (!datos.nombre)                        error = 'Escribinos tu nombre.';
+        else if (!datos.mensaje)                  error = 'Contanos qué necesitás.';
+        else if (!datos.email && !datos.telefono) error = 'Dejanos un email o un teléfono para poder responderte.';
+        if (error) { caja.className = 'cf-msg err'; caja.textContent = error; return; }
+
+        btn.disabled = true;
+        caja.className = 'cf-msg';
+        caja.textContent = 'Enviando…';
+        fetch('/api/public/consultas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        })
+            .then(r => r.json().catch(() => ({})).then(d => ({ ok: r.ok, d })))
+            .then(({ ok, d }) => {
+                if (!ok) throw new Error(d.error || '');
+                // HTML fijo, sin nada que haya tipeado el visitante.
+                document.getElementById('form-consulta').innerHTML =
+                    '<div class="cf-ok">' +
+                    '<div class="cf-ok-icon">✓</div>' +
+                    '<div class="cf-ok-title">Recibimos tu consulta</div>' +
+                    '<div class="cf-ok-text">Te respondemos a la brevedad. Si es urgente, escribinos por WhatsApp.</div>' +
+                    '</div>';
+            })
+            .catch(e => {
+                btn.disabled = false;
+                caja.className = 'cf-msg err';
+                caja.textContent = e.message || 'No pudimos enviar la consulta. Probá de nuevo o escribinos por WhatsApp.';
+            });
     }
 
     // Sin búsqueda por barrio ni dirección: Gualeguay es chica y nadie busca

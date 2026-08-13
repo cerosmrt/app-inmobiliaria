@@ -745,28 +745,39 @@ def _send_invite_email(email, host_url):
 
 @app.route('/api/public/consultas', methods=['POST'])
 def api_public_consultas():
-    data = request.get_json()
-    if not data or not data.get('nombre') or not data.get('mensaje'):
+    data     = request.get_json(silent=True) or {}
+    nombre   = (data.get('nombre')   or '').strip()
+    mensaje  = (data.get('mensaje')  or '').strip()
+    email    = (data.get('email')    or '').strip()
+    telefono = (data.get('telefono') or '').strip()
+    if not nombre or not mensaje:
         return jsonify({"error": "Nombre y mensaje son requeridos"}), 400
-    consulta = Consulta(
-        nombre=data['nombre'],
-        telefono=data.get('telefono', ''),
-        email=data.get('email', ''),
-        mensaje=data['mensaje'],
-        propiedad_id=data.get('propiedad_id')
-    )
+    # Sin email ni teléfono la consulta es irrespondible: queda en la bandeja
+    # como un mensaje al que nadie puede contestar. Se pide al menos uno.
+    if not email and not telefono:
+        return jsonify({"error": "Dejanos un email o un teléfono para poder responderte"}), 400
+
+    # El id viene del front público: puede llegar vacío o basura, no confiar.
+    try:
+        prop_id = int(data.get('propiedad_id')) if data.get('propiedad_id') else None
+    except (TypeError, ValueError):
+        prop_id = None
+
+    datos = {'nombre': nombre[:120], 'email': email[:120],
+             'telefono': telefono[:40], 'mensaje': mensaje[:2000]}
+    consulta = Consulta(propiedad_id=prop_id, **datos)
     db.session.add(consulta)
     db.session.commit()
 
     prop_info = None
-    if data.get('propiedad_id'):
-        prop = Propiedad.query.get(data['propiedad_id'])
+    if prop_id:
+        prop = db.session.get(Propiedad, prop_id)
         if prop:
             prop_info = {'id': prop.id, 'direccion': prop.direccion, 'barrio': prop.barrio}
     host_url = request.host_url
     threading.Thread(
         target=_send_consulta_email,
-        args=(data, prop_info, host_url),
+        args=(datos, prop_info, host_url),
         daemon=True
     ).start()
 
