@@ -149,7 +149,13 @@
             border: 1px solid #EBEBEB;
         }
 
-        .prop-badges { display: flex; gap: 7px; margin-bottom: 16px; flex-wrap: wrap; }
+        /* Las chapitas van sobre la foto, no en la tarjeta: ahí repetían lo que
+           después decían de nuevo los cuadros de Tipo y Operación. */
+        .prop-badges {
+            position: absolute; top: 14px; left: 14px; z-index: 3;
+            display: flex; gap: 7px; flex-wrap: wrap;
+        }
+        .prop-badges .badge { box-shadow: 0 2px 10px rgba(0,0,0,0.28); }
         .badge {
             font-size: 9.5px; font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.8px; padding: 4px 11px; border-radius: 4px;
@@ -209,29 +215,32 @@
            Va primero y los botones abajo: escribir es la vía principal, el
            WhatsApp y el mail son la alternativa para el que prefiere ese lado. */
         .cf-sep {
-            display: flex; align-items: center; gap: 10px; margin: 22px 0 16px;
+            display: flex; align-items: center; gap: 10px; margin: 16px 0 12px;
             font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #AAAAAA; font-weight: 600;
         }
         .cf-sep::before, .cf-sep::after { content: ''; flex: 1; height: 1px; background: #EBEBEB; }
-        .cf-field { margin-bottom: 10px; }
+        /* Compacto a propósito: la tarjeta va en la columna de al lado de la
+           galería y tiene que entrar sin empujar la página para abajo. */
+        .cf-row { display: flex; gap: 8px; }
+        .cf-field { flex: 1; margin-bottom: 8px; }
         .cf-field label {
-            display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
-            color: #999999; font-weight: 600; margin-bottom: 6px;
+            display: block; font-size: 8.5px; text-transform: uppercase; letter-spacing: 1.5px;
+            color: #999999; font-weight: 600; margin-bottom: 4px;
         }
         .cf-field input, .cf-field textarea {
-            width: 100%; background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 9px;
-            padding: 11px 13px; color: #111111; font-family: inherit; font-size: 14px;
+            width: 100%; background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 8px;
+            padding: 9px 11px; color: #111111; font-family: inherit; font-size: 13.5px;
             transition: border-color 0.2s, background 0.2s;
         }
         .cf-field input::placeholder, .cf-field textarea::placeholder { color: #BBBBBB; }
         .cf-field input:focus, .cf-field textarea:focus {
             outline: none; background: #FFFFFF; border-color: var(--red);
         }
-        .cf-field textarea { min-height: 86px; resize: vertical; line-height: 1.55; }
-        .cf-hint { font-size: 11.5px; color: #999999; margin: -4px 0 12px; }
+        .cf-field textarea { min-height: 62px; resize: vertical; line-height: 1.5; }
+        .cf-hint { font-size: 11px; color: #999999; margin: -4px 0 10px; }
         .cf-send {
-            width: 100%; background: var(--red); color: #FFFFFF; border: none; border-radius: 9px;
-            padding: 13px; font-family: inherit; font-size: 13.5px; font-weight: 600;
+            width: 100%; background: var(--red); color: #FFFFFF; border: none; border-radius: 8px;
+            padding: 11px; font-family: inherit; font-size: 13.5px; font-weight: 600;
             cursor: pointer; transition: all 0.2s;
         }
         .cf-send:hover { background: #A30F28; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(196,18,48,0.28); }
@@ -537,7 +546,13 @@
 
         document.getElementById('btn-share').style.display = 'flex';
 
-        const gal = renderGallery();
+        const badges = `
+            <div class="prop-badges">
+                ${p.operacion ? `<span class="badge badge-${escHtml(p.operacion)}">${escHtml(p.operacion)}</span>` : ''}
+                ${p.tipo      ? `<span class="badge badge-tipo">${escHtml(p.tipo)}</span>`                        : ''}
+                ${p.estado    ? `<span class="badge badge-${escHtml(p.estado)}">${escHtml(p.estado)}</span>`      : ''}
+            </div>`;
+        const gal = renderGallery(badges);
         const msgDefecto = `Hola, me interesa la propiedad en ${p.direccion}${p.barrio ? ' (' + p.barrio + ')' : ''}.`;
 
         document.getElementById('layout').innerHTML = `
@@ -550,23 +565,6 @@
             </div>` : ''}
         </div>
         <div class="details">
-            <div class="detail-card">
-                <div class="prop-badges">
-                    ${p.operacion ? `<span class="badge badge-${escHtml(p.operacion)}">${escHtml(p.operacion)}</span>` : ''}
-                    ${p.tipo      ? `<span class="badge badge-tipo">${escHtml(p.tipo)}</span>`                        : ''}
-                    ${p.estado    ? `<span class="badge badge-${escHtml(p.estado)}">${escHtml(p.estado)}</span>`      : ''}
-                </div>
-                <div class="prop-price">${formatPrecio(p)}</div>
-                <div class="prop-address">${escHtml(p.direccion)}</div>
-                ${p.barrio ? `<div class="prop-barrio">📍 ${escHtml(p.barrio)}</div>` : ''}
-                <div class="prop-specs">
-                    ${p.ambientes ? `<div class="spec-item"><div class="spec-label">Ambientes</div><div class="spec-value">${escHtml(p.ambientes)}</div></div>` : ''}
-                    ${p.tipo      ? `<div class="spec-item"><div class="spec-label">Tipo</div><div class="spec-value">${escHtml(capitalizar(p.tipo))}</div></div>` : ''}
-                    ${p.operacion ? `<div class="spec-item"><div class="spec-label">Operación</div><div class="spec-value">${escHtml(capitalizar(p.operacion))}</div></div>` : ''}
-                    ${p.barrio    ? `<div class="spec-item"><div class="spec-label">Barrio</div><div class="spec-value">${escHtml(p.barrio)}</div></div>` : ''}
-                </div>
-            </div>
-
             <div class="detail-card contact-card">
                 <h3>¿Te interesa esta propiedad? Consultanos acá</h3>
                 <form id="form-consulta" novalidate onsubmit="enviarConsulta(event)">
@@ -574,13 +572,15 @@
                         <label for="cf-nombre">Nombre</label>
                         <input type="text" id="cf-nombre" maxlength="120" autocomplete="name" placeholder="Cómo te llamás">
                     </div>
-                    <div class="cf-field">
-                        <label for="cf-email">Email</label>
-                        <input type="email" id="cf-email" maxlength="120" autocomplete="email" placeholder="tunombre@mail.com">
-                    </div>
-                    <div class="cf-field">
-                        <label for="cf-telefono">Teléfono</label>
-                        <input type="tel" id="cf-telefono" maxlength="40" autocomplete="tel" placeholder="3444 000000">
+                    <div class="cf-row">
+                        <div class="cf-field">
+                            <label for="cf-email">Email</label>
+                            <input type="email" id="cf-email" maxlength="120" autocomplete="email" placeholder="tunombre@mail.com">
+                        </div>
+                        <div class="cf-field">
+                            <label for="cf-telefono">Teléfono</label>
+                            <input type="tel" id="cf-telefono" maxlength="40" autocomplete="tel" placeholder="3444 000000">
+                        </div>
                     </div>
                     <p class="cf-hint">Dejanos al menos uno de los dos para poder responderte.</p>
                     <div class="cf-field">
@@ -606,6 +606,15 @@
                     </a>
                 </div>
                 <div class="print-only">📞 ${TELEFONO} &nbsp;·&nbsp; Roberto Moret Inmobiliaria</div>
+            </div>
+
+            <div class="detail-card">
+                <div class="prop-price">${formatPrecio(p)}</div>
+                <div class="prop-address">${escHtml(p.direccion)}</div>
+                ${p.barrio ? `<div class="prop-barrio">📍 ${escHtml(p.barrio)}</div>` : ''}
+                ${p.ambientes ? `<div class="prop-specs">
+                    <div class="spec-item"><div class="spec-label">Ambientes</div><div class="spec-value">${escHtml(p.ambientes)}</div></div>
+                </div>` : ''}
             </div>
         </div>`;
 
@@ -658,10 +667,12 @@
         </a>`;
     }
 
-    function renderGallery() {
+    function renderGallery(badges) {
+        badges = badges || '';
         if (fotos.length === 0) {
             return `<div class="gallery">
                 <div class="gallery-main">
+                    ${badges}
                     <div class="no-photo"><span>🏠</span><span style="font-size:14px;color:#bbb">Sin fotos disponibles</span></div>
                 </div>
             </div>`;
@@ -675,6 +686,7 @@
         return `
         <div class="gallery">
             <div class="gallery-main">
+                ${badges}
                 ${mainImg}
                 ${fotos.length > 1 ? `<div class="gallery-nav">
                     <button class="nav-btn" onclick="setFoto(fotoActual - 1)">‹</button>
