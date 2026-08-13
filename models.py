@@ -76,13 +76,19 @@ class Propiedad(db.Model):
     #
     # Afuera quedan, además de `notas`: propietarios e interesados (nombre y
     # TELÉFONO de gente real), `codigo` interno, `publicada` y `fecha_estado`.
+    #
+    # También queda afuera la ubicación exacta (`lat`, `lng`,
+    # `geojson_geometry`, `tipo_geometria`). El sitio público ya no muestra el
+    # mapa de la ficha, y sacar solo el mapa no alcanzaba: mientras los campos
+    # siguieran en esta lista, las coordenadas exactas estaban a un pedido de
+    # /api/public/propiedades/<id> de distancia. El visitante ubica la
+    # propiedad por dirección y barrio; el punto en el mapa es del admin.
     _CAMPOS_PUBLICOS = (
         'id', 'direccion', 'barrio', 'tipo', 'operacion', 'estado',
         'ambientes', 'superficie_terreno', 'superficie_cubierta',
         'hectareas', 'nombre_campo', 'uso_suelo', 'subdivisible',
         'rango_min', 'rango_max', 'es_usd', 'precio_a_consultar',
         'destacada', 'descripcion', 'fotos',
-        'lat', 'lng', 'geojson_geometry', 'tipo_geometria',
     )
 
     def as_dict_publico(self):
