@@ -58,6 +58,13 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 - Mapa arranca centrado en **Gualeguay** (zoom 13); geocoding vía Nominatim.
 
 ### Sitio público
+- **Buzón de consultas, en vez de hacer elegir canal.** La sección de contacto del landing eran tres tarjetas (WhatsApp / Teléfono / Email): le pasaban la decisión al visitante y el que dudaba se iba sin dejar rastro. Ahora escribe ahí mismo y la consulta cae en `/admin/consultas`. **Lo llamativo: la mitad de atrás ya existía y estaba muerta** — modelo `Consulta`, `POST /api/public/consultas` y la bandeja con contador de no-leídas estaban hechos, pero ningún template llamaba al endpoint; el único que le pegaba era `audit_test.py`.
+  - **También en la ficha pública**, debajo de los botones de WhatsApp/Gmail, que se quedan. Ahí la consulta viaja con el `propiedad_id`, así la bandeja muestra por cuál propiedad escribieron en vez de deducirlo del texto; el mensaje viene precargado con la dirección (mismo texto que el link de WhatsApp) y sale por `escHtml`.
+  - **Los canales directos no se sacaron**, quedan abajo en chico: en Gualeguay mucha gente prefiere mandar un WhatsApp y listo, y un formulario solo pierde a esos.
+  - **Contacto obligatorio:** nombre y mensaje, más **al menos uno** de email / teléfono, validado en el front *y* en el back — sin contacto la consulta es irrespondible.
+  - De paso se endureció el endpoint, que hasta ahora nadie usaba de verdad: `get_json(silent=True)` (un body raro tiraba 500), campos recortados y `propiedad_id` casteado con guarda en vez de ir crudo a la base.
+  - ⚠️ **El aviso por mail sigue sin salir** por el problema de SMTP (ver Pendiente). La consulta se guarda y se ve en la bandeja igual.
+- **Sin botón Imprimir en la ficha pública.** Imprimir es cosa del admin, que ya tiene su impresión unificada; en el sitio público el botón solo ocupaba lugar al lado de *Compartir* y *Volver*, que sí son del visitante. Las reglas de `@media print` se quedaron: Ctrl+P no se puede sacar, así que si alguien igual imprime conviene que salga prolijo.
 - **Sin alquileres.** La inmobiliaria hoy solo opera venta: se sacó la solapa *En Alquiler*, y un `?tab=alquiler` viejo (link guardado, buscador) cae en *Todas* en vez de filtrar por una operación que ya no se ofrece y devolver una grilla vacía. También salió de `<title>`, meta description, OG y hero. El valor `alquiler` sigue existiendo en el modelo y en el admin: se sacó de la oferta, no de los datos.
 - **Sin búsqueda por barrio ni dirección.** Gualeguay es chica y nadie busca así; quedan tipo, ambientes y precio. La API sigue aceptando `barrio` por si alguna vez vuelve.
 - **Fotos de las cards con las cuatro esquinas redondeadas** (van metidas adentro de la card, con margen y radio concéntricos) — antes cortaban en escuadra contra el cuerpo blanco.
@@ -75,18 +82,8 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
-### 📬 Buzón de consultas en el landing (formulario público)
-**Pedido 13/08/2026.** Hoy la sección de contacto del landing son tres tarjetas (WhatsApp / Teléfono / Email): le tira la decisión al visitante, y el que duda se va sin dejar rastro. La idea es un **buzón**: escribís, mandás, y la consulta cae en el CRM.
-
-**Lo raro del estado actual:** la mitad de atrás ya está construida y sin usar — modelo `Consulta`, `POST /api/public/consultas` (`app.py`), bandeja `/admin/consultas` con contador de no-leídas. **Ningún template la llama**: el único que le pega al endpoint es `audit_test.py`. Esto es terminar algo que quedó a mitad, no empezar de cero.
-
-**Decidido con el usuario:**
-1. **Formulario protagonista + accesos chicos abajo.** No se saca WhatsApp: en Gualeguay mucha gente quiere chatear y listo, y un formulario solo pierde a esos.
-2. **Campos:** nombre y mensaje obligatorios, y **al menos uno** de email / teléfono — validado en el front *y* en el back. Sin contacto la consulta es irrespondible.
-3. **Aviso a WhatsApp: por ahora no.** Flask no puede mandar un WhatsApp solo; necesita un tercero (API oficial de Meta: cuenta business + plantillas aprobadas; Twilio: paga; CallMeBot: gratis pero no oficial y se cae cuando quiere). Queda como decisión aparte, ver abajo.
-4. **Destinatarios del mail:** los admins con email cargado y permiso sobre *Consultas*, en vez de la casilla única `MAIL_TO`. Así al sumar gente al panel se entera sola, sin tocar variables en Railway.
-
-⚠️ **Ojo:** el mail hoy no sale por el problema de SMTP de acá abajo. El formulario va a guardar la consulta y a mostrarla en la bandeja igual, pero la notificación no llega hasta que se seteen las variables en Railway.
+### 📬 Buzón — falta el destinatario del aviso
+El formulario ya está hecho (ver *Hecho › Sitio público*). Queda **una decisión tomada y sin implementar**: cuando el aviso por mail vuelva a andar, tiene que salir a **los admins con email cargado y permiso sobre *Consultas***, no a la casilla única `MAIL_TO` que usa hoy `_send_consulta_email`. Así al sumar gente al panel se entera sola, sin tocar variables en Railway. Va pegado al arreglo de SMTP de acá abajo: implementarlo antes no se puede probar.
 
 ### 📲 Aviso por WhatsApp al entrar una consulta
 Sin resolver, a propósito. Las tres vías y su costo real:
