@@ -671,13 +671,47 @@ def api_public_propiedad(id):
         return jsonify({"error": "Propiedad no encontrada"}), 404
     return jsonify(p.as_dict_publico())
 
-def _send_consulta_email(data, prop_info, host_url):
+def _destinatarios_consultas():
+    """A quién se le avisa cuando entra una consulta.
+
+    Los admins que tengan email cargado y permiso sobre *Consultas*. Antes iba
+    a una sola casilla fija (`MAIL_TO`) que había que mantener a mano en
+    Railway; así, sumar a alguien al panel alcanza para que empiece a recibir.
+
+    `MAIL_TO` queda de red: si ningún admin tiene email cargado —hoy la cuenta
+    principal entra por usuario y no tiene—, el aviso igual sale.
+
+    Se llama desde la request, no desde el thread que manda el mail: consultar
+    la base necesita contexto de aplicación y el thread no lo tiene.
+    """
+    mails = []
+    for a in Admin.query.filter(Admin.email.isnot(None)).all():
+        if a.email and a.puede('consultas') and a.email not in mails:
+            mails.append(a.email)
+    fallback = app.config.get('MAIL_TO', '')
+    if not mails and fallback:
+        mails.append(fallback)
+    return mails
+
+
+def _send_consulta_email(data, prop_info, host_url, destinatarios):
     smtp_host = app.config.get('MAIL_SMTP', '')
     smtp_port = app.config.get('MAIL_PORT', 587)
     smtp_user = app.config.get('MAIL_USER', '')
     smtp_pass = app.config.get('MAIL_PASS', '')
-    mail_to   = app.config.get('MAIL_TO', '')
-    if not all([smtp_host, smtp_user, smtp_pass, mail_to]):
+    # Antes esto era un `return` mudo y por eso nunca se supo que los mails no
+    # salían: la consulta se guardaba igual y nadie se enteraba de nada.
+    faltan = [n for n, v in (('MAIL_SMTP', smtp_host), ('MAIL_USER', smtp_user),
+                             ('MAIL_PASS', smtp_pass)) if not v]
+    if faltan:
+        app.logger.warning(
+            'Consulta guardada pero SIN aviso por mail: faltan %s en el entorno.',
+            ', '.join(faltan))
+        return
+    if not destinatarios:
+        app.logger.warning(
+            'Consulta guardada pero SIN aviso por mail: no hay ningún admin con '
+            'email y permiso de Consultas, y MAIL_TO está vacío.')
         return
     prop_line = ''
     if prop_info:
@@ -700,15 +734,18 @@ def _send_consulta_email(data, prop_info, host_url):
     msg = MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = f"Nueva consulta de {data['nombre']}"
     msg['From']    = smtp_user
-    msg['To']      = mail_to
+    msg['To']      = ', '.join(destinatarios)
     try:
         ctx = ssl.create_default_context()
         with smtplib.SMTP(smtp_host, smtp_port) as srv:
             srv.starttls(context=ctx)
             srv.login(smtp_user, smtp_pass)
             srv.send_message(msg)
+        app.logger.info('Aviso de consulta enviado a %s', msg['To'])
     except Exception:
-        pass
+        # Sin esto el error se perdía y el sintoma era "no llega el mail" sin
+        # ninguna pista de por qué (credencial, puerto, casilla mal escrita).
+        app.logger.exception('Falló el envío del aviso de consulta a %s', msg['To'])
 
 def _send_invite_email(email, host_url):
     """Manda el mail de invitación en un thread. Si no hay SMTP, no hace nada."""
@@ -777,7 +814,7 @@ def api_public_consultas():
     host_url = request.host_url
     threading.Thread(
         target=_send_consulta_email,
-        args=(datos, prop_info, host_url),
+        args=(datos, prop_info, host_url, _destinatarios_consultas()),
         daemon=True
     ).start()
 
