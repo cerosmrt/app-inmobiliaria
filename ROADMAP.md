@@ -75,6 +75,27 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
+### 📬 Buzón de consultas en el landing (formulario público)
+**Pedido 13/08/2026.** Hoy la sección de contacto del landing son tres tarjetas (WhatsApp / Teléfono / Email): le tira la decisión al visitante, y el que duda se va sin dejar rastro. La idea es un **buzón**: escribís, mandás, y la consulta cae en el CRM.
+
+**Lo raro del estado actual:** la mitad de atrás ya está construida y sin usar — modelo `Consulta`, `POST /api/public/consultas` (`app.py`), bandeja `/admin/consultas` con contador de no-leídas. **Ningún template la llama**: el único que le pega al endpoint es `audit_test.py`. Esto es terminar algo que quedó a mitad, no empezar de cero.
+
+**Decidido con el usuario:**
+1. **Formulario protagonista + accesos chicos abajo.** No se saca WhatsApp: en Gualeguay mucha gente quiere chatear y listo, y un formulario solo pierde a esos.
+2. **Campos:** nombre y mensaje obligatorios, y **al menos uno** de email / teléfono — validado en el front *y* en el back. Sin contacto la consulta es irrespondible.
+3. **Aviso a WhatsApp: por ahora no.** Flask no puede mandar un WhatsApp solo; necesita un tercero (API oficial de Meta: cuenta business + plantillas aprobadas; Twilio: paga; CallMeBot: gratis pero no oficial y se cae cuando quiere). Queda como decisión aparte, ver abajo.
+4. **Destinatarios del mail:** los admins con email cargado y permiso sobre *Consultas*, en vez de la casilla única `MAIL_TO`. Así al sumar gente al panel se entera sola, sin tocar variables en Railway.
+
+⚠️ **Ojo:** el mail hoy no sale por el problema de SMTP de acá abajo. El formulario va a guardar la consulta y a mostrarla en la bandeja igual, pero la notificación no llega hasta que se seteen las variables en Railway.
+
+### 📲 Aviso por WhatsApp al entrar una consulta
+Sin resolver, a propósito. Las tres vías y su costo real:
+- **API oficial (WhatsApp Cloud API de Meta)** — confiable, gratis en volumen bajo, pero pide cuenta de WhatsApp Business, verificación del negocio y plantillas de mensaje aprobadas.
+- **Twilio** — la más rápida de programar, cobra por mensaje.
+- **CallMeBot** — gratis y se configura en cinco minutos, pero es un tercero no oficial: puede dejar de andar sin aviso.
+
+Mientras tanto el aviso es la bandeja `/admin/consultas` con su badge de no-leídas.
+
 ### 📧 No llega ningún mail (consultas del sitio ni invitaciones de admins)
 **Reportado 13/08/2026.** Dos síntomas, una sola causa probable: no llega el mail al cargar una consulta desde la web pública, ni la invitación al agregar un administrador (probado invitando a un mail personal — nunca llegó).
 
