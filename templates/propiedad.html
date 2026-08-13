@@ -322,13 +322,16 @@
         #pub-geo-map { height: 320px; border-radius: 10px; overflow: hidden; border: 1px solid #EBEBEB; margin-top: 20px; }
         @media print { #pub-geo-map { display: none !important; } }
 
-        /* ── PRINT ── */
+        /* ── PRINT ──
+           Sin botón de imprimir: imprimir la ficha es cosa del admin, no del
+           visitante. Las reglas se quedan igual porque Ctrl+P no se puede
+           sacar — lo que se saca es ofrecerlo. */
         .print-only { display: none; }
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .header { position: static; box-shadow: none; border-bottom: 2px solid var(--red); background: white; }
             .header-inner { height: auto; padding: 14px 20px; }
-            #btn-share, #btn-print, .back-btn,
+            #btn-share, .back-btn,
             .gallery-nav, .gallery-expand, .gallery-thumbs, .gallery-count,
             .lightbox, #similares-section,
             .btn-wa, .btn-gmail, #form-consulta,
@@ -372,10 +375,6 @@
             </div>
         </a>
         <div class="header-actions">
-            <button class="btn-share" id="btn-print" onclick="window.print()" style="display:none">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4"/></svg>
-                Imprimir
-            </button>
             <button class="btn-share" onclick="compartir()" id="btn-share" style="display:none">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                 Compartir
@@ -541,7 +540,6 @@
         document.getElementById('back-btn').href = refTab ? `/?tab=${refTab}` : '/';
 
         document.getElementById('btn-share').style.display = 'flex';
-        document.getElementById('btn-print').style.display = 'flex';
 
         const gal = renderGallery();
         const msgDefecto = `Hola, me interesa la propiedad en ${p.direccion}${p.barrio ? ' (' + p.barrio + ')' : ''}.`;
