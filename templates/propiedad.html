@@ -244,9 +244,12 @@
            galería y tiene que entrar sin empujar la página para abajo. */
         .cf-row { display: flex; gap: 8px; }
         .cf-field { flex: 1; margin-bottom: 8px; }
+        /* #999 sobre blanco daba 2.9:1 y WCAG AA pide 4.5:1. Son textos chicos
+           (8.5px en mayúsculas y la ayuda del formulario), justo los que peor
+           se leen. #6E6E6E da 5.1:1. */
         .cf-field label {
             display: block; font-size: 8.5px; text-transform: uppercase; letter-spacing: 1.5px;
-            color: #999999; font-weight: 600; margin-bottom: 4px;
+            color: #6E6E6E; font-weight: 600; margin-bottom: 4px;
         }
         .cf-field input, .cf-field textarea {
             width: 100%; background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 8px;
@@ -258,7 +261,7 @@
             outline: none; background: #FFFFFF; border-color: var(--red);
         }
         .cf-field textarea { min-height: 62px; resize: vertical; line-height: 1.5; }
-        .cf-hint { font-size: 11px; color: #999999; margin: -4px 0 10px; }
+        .cf-hint { font-size: 11px; color: #6E6E6E; margin: -4px 0 10px; }
         .cf-send {
             width: 100%; background: var(--red); color: #FFFFFF; border: none; border-radius: 8px;
             padding: 11px; font-family: inherit; font-size: 13.5px; font-weight: 600;
