@@ -73,6 +73,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 - **Carrusel: un dot por foto.** Se dibujaban 5 como máximo mientras las flechas recorrían todas, así que en una propiedad con 8 fotos los pasos 6 a 8 no encendían ningún dot y parecía que se quedaba clavado en la misma foto. Pasadas 8 fotos va un contador `n / total` en vez de la fila de puntitos. Además el swipe táctil ahora corta la propagación: en el celular pasar de foto abría la ficha.
 
 ### Plataforma
+- **Los mails ya no fallan en silencio.** Consultas e invitaciones hacían un `return` mudo si faltaban las variables SMTP y se comían cualquier error con `except: pass`; el síntoma era "no llega el mail" sin una sola pista. Ahora se loguea qué variable falta, a quién iba dirigido y la traza del error si el SMTP rechaza. **El aviso de consultas sale a los admins con email y permiso sobre *Consultas*** en vez de a la casilla fija `MAIL_TO`, que queda solo de red: sumar a alguien al panel alcanza para que empiece a recibir. La lista se arma en la request, no en el thread, porque consultar la base necesita contexto de aplicación. *Falta la configuración en Railway — ver Pendiente.*
 - **Admin en sans (Inter)**: se sacó Lora del `<body>` de todo el panel — los remates ensucian labels chicos, mayúsculas e inputs, y el sidebar ya venía en sans. El sitio público no se tocó.
 - **Controles de la ficha**: switches en vez de checkbox + "Sí"/"No" (redundante); moneda como selector ARS/USD sobre el mismo booleano `es_usd`; labels con `--text-2` en vez de `--muted` (2.7:1 → 4.9:1 de contraste, WCAG AA pide 4.5:1); miniaturas de fotos a 2 por fila.
 - Auth por sesión (hashing Werkzeug, **CSRF**, rate-limit de login, cookies seguras en prod), setup del primer admin.
@@ -83,9 +84,6 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ---
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
-
-### 📬 Buzón — falta el destinatario del aviso
-El formulario ya está hecho (ver *Hecho › Sitio público*). Queda **una decisión tomada y sin implementar**: cuando el aviso por mail vuelva a andar, tiene que salir a **los admins con email cargado y permiso sobre *Consultas***, no a la casilla única `MAIL_TO` que usa hoy `_send_consulta_email`. Así al sumar gente al panel se entera sola, sin tocar variables en Railway. Va pegado al arreglo de SMTP de acá abajo: implementarlo antes no se puede probar.
 
 ### 🎨 Pulido visual de la ficha — queda solo el rojo de marca
 Las tres tandas de la revisión del 13/08/2026 están hechas (ver *Hecho › Sitio público*). Sin hacer, a propósito, un solo punto: **pasar el rojo a un borgoña más apagado**. No es un ajuste de la ficha sino un cambio de identidad — `--red` vive en el landing, el logo y el admin, así que o se cambia en todos lados o no se cambia. Decisión del usuario, no técnica.
@@ -98,21 +96,18 @@ Sin resolver, a propósito. Las tres vías y su costo real:
 
 Mientras tanto el aviso es la bandeja `/admin/consultas` con su badge de no-leídas.
 
-### 📧 No llega ningún mail (consultas del sitio ni invitaciones de admins)
-**Reportado 13/08/2026.** Dos síntomas, una sola causa probable: no llega el mail al cargar una consulta desde la web pública, ni la invitación al agregar un administrador (probado invitando a un mail personal — nunca llegó).
+### 📧 No llega ningún mail — falta la configuración en Railway
+**Reportado 13/08/2026.** No llega el mail al cargar una consulta desde la web pública ni la invitación al agregar un administrador.
 
-**Causa casi segura: faltan las variables SMTP en Railway.** Las dos funciones arrancan igual y **se van sin hacer nada si no están seteadas**, sin error ni log:
-```python
-if not all([smtp_host, smtp_user, smtp_pass, email]):
-    return
-```
-Ver `_send_invite_email` y `_send_consulta_email` en `app.py`. Faltarían `MAIL_SMTP`, `MAIL_USER`, `MAIL_PASS` (y `MAIL_TO` para las consultas) en Railway → servicio de la app → Variables. Para Gmail hace falta una **contraseña de aplicación**, no la contraseña normal de la cuenta.
+**El lado del código ya está hecho** (ver *Hecho › Plataforma*): el envío ya no falla mudo — dice qué variable falta, a quién iba dirigido y loguea el error con traza si el SMTP rechaza.
 
-**Primer paso, antes de tocar código: confirmar en el panel si esas variables existen.** Si no están, es configuración y no hay bug que arreglar.
+**Lo que queda es configuración, y va en el panel de Railway,** no en el repo: setear `MAIL_SMTP`, `MAIL_USER` y `MAIL_PASS` en el servicio de la app → *Variables*. Para Gmail hace falta una **contraseña de aplicación**, no la contraseña normal de la cuenta. `MAIL_TO` ya no es necesaria salvo como red: el aviso sale a los admins con permiso de *Consultas*.
 
-**Pero además hay un bug real de diagnóstico, independiente de eso:** el envío falla en silencio por partida doble — si faltan las variables hace `return`, y si el SMTP tira error el `except Exception: pass` se lo come. Por eso no hay forma de saber si el mail salió. Como mínimo debería loguear el motivo, y el panel debería avisar "invitación creada, pero no se pudo mandar el mail" en vez de dar a entender que se envió.
+**Cómo comprobar que anduvo:** cargar una consulta desde el sitio y mirar los logs del deploy. Va a decir `Aviso de consulta enviado a …` o el motivo exacto de la falla.
 
-**Mientras tanto la invitación igual funciona sin mail:** el invitado entra a `/admin/registro`, pone el email que se habilitó y elige su contraseña. El mail es solo la comodidad de avisarle.
+**Mientras tanto la invitación funciona sin mail:** el invitado entra a `/admin/registro`, pone el email que se habilitó y elige su contraseña. El mail es solo la comodidad de avisarle.
+
+*Pendiente menor:* que el panel muestre "invitación creada, pero no se pudo mandar el mail" en vez de dar a entender que se envió. Hoy eso solo se ve en el log.
 
 ### 👤 Pasar la cuenta principal a la casilla del negocio
 Hoy la cuenta principal (la protegida, la única que puede sacar administradores) es **`fmoret`**, una persona. Debería ser **`moretinmobiliaria.admin@gmail.com`**, que es la casilla del negocio: si mañana alguien se va, la llave sigue siendo de la inmobiliaria y no de un individuo.
