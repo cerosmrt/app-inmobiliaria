@@ -64,6 +64,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
   - **Contacto obligatorio:** nombre y mensaje, más **al menos uno** de email / teléfono, validado en el front *y* en el back — sin contacto la consulta es irrespondible.
   - De paso se endureció el endpoint, que hasta ahora nadie usaba de verdad: `get_json(silent=True)` (un body raro tiraba 500), campos recortados y `propiedad_id` casteado con guarda en vez de ir crudo a la base.
   - ⚠️ **El aviso por mail sigue sin salir** por el problema de SMTP (ver Pendiente). La consulta se guarda y se ve en la bandeja igual.
+- **Pulido visual de la ficha** (revisión de diseño del 13/08/2026, hecha en tres tandas): "Descripción" y "Consultanos acá" más chicos y livianos — eran etiquetas de sección compitiendo con el título de la propiedad — y la descripción con más interlineado; miniaturas con el mismo radio que la galería, hover con borde y zoom corto, y más aire en la barra; WhatsApp de verde pleno a outline, porque se comía la atención de *Enviar consulta*; chapitas sobre la foto todas iguales, en vidrio esmerilado. **Descartado:** que la descripción ocupe dos columnas — la derecha es la columna del buzón, que es lo que queremos que se vea primero.
 - **Sin mapa en la ficha pública.** El visitante ubica la propiedad por dirección y barrio; el punto exacto es información del admin. **Sacar el mapa no alcanzaba:** `lat`, `lng`, `geojson_geometry` y `tipo_geometria` estaban en `_CAMPOS_PUBLICOS`, así que las coordenadas seguían a un pedido de `/api/public/propiedades/<id>` de distancia aunque no se dibujara nada. Salieron los cuatro campos de la lista blanca. De paso la ficha ya no baja Leaflet del CDN. En el admin no cambia nada: `as_dict()` sigue trayendo todo y el catastro sigue igual.
 - **Sin botón Imprimir en la ficha pública.** Imprimir es cosa del admin, que ya tiene su impresión unificada; en el sitio público el botón solo ocupaba lugar al lado de *Compartir* y *Volver*, que sí son del visitante. Las reglas de `@media print` se quedaron: Ctrl+P no se puede sacar, así que si alguien igual imprime conviene que salga prolijo.
 - **Sin alquileres.** La inmobiliaria hoy solo opera venta: se sacó la solapa *En Alquiler*, y un `?tab=alquiler` viejo (link guardado, buscador) cae en *Todas* en vez de filtrar por una operación que ya no se ofrece y devolver una grilla vacía. También salió de `<title>`, meta description, OG y hero. El valor `alquiler` sigue existiendo en el modelo y en el admin: se sacó de la oferta, no de los datos.
@@ -86,26 +87,8 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ### 📬 Buzón — falta el destinatario del aviso
 El formulario ya está hecho (ver *Hecho › Sitio público*). Queda **una decisión tomada y sin implementar**: cuando el aviso por mail vuelva a andar, tiene que salir a **los admins con email cargado y permiso sobre *Consultas***, no a la casilla única `MAIL_TO` que usa hoy `_send_consulta_email`. Así al sumar gente al panel se entera sola, sin tocar variables en Railway. Va pegado al arreglo de SMTP de acá abajo: implementarlo antes no se puede probar.
 
-### 🎨 Pulido visual de la ficha pública (revisión de diseño 13/08/2026)
-Lista traída por el usuario. Agrupada para hacerla de a tandas, no toda junta.
-
-**a. Tipografía y aire**
-- "Descripción" pesa demasiado contra el cuerpo: bajar tamaño o peso.
-- Subir el `line-height` de la descripción; hoy se lee apretada.
-- "¿Te interesa esta propiedad? Consultanos acá" compite con el título de la propiedad: más chico o más liviano.
-
-**b. Grilla y tarjetas**
-- Alinear el borde superior de la foto con el de la tarjeta del buzón.
-- El gap entre la foto y la barra de miniaturas es menor que el padding interno de las tarjetas: unificar la escala de espaciado.
-- Sombras disparejas entre tarjetas (el buzón tiene sombra marcada, la descripción apenas un borde): una sola elevación para todas.
-- Miniaturas sin esquinas redondeadas y sin feedback: redondear igual que la foto y agregar hover.
-
-**c. Color** — *ojo acá*
-- Rojo más apagado/borgoña: **no es un ajuste de la ficha, es cambio de identidad.** El `--red` vive en el landing, el logo y el admin; cambiarlo por una pantalla desalinea el resto.
-- Botón de WhatsApp en verde pleno: se come la atención del botón *Enviar consulta*. Pasarlo a outline sí es local y razonable.
-- Chapitas sobre la foto con fondo translúcido/blur en vez de colores plenos.
-
-**Descartado:** "que la descripción ocupe dos columnas" — la columna derecha es la del buzón, que es justamente lo que queremos que se vea primero.
+### 🎨 Pulido visual de la ficha — queda solo el rojo de marca
+Las tres tandas de la revisión del 13/08/2026 están hechas (ver *Hecho › Sitio público*). Sin hacer, a propósito, un solo punto: **pasar el rojo a un borgoña más apagado**. No es un ajuste de la ficha sino un cambio de identidad — `--red` vive en el landing, el logo y el admin, así que o se cambia en todos lados o no se cambia. Decisión del usuario, no técnica.
 
 ### 📲 Aviso por WhatsApp al entrar una consulta
 Sin resolver, a propósito. Las tres vías y su costo real:
