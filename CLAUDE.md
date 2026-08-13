@@ -11,6 +11,7 @@ CRM inmobiliario para la inmobiliaria familiar (Moret, Gualeguay, Entre Ríos). 
 - **Todo lo nuevo entra primero como "Pendiente" en `ROADMAP.md`.** Al completar un ítem, moverlo a "Hecho".
 - **Commitear después de cada implementación terminada.** No acumular varios cambios sin commitear: cada modificación verificada se cierra con su propio commit (mensaje en español, en imperativo, explicando el *por qué*). Así cada paso queda revertible por separado.
 - No asumir intención: si hay ambigüedad de alcance, preguntar antes.
+- **Respuestas breves.** El usuario prefiere ida y vuelta corto antes que un informe largo: dos o tres líneas por respuesta, lo que hiciste y lo que hay que saber. Nada de resúmenes con secciones, listas de todo lo tocado ni opciones que no pidió. El detalle va al commit y al ROADMAP, no al chat.
 
 ## Stack
 - **Backend:** Flask 3 + Flask-SQLAlchemy 3.1 + Flask-Migrate/Alembic.
