@@ -752,7 +752,14 @@ def _send_invite_email(email, host_url):
     smtp_host = app.config.get('MAIL_SMTP', '')
     smtp_user = app.config.get('MAIL_USER', '')
     smtp_pass = app.config.get('MAIL_PASS', '')
-    if not all([smtp_host, smtp_user, smtp_pass, email]):
+    faltan = [n for n, v in (('MAIL_SMTP', smtp_host), ('MAIL_USER', smtp_user),
+                             ('MAIL_PASS', smtp_pass), ('email del invitado', email)) if not v]
+    if faltan:
+        # La invitación funciona igual sin mail: el invitado entra a
+        # /admin/registro con su email y elige contraseña. El mail es la
+        # comodidad de avisarle, pero hay que saber que no salió.
+        app.logger.warning(
+            'Invitación creada pero SIN mail de aviso: falta %s.', ', '.join(faltan))
         return
 
     def _worker():
@@ -775,8 +782,9 @@ def _send_invite_email(email, host_url):
                 srv.starttls(context=ctx)
                 srv.login(smtp_user, smtp_pass)
                 srv.send_message(msg)
+            app.logger.info('Invitación enviada a %s', email)
         except Exception:
-            pass
+            app.logger.exception('Falló el envío de la invitación a %s', email)
 
     threading.Thread(target=_worker, daemon=True).start()
 
