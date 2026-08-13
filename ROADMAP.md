@@ -75,6 +75,22 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
+### 📧 No llega ningún mail (consultas del sitio ni invitaciones de admins)
+**Reportado 13/08/2026.** Dos síntomas, una sola causa probable: no llega el mail al cargar una consulta desde la web pública, ni la invitación al agregar un administrador (probado invitando a un mail personal — nunca llegó).
+
+**Causa casi segura: faltan las variables SMTP en Railway.** Las dos funciones arrancan igual y **se van sin hacer nada si no están seteadas**, sin error ni log:
+```python
+if not all([smtp_host, smtp_user, smtp_pass, email]):
+    return
+```
+Ver `_send_invite_email` y `_send_consulta_email` en `app.py`. Faltarían `MAIL_SMTP`, `MAIL_USER`, `MAIL_PASS` (y `MAIL_TO` para las consultas) en Railway → servicio de la app → Variables. Para Gmail hace falta una **contraseña de aplicación**, no la contraseña normal de la cuenta.
+
+**Primer paso, antes de tocar código: confirmar en el panel si esas variables existen.** Si no están, es configuración y no hay bug que arreglar.
+
+**Pero además hay un bug real de diagnóstico, independiente de eso:** el envío falla en silencio por partida doble — si faltan las variables hace `return`, y si el SMTP tira error el `except Exception: pass` se lo come. Por eso no hay forma de saber si el mail salió. Como mínimo debería loguear el motivo, y el panel debería avisar "invitación creada, pero no se pudo mandar el mail" en vez de dar a entender que se envió.
+
+**Mientras tanto la invitación igual funciona sin mail:** el invitado entra a `/admin/registro`, pone el email que se habilitó y elige su contraseña. El mail es solo la comodidad de avisarle.
+
 ### 👤 Pasar la cuenta principal a la casilla del negocio
 Hoy la cuenta principal (la protegida, la única que puede sacar administradores) es **`fmoret`**, una persona. Debería ser **`moretinmobiliaria.admin@gmail.com`**, que es la casilla del negocio: si mañana alguien se va, la llave sigue siendo de la inmobiliaria y no de un individuo.
 
