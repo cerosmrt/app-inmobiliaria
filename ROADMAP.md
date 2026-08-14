@@ -89,6 +89,9 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
+### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)
+Roberto quiere publicar con precio — le sirve para que el visitante ubique la casa en una franja — pero le incomoda que se lea como un número cerrado, porque en la práctica casi siempre se negocia. Su propuesta: rotularlo **"Precio sugerido"** o **"Sugerido U$S xxx"**, igual que en las tasaciones. Es un cambio de rótulo en la ficha pública y en las cards del listado; falta definir si va en todas las operaciones o solo en casas, y si el rótulo se guarda por propiedad o es fijo del sitio. **No tocar hasta charlarlo.**
+
 ### 🎨 Pulido visual de la ficha — queda solo el rojo de marca
 Las tres tandas de la revisión del 13/08/2026 están hechas (ver *Hecho › Sitio público*). Sin hacer, a propósito, un solo punto: **pasar el rojo a un borgoña más apagado**. No es un ajuste de la ficha sino un cambio de identidad — `--red` vive en el landing, el logo y el admin, así que o se cambia en todos lados o no se cambia. Decisión del usuario, no técnica.
 
