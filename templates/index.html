@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roberto Moret Inmobiliaria — Propiedades en venta</title>
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
     <meta name="description" content="Encontrá propiedades en venta en Entre Ríos. Roberto Moret Inmobiliaria, más de 30 años de experiencia acompañándote en cada paso.">
     <meta property="og:title" content="Roberto Moret Inmobiliaria">
     <meta property="og:description" content="Propiedades en venta en Entre Ríos. Más de 30 años de experiencia.">
@@ -37,12 +38,8 @@
             display: flex; align-items: center; justify-content: space-between;
             height: 62px;
         }
-        .logo { display: flex; align-items: center; gap: 11px; }
-        .logo img { height: 38px; width: auto; object-fit: contain; }
-        .logo-text { line-height: 1; }
-        .logo-roberto { display: block; font-size: 8px; letter-spacing: 3px; color: #BBBBBB; text-transform: uppercase; font-weight: 500; }
-        .logo-moret { display: block; font-size: 24px; font-weight: 400; color: var(--red); letter-spacing: -0.3px; font-family: 'DM Serif Display', Georgia, serif; line-height: 1.1; }
-        .logo-inmobiliaria { display: block; font-size: 8px; letter-spacing: 3px; color: #AAAAAA; text-transform: uppercase; font-weight: 500; }
+        .logo { display: flex; align-items: center; }
+        .logo img { height: 40px; width: auto; object-fit: contain; display: block; }
         .header-nav { display: flex; align-items: center; gap: 4px; }
         .header-nav a {
             font-size: 13px; font-weight: 500; padding: 7px 13px;
@@ -419,7 +416,7 @@
         /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
             .header-inner { padding: 0 20px; height: 60px; }
-            .logo-moret { font-size: 22px; }
+            .logo img { height: 34px; }
             .hero { min-height: 88svh; min-height: 88vh; }
             .hero-content { padding: 0 20px; }
             .hero h1 { font-size: clamp(36px, 9vw, 54px); }
@@ -446,12 +443,7 @@
 <header class="header">
     <div class="header-inner">
         <a href="/" class="logo">
-            <img src="/static/logo.png" alt="Moret Inmobiliaria" onerror="this.style.display='none'">
-            <div class="logo-text">
-                <span class="logo-roberto">Roberto</span>
-                <span class="logo-moret">Moret</span>
-                <span class="logo-inmobiliaria">Inmobiliaria</span>
-            </div>
+            <img src="/static/logo.png" alt="Roberto Moret Inmobiliaria">
         </a>
         <nav class="header-nav">
             <a href="#propiedades">Propiedades</a>

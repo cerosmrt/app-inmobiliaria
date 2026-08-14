@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Panel Admin{% endblock %} — Moret</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=12">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=13">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -20,8 +20,11 @@
     <aside class="sidebar" id="sidebar">
         <div class="sb-brand">
             <a href="/admin" class="sb-brand-link">
-                <span class="sb-name">Moret</span>
-                <span class="sb-tagline">Inmobiliaria · Admin</span>
+                <img class="sb-logo" src="{{ url_for('static', filename='isotipo.png') }}" alt="">
+                <span class="sb-brand-text">
+                    <span class="sb-name">Moret</span>
+                    <span class="sb-tagline">Inmobiliaria · Admin</span>
+                </span>
             </a>
         </div>
         <button class="sb-toggle-desktop" onclick="toggleSidebar()" title="Contraer / expandir">

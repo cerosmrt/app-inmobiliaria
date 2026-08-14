@@ -146,8 +146,14 @@ body.sb-collapsed .sb-reopen { display: flex; }
 
 /* Brand */
 .sb-brand { padding: 18px 16px 14px; border-bottom: 1px solid var(--sb-border); }
-.sb-brand-link { text-decoration: none; display: block; }
+.sb-brand-link { text-decoration: none; display: flex; align-items: center; gap: 10px; }
 .sb-brand-link:hover { text-decoration: none; }
+/* El isotipo tiene trazos oscuros: sobre el sidebar negro va en chapa blanca */
+.sb-logo {
+    width: 32px; height: 32px; flex-shrink: 0;
+    background: #FFFFFF; border-radius: 7px; padding: 3px;
+    object-fit: contain;
+}
 .sb-name {
     display: block; font-size: 16px; font-weight: 700;
     color: var(--red); letter-spacing: -0.5px; line-height: 1;

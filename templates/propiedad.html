@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Propiedad — Moret Inmobiliaria</title>
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
     <meta name="description" content="Consultá esta propiedad en Roberto Moret Inmobiliaria. Más de 30 años de experiencia en el mercado inmobiliario de Entre Ríos.">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="es_AR">
@@ -38,12 +39,8 @@
             display: flex; align-items: center; justify-content: space-between;
             height: 62px;
         }
-        .logo { display: flex; align-items: center; gap: 11px; }
-        .logo img { height: 38px; width: auto; object-fit: contain; }
-        .logo-text { line-height: 1; }
-        .logo-text .roberto { font-size: 8px; letter-spacing: 3px; color: #BBBBBB; text-transform: uppercase; font-weight: 500; }
-        .logo-text .moret { font-size: 24px; font-weight: 400; color: var(--red); letter-spacing: -0.3px; font-family: 'DM Serif Display', Georgia, serif; line-height: 1.1; }
-        .logo-text .inmobiliaria { font-size: 8px; letter-spacing: 3px; color: #AAAAAA; text-transform: uppercase; font-weight: 500; }
+        .logo { display: flex; align-items: center; }
+        .logo img { height: 40px; width: auto; object-fit: contain; display: block; }
 
         .header-actions { display: flex; align-items: center; gap: 8px; }
         .btn-share {
@@ -407,12 +404,7 @@
 <header class="header">
     <div class="header-inner">
         <a href="/" class="logo">
-            <img src="/static/logo.png" alt="Moret Inmobiliaria" onerror="this.style.display='none'">
-            <div class="logo-text">
-                <div class="roberto">Roberto</div>
-                <div class="moret">Moret</div>
-                <div class="inmobiliaria">Inmobiliaria</div>
-            </div>
+            <img src="/static/logo.png" alt="Roberto Moret Inmobiliaria">
         </a>
         <div class="header-actions">
             <button class="btn-share" onclick="compartir()" id="btn-share" style="display:none">
