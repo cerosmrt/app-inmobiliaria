@@ -92,6 +92,13 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)
 Roberto quiere publicar con precio — le sirve para que el visitante ubique la casa en una franja — pero le incomoda que se lea como un número cerrado, porque en la práctica casi siempre se negocia. Su propuesta: rotularlo **"Precio sugerido"** o **"Sugerido U$S xxx"**, igual que en las tasaciones. Es un cambio de rótulo en la ficha pública y en las cards del listado; falta definir si va en todas las operaciones o solo en casas, y si el rótulo se guarda por propiedad o es fijo del sitio. **No tocar hasta charlarlo.**
 
+### 📷 Fotos sueltas: sacar una foto de una propiedad no borra el archivo
+Revisando por qué "parecían menos fotos que antes" (14/08/2026) apareció esto: al quitar o reemplazar una foto en el editor se saca la ruta del CSV de `Propiedad.fotos`, pero el archivo se queda en `static/uploads/` para siempre. En la base local hay **36 archivos huérfanos** — 16 de la casa quinta (id 14), 15 de Sarmiento y P. Ramírez (id 16) y 5 de frente escuela normal (id 15) — más 3 sueltos viejos y una carpeta `properties/` vacía que dejaron los tests. Dos cosas distintas para decidir:
+- **Recuperarlas:** las fotos no se perdieron, están en disco sin dueño. Falta una vista para mirarlas y volver a engancharlas a la propiedad que corresponda.
+- **Que no vuelva a pasar:** o se borra el archivo al sacar la foto, o se acepta que quede y se agrega una limpieza aparte. Ojo que en producción esto crece dentro del volumen de Railway, que se paga por GB.
+
+**Nota de contexto:** la base local **no** es la de producción. En local solo tienen fotos las 3 propiedades de prueba; las propiedades reales (Int. Vaccaro, Benítez, los loteos, etc.) están cargadas sin fotos y ocultas. Lo que se carga en la web live vive en la Postgres y el volumen de Railway y no baja a la máquina.
+
 ### 🎨 Pulido visual de la ficha — queda solo el rojo de marca
 Las tres tandas de la revisión del 13/08/2026 están hechas (ver *Hecho › Sitio público*). Sin hacer, a propósito, un solo punto: **pasar el rojo a un borgoña más apagado**. No es un ajuste de la ficha sino un cambio de identidad — `--red` vive en el landing, el logo y el admin, así que o se cambia en todos lados o no se cambia. Decisión del usuario, no técnica.
 
