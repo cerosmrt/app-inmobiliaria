@@ -188,6 +188,7 @@
             <input type="number" id="filtroAmbientesProp" placeholder="Ambientes" onkeyup="filtrarPropiedades()" style="width:90px">
             <div class="sep"></div>
             <label><input type="checkbox" id="filtroPublicadas" onchange="filtrarPropiedades()"> Publicadas</label>
+            <label><input type="checkbox" id="filtroIncompletas" onchange="filtrarPropiedades()"> Incompletas</label>
         </div>
         <div class="table-wrap">
             <table id="tablaPropiedades">
@@ -199,6 +200,7 @@
                     <th class="sortable" data-sort="propiedades" data-field="estado"       onclick="sortBy(this)">Estado <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="propiedades" data-field="rango_min"    onclick="sortBy(this)">Precio <span class="sort-icon"></span></th>
                     <th>Publicada</th>
+                    <th class="sortable" data-sort="propiedades" data-field="completitud_score" onclick="sortBy(this)">Completá <span class="sort-icon"></span></th>
                     <th>Notas</th>
                 </tr></thead>
                 <tbody></tbody>
@@ -524,6 +526,9 @@
             if (s.field === 'propietario') {
                 va = a.propietarios && a.propietarios.length ? a.propietarios[0].apellido + ' ' + a.propietarios[0].nombre : (a.propietario || '');
                 vb = b.propietarios && b.propietarios.length ? b.propietarios[0].apellido + ' ' + b.propietarios[0].nombre : (b.propietario || '');
+            } else if (s.field === 'completitud_score') {
+                va = a.completitud ? a.completitud.score : 0;
+                vb = b.completitud ? b.completitud.score : 0;
             } else {
                 va = a[s.field] != null ? a[s.field] : '';
                 vb = b[s.field] != null ? b[s.field] : '';
@@ -739,16 +744,19 @@
         const estado  = document.getElementById('filtroEstado').value;
         const amb     = document.getElementById('filtroAmbientesProp').value;
         const soloPub = document.getElementById('filtroPublicadas').checked;
+        const soloIncompletas = document.getElementById('filtroIncompletas').checked;
 
         let filtradas = propiedades.filter(function(p) {
             const matchDir = !dir || (p.direccion || '').toLowerCase().includes(dir)
                 || (p.barrio || '').toLowerCase().includes(dir)
                 || (p.codigo || '').toLowerCase().includes(dir);
+            const incompleta = p.completitud && p.completitud.score < p.completitud.total;
             return matchDir
                 && (!tipo   || p.tipo === tipo)
                 && (!estado || p.estado === estado)
                 && (!amb    || p.ambientes == amb)
-                && (!soloPub || p.publicada);
+                && (!soloPub || p.publicada)
+                && (!soloIncompletas || incompleta);
         });
         filtradas = applySort(filtradas, sortPropiedades);
 
@@ -778,6 +786,7 @@
                 '<td style="text-align:center;font-size:15px;cursor:pointer" onclick="togglePublicada(' + p.id + ', ' + p.publicada + ')" title="' + (p.publicada ? 'Click para despublicar' : 'Click para publicar') + '">' +
                     (p.publicada ? '<span style="color:var(--accent)">&#x2713;</span>' : '<span style="color:var(--muted)">&#x2715;</span>') +
                 '</td>' +
+                celdaCompletitud(p) +
                 '<td class="notas-col">' +
                     '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '">' +
                         (hasNotes ? '&#x1F4DD;' : '<span style="opacity:0.2">&#x1F4DD;</span>') +
@@ -792,11 +801,49 @@
         syncChipsActivas();
     }
 
+    // Celda "Completá": barra + N/total, con tooltip de lo que falta. No
+    // bloquea nada — es una guía para completar propiedades cargadas al vuelo.
+    function celdaCompletitud(p) {
+        const c = p.completitud;
+        if (!c) return '<td></td>';
+        const pct = c.total ? Math.round(c.score / c.total * 100) : 0;
+        const lvl = c.score >= c.total ? 'full' : (pct >= 50 ? 'mid' : 'low');
+        const faltaN = c.total - c.score;
+        let pop = '';
+        if (faltaN === 0) {
+            pop = '<b>Completa</b>';
+        } else {
+            if (c.falta_aviso.length) {
+                pop += '<b>Falta para el aviso</b><ul>' +
+                    c.falta_aviso.map(function(f) { return '<li>' + esc(f.label) + '</li>'; }).join('') + '</ul>';
+            }
+            if (c.falta_interno.length) {
+                pop += '<b>Falta interno</b><ul>' +
+                    c.falta_interno.map(function(f) { return '<li>' + esc(f.label) + '</li>'; }).join('') + '</ul>';
+            }
+        }
+        return '<td>' +
+            '<span class="compl compl-' + lvl + '">' +
+                '<span class="compl-bar"><i style="width:' + pct + '%"></i></span>' +
+                '<span class="compl-num">' + c.score + '/' + c.total + '</span>' +
+                '<span class="compl-pop">' + pop + '</span>' +
+            '</span>' +
+        '</td>';
+    }
+
     function togglePublicada(id, actual) {
         fetch('/api/propiedades/' + id, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ publicada: !actual })
-        }).then(function() { cargarPropiedades(); })
+        }).then(function(r) { return r.json(); })
+          .then(function(p) {
+              // Publicar con faltantes del aviso: no se bloquea, se avisa.
+              if (!actual && p && p.completitud && p.completitud.falta_aviso.length) {
+                  toast('Publicada, pero faltan: ' +
+                      p.completitud.falta_aviso.map(function(f) { return f.label; }).join(', '), 'error');
+              }
+              cargarPropiedades();
+          })
           .catch(function(e) { console.error('Error al togglear publicada', e); });
     }
 
@@ -805,6 +852,7 @@
             document.getElementById(id).value = '';
         });
         document.getElementById('filtroPublicadas').checked = false;
+        document.getElementById('filtroIncompletas').checked = false;
         filtrarPropiedades();
     }
 

@@ -518,6 +518,10 @@
         </div>
     </div>
 
+    <!-- Qué falta: guía de completitud. No bloquea publicar; cada faltante
+         linkea al campo. Se llena en renderPanelFalta(). -->
+    <div class="panel-falta" id="panel-falta" style="display:none"></div>
+
     </aside><!-- .prop-rail -->
 
     </div><!-- .prop-layout -->
@@ -703,6 +707,44 @@
         }).join('');
         attachCampoEvents();
         renderRotuloPublicada();
+        renderPanelFalta();
+    }
+
+    // Panel "Qué falta" del rail. No bloquea nada: cada faltante linkea al
+    // campo/acción. El score sale de models.py (Propiedad.completitud).
+    var _FALTA_LINKS = {
+        fotos:       function() { document.getElementById('input-fotos').click(); },
+        descripcion: function() { document.getElementById('descripcion').focus(); },
+        ubicacion:   function() { if (window.abrirMapa) abrirMapa(); },
+    };
+    function renderPanelFalta() {
+        var el = document.getElementById('panel-falta');
+        if (!el || !propData.completitud) { if (el) el.style.display = 'none'; return; }
+        var c = propData.completitud;
+        var pct = c.total ? Math.round(c.score / c.total * 100) : 0;
+        var lvl = c.score >= c.total ? 'compl-full' : (pct >= 50 ? 'compl-mid' : 'compl-low');
+        el.className = 'panel-falta ' + lvl;
+        el.style.display = '';
+
+        function item(f, hecho) {
+            var act = _FALTA_LINKS[f.campo]
+                ? ' <a href="#" onclick="_FALTA_LINKS[\'' + f.campo + '\']();return false" style="margin-left:auto;font-size:11px">ir &rarr;</a>' : '';
+            return '<div class="falta-item ' + (hecho ? 'ok' : 'miss') + '">' +
+                '<span class="mk">' + (hecho ? '&#x2713;' : '&#x25B2;') + '</span>' +
+                esc(f.label) + (hecho ? '' : act) + '</div>';
+        }
+        function grupo(titulo, faltan) {
+            if (!faltan.length) return '';
+            return '<div class="falta-grp"><span>' + titulo + '</span>' +
+                faltan.map(function(f) { return item(f, false); }).join('') + '</div>';
+        }
+        var cuerpo = grupo('Para el aviso', c.falta_aviso) + grupo('Interno', c.falta_interno);
+        if (!cuerpo) cuerpo = '<div class="falta-grp"><div class="falta-item ok">' +
+            '<span class="mk">&#x2713;</span>Propiedad completa</div></div>';
+        el.innerHTML =
+            '<h3>Qu&eacute; falta <span class="frac">' + c.score + '/' + c.total + '</span></h3>' +
+            cuerpo +
+            '<p class="note">No bloquea publicar. Si falta algo del aviso, te avisamos igual.</p>';
     }
 
     // El switch de publicar, arriba de la columna pública. Con el estado en
@@ -810,10 +852,19 @@
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         }).then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
-          .then(function() {
-              propData[field] = value;
+          .then(function(fresca) {
+              // El PUT devuelve la propiedad entera: pisamos propData para que
+              // completitud y el resto queden al día sin recargar.
+              if (fresca && fresca.id) propData = fresca; else propData[field] = value;
               renderDatos();
               toast('Guardado', 'success');
+              // Publicar con faltantes del aviso: no se bloquea, se avisa.
+              if (field === 'publicada' && value && propData.completitud
+                  && propData.completitud.falta_aviso.length) {
+                  toast('Publicada, pero faltan datos del aviso: ' +
+                      propData.completitud.falta_aviso.map(function(f) { return f.label; }).join(', '),
+                      'error');
+              }
               // When address changes and no geometry exists, geocode in background
               if ((field === 'direccion' || field === 'barrio') && !propData.lat && !propData.geojson_geometry) {
                   fetch('/api/propiedades/' + propiedadId + '/geocode', {method:'POST', credentials:'same-origin'})
@@ -1094,14 +1145,14 @@
     function asignarPropietario(clienteId) {
         fetch('/api/propiedades/' + propiedadId + '/propietarios/' + clienteId, { method: 'POST' })
             .then(function(r) { return r.json(); })
-            .then(function(data) { propData = data; renderPropietarios(); toast('Propietario asignado', 'success'); })
+            .then(function(data) { propData = data; renderPropietarios(); renderPanelFalta(); toast('Propietario asignado', 'success'); })
             .catch(function() { toast('Error', 'error'); });
     }
 
     function desasignarPropietario(clienteId) {
         fetch('/api/propiedades/' + propiedadId + '/propietarios/' + clienteId, { method: 'DELETE' })
             .then(function(r) { return r.json(); })
-            .then(function(data) { propData = data; renderPropietarios(); toast('Propietario removido', 'success'); })
+            .then(function(data) { propData = data; renderPropietarios(); renderPanelFalta(); toast('Propietario removido', 'success'); })
             .catch(function() { toast('Error', 'error'); });
     }
 
@@ -1117,7 +1168,8 @@
         fetch('/api/propiedades/' + propiedadId, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ descripcion: document.getElementById('descripcion').value })
-        }).then(function() {
+        }).then(function(r) { return r.json(); }).then(function(fresca) {
+            if (fresca && fresca.id) { propData = fresca; renderPanelFalta(); }
             setDescEstado('&#x2713; Guardado', true);
             setTimeout(function() {
                 var el = document.getElementById('desc-estado');
@@ -1235,6 +1287,7 @@
                         propData   = data;
                         fotosOrden = data.fotos ? data.fotos.slice() : [];
                         renderFotos();
+                        renderPanelFalta();
                     });
                 })
                 .catch(function() { fail++; toast('Error de red al subir foto', 'error'); })
@@ -1254,6 +1307,7 @@
                     propData   = data;
                     fotosOrden = data.fotos ? data.fotos.slice() : [];
                     renderFotos();
+                    renderPanelFalta();
                     toast('Foto eliminada', 'success');
                 }).catch(function(e) { console.error(e); });
         });
@@ -1269,7 +1323,9 @@
             body: JSON.stringify({ notas: document.getElementById('notas').value })
         }).then(function(r) {
             if (!r.ok) throw new Error();
-            if (propData) propData.notas = document.getElementById('notas').value;
+            return r.json();
+        }).then(function(fresca) {
+            if (fresca && fresca.id) { propData = fresca; renderPanelFalta(); }
             el.innerHTML = '&#x2713; Guardado';
             el.style.color = 'var(--accent)';
             el.style.display = 'inline';

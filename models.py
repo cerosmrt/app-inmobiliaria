@@ -96,6 +96,52 @@ class Propiedad(db.Model):
         completo = self.as_dict()
         return {k: completo[k] for k in self._CAMPOS_PUBLICOS if k in completo}
 
+    def completitud(self):
+        """Qué le falta a la propiedad para estar "completa" — nada de esto
+        bloquea publicar, es un asistente para cargar rápido con un dato y
+        volver después. Fuente única: la usan as_dict() (tabla) y la ficha.
+
+        Devuelve {score, total, falta_aviso: [...], falta_interno: [...]}.
+        Cada faltante es {campo, label}. Los campos rurales (campo/terreno) no
+        piden ambientes; una propiedad rural pide hectáreas en su lugar.
+        """
+        es_rural = (self.tipo or '') in ('campo', 'terreno')
+
+        tiene_precio = bool(self.precio_a_consultar or self.rango_min)
+        tiene_fotos = bool(self._fotos_list())
+        tiene_desc = bool((self.descripcion or '').strip())
+        tiene_sup = bool(
+            self.superficie_terreno or self.superficie_cubierta
+            or (es_rural and self.hectareas) or (not es_rural and self.ambientes)
+        )
+        tiene_ubic = self.lat is not None or bool(self.geojson_geometry)
+        tiene_prop = bool(self.propietarios) or self.propietario_id is not None
+
+        aviso = [
+            ('precio', 'Precio', tiene_precio),
+            ('fotos', 'Fotos', tiene_fotos),
+            ('descripcion', 'Descripción', tiene_desc),
+            ('tipo', 'Tipo', bool(self.tipo)),
+            ('operacion', 'Operación', bool(self.operacion)),
+            ('barrio', 'Barrio', bool((self.barrio or '').strip())),
+            ('superficie', 'Hectáreas' if es_rural else 'Superficie / ambientes', tiene_sup),
+        ]
+        interno = [
+            ('propietario', 'Propietario asignado', tiene_prop),
+            ('ubicacion', 'Ubicación en el mapa', tiene_ubic),
+            ('notas', 'Notas internas', bool((self.notas or '').strip())),
+        ]
+
+        falta_aviso = [{'campo': c, 'label': l} for c, l, ok in aviso if not ok]
+        falta_interno = [{'campo': c, 'label': l} for c, l, ok in interno if not ok]
+        total = len(aviso) + len(interno)
+        return {
+            'score': total - len(falta_aviso) - len(falta_interno),
+            'total': total,
+            'falta_aviso': falta_aviso,
+            'falta_interno': falta_interno,
+        }
+
     def as_dict(self):
         return {
             'id': self.id,
@@ -132,6 +178,7 @@ class Propiedad(db.Model):
             'hectareas': self.hectareas,
             'subdivisible': self.subdivisible,
             'uso_suelo': self.uso_suelo or '',
+            'completitud': self.completitud(),
         }
 
 class Cliente(db.Model):

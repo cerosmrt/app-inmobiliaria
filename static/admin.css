@@ -543,6 +543,50 @@ a:hover { color: var(--text); text-decoration: underline; }
 }
 .btn-map:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); text-decoration: none; }
 
+/* ── Completitud ─────────────────────────────────────────────────────────── */
+/* Barra + N/total en la tabla de Propiedades y el panel de la ficha. No
+   bloquea publicar: marca qué falta cargar. Rojo <50%, ámbar <100%, verde. */
+.compl { display: inline-flex; align-items: center; gap: 6px; position: relative; cursor: default; }
+.compl-bar { width: 52px; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.compl-bar > i { display: block; height: 100%; }
+.compl-num { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.compl-low  .compl-bar > i { background: var(--accent); }  .compl-low  .compl-num { color: var(--accent); }
+.compl-mid  .compl-bar > i { background: var(--amber); }   .compl-mid  .compl-num { color: var(--amber); }
+.compl-full .compl-bar > i { background: var(--green); }   .compl-full .compl-num { color: var(--green); }
+.compl-pop {
+    position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; width: 230px;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: 9px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); padding: 10px 12px; font-size: 12px;
+    opacity: 0; visibility: hidden; transform: translateY(-3px); transition: 0.13s;
+}
+.compl:hover .compl-pop, .compl:focus-within .compl-pop { opacity: 1; visibility: visible; transform: none; }
+.compl-pop b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); margin: 8px 0 4px; font-weight: 600; }
+.compl-pop b:first-child { margin-top: 0; }
+.compl-pop ul { margin: 0; padding: 0; list-style: none; }
+.compl-pop li { padding: 2px 0; color: var(--text-2); }
+.compl-pop li::before { content: "○ "; color: var(--muted); }
+
+/* Panel "Qué falta" en la ficha admin (columna pública) */
+.panel-falta { border: 1px solid var(--border); border-radius: 11px; overflow: hidden; margin-top: 14px; }
+.panel-falta > h3 { margin: 0; font-size: 12px; font-weight: 600; padding: 10px 13px;
+    background: var(--surface-2); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; }
+.panel-falta > h3 .frac { font-variant-numeric: tabular-nums; font-weight: 700; }
+.panel-falta.compl-low  > h3 .frac { color: var(--accent); }
+.panel-falta.compl-mid  > h3 .frac { color: var(--amber); }
+.panel-falta.compl-full > h3 .frac { color: var(--green); }
+.falta-grp { padding: 8px 13px; }
+.falta-grp:not(:last-child) { border-bottom: 1px solid var(--border-subtle); }
+.falta-grp > span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); font-weight: 600; }
+.falta-item { display: flex; align-items: center; gap: 9px; padding: 6px 0; font-size: 13px; }
+.falta-item .mk { width: 16px; text-align: center; flex: none; }
+.falta-item.ok { color: var(--muted); } .falta-item.ok .mk { color: var(--green); }
+.falta-item.miss .mk { color: var(--amber); }
+.panel-falta .note { font-size: 11px; color: var(--muted); padding: 9px 13px;
+    background: var(--surface-2); border-top: 1px solid var(--border); }
+
 /* ── Print ───────────────────────────────────────────────────────────────── */
 /* Número de teléfono: solo texto en papel; en pantalla vive el ícono de WhatsApp */
 .tel-print { display: none; }

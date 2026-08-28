@@ -1184,7 +1184,9 @@ def update_propiedad(id):
     if 'propietarios_ids' in data:
         p.propietarios = Cliente.query.filter(Cliente.id.in_(data['propietarios_ids'])).all()
     db.session.commit()
-    return jsonify({"message": "Propiedad actualizada"})
+    # Devuelve la propiedad entera (no solo un message) para que la ficha y el
+    # listado refresquen `completitud` sin pedir de nuevo.
+    return jsonify(p.as_dict())
 
 @app.route('/api/propiedades/<int:id>', methods=['DELETE'])
 @api_login_required
