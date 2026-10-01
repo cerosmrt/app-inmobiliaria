@@ -30,9 +30,15 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    # Railway injects DATABASE_URL as postgres://, SQLAlchemy needs postgresql://
+    # Railway injects DATABASE_URL as postgres:// (or postgresql://). Se fuerza el
+    # driver psycopg2 explicito: SQLAlchemy 2.1 pasó a usar psycopg v3 por defecto
+    # con "postgresql://", y ese paquete no está en requirements.
     _db_url = os.environ.get('DATABASE_URL') or 'sqlite:///inmobiliaria.db'
-    SQLALCHEMY_DATABASE_URI = _db_url.replace('postgres://', 'postgresql://', 1)
+    for _prefijo in ('postgres://', 'postgresql://'):
+        if _db_url.startswith(_prefijo):
+            _db_url = 'postgresql+psycopg2://' + _db_url[len(_prefijo):]
+            break
+    SQLALCHEMY_DATABASE_URI = _db_url
     SESSION_COOKIE_SECURE   = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
