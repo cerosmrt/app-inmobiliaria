@@ -664,6 +664,12 @@ def api_public_propiedades():
         Propiedad.destacada.desc(), Propiedad.id.desc()
     ).all()])
 
+@app.route('/api/public/stats')
+def api_public_stats():
+    """Contador de la landing: mismo criterio que el listado público."""
+    n = Propiedad.query.filter_by(publicada=True).filter(Propiedad.deleted_at.is_(None)).count()
+    return jsonify({'publicas': n})
+
 @app.route('/api/public/propiedades/<int:id>')
 def api_public_propiedad(id):
     p = Propiedad.query.filter_by(id=id, publicada=True).filter(Propiedad.deleted_at.is_(None)).first()

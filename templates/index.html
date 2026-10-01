@@ -475,10 +475,6 @@
                 <div class="hero-stat-num" id="hero-stat-disponibles">—</div>
                 <div class="hero-stat-lbl">Propiedades disponibles</div>
             </div>
-            <div class="hero-stat">
-                <div class="hero-stat-num" id="hero-stat-clientes">—</div>
-                <div class="hero-stat-lbl">Clientes atendidos</div>
-            </div>
         </div>
     </div>
 </section>
@@ -861,13 +857,11 @@
         buscar();
         track('view_listado');
 
-        fetch('/api/stats')
+        fetch('/api/public/stats')
             .then(r => r.json())
             .then(s => {
                 const d = document.getElementById('hero-stat-disponibles');
-                const c = document.getElementById('hero-stat-clientes');
-                if (d) d.textContent = s.disponibles;
-                if (c) c.textContent = s.clientes;
+                if (d) d.textContent = s.publicas;
             }).catch(() => {});
 
         const scrollBtn = document.getElementById('scroll-top');
