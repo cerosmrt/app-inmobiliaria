@@ -149,7 +149,6 @@
                     <th>Teléfono</th>
                     <th class="sortable" data-sort="propietarios" data-field="email"  onclick="sortBy(this)">Email <span class="sort-icon"></span></th>
                     <th>Propiedades</th>
-                    <th class="no-print">Acciones</th>
                 </tr></thead>
                 <tbody></tbody>
             </table>
@@ -650,7 +649,10 @@
                 '<td class="editable-text" data-field="email" data-id="' + c.id + '">' + esc(c.email || '') + '</td>' +
                 '<td style="font-size:12px;color:var(--muted);cursor:pointer" onclick="abrirPropiedadesModal(' + c.id + ')" title="Asignar / quitar propiedades">' + propIds + '</td>' +
                 extraCols +
-                '<td class="no-print"><button class="btn-action btn-cancel" onclick="eliminarCliente(' + c.id + ')">&#x2715;</button></td>';
+                // Los propietarios se eliminan desde su ficha, no desde la tabla.
+                (tipo === 'interesado'
+                    ? '<td class="no-print"><button class="btn-action btn-cancel" onclick="eliminarCliente(' + c.id + ')">&#x2715;</button></td>'
+                    : '');
             tbody.appendChild(row);
         });
         if (raw && filtrados.length === 0) {
