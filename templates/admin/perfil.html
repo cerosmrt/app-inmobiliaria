@@ -75,10 +75,16 @@
         border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;
     }
     .buscar-wrap input:focus { outline: none; border-color: var(--muted); }
+    /* Desplegable bajo el input: flota sobre la página en vez de empujarla. */
+    .buscar-prop-wrap { position: relative; }
     #buscar-prop-cli-resultados {
-        max-height: 260px; overflow-y: auto;
-        border: 1px solid var(--border); border-radius: 6px; margin-top: 8px;
+        position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+        max-height: 280px; overflow-y: auto;
+        background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
     }
+    #buscar-prop-cli-resultados .inter-row:hover { background: var(--surface-3); }
+    #buscar-prop-cli-resultados .disp-empty { padding: 12px; margin: 0; }
     .disp-empty { color: var(--muted); font-size: 13px; padding: 8px 4px; }
     .inter-subtitulo {
         font-size: 11px; color: var(--muted); text-transform: uppercase;
@@ -197,10 +203,12 @@
             tabla +
             '<hr class="inter-sep">' +
             '<p class="inter-subtitulo">Disponibles para asignar</p>' +
-            '<input type="text" id="buscar-propiedad-cli" placeholder="Filtrar propiedades..." ' +
+            '<div class="buscar-prop-wrap">' +
+            '<input type="text" id="buscar-propiedad-cli" placeholder="Buscar propiedad para asignar..." ' +
                 'autocomplete="off" oninput="filtrarDisponiblesProp(this)" ' +
                 'style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;margin-bottom:0">' +
             '<div id="buscar-prop-cli-resultados" style="display:none"></div>' +
+            '</div>' +
         '</div>';
     }
 
@@ -310,6 +318,17 @@
             setTimeout(function() { el.style.display = 'none'; }, 2000);
         }).catch(function(e) { console.error('Error al guardar descripción', e); });
     }
+
+    // El desplegable se cierra al clickear afuera o con Escape.
+    document.addEventListener('click', function(e) {
+        var list = document.getElementById('buscar-prop-cli-resultados');
+        if (list && !e.target.closest('.buscar-prop-wrap')) list.style.display = 'none';
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        var list = document.getElementById('buscar-prop-cli-resultados');
+        if (list) list.style.display = 'none';
+    });
 
     document.addEventListener('DOMContentLoaded', cargarPerfil);
 </script>
