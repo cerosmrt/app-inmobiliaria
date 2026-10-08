@@ -239,11 +239,12 @@
                 return;
             }
             list.innerHTML = disponibles.map(function(p) {
-                var label = (p.codigo ? '[' + esc(p.codigo) + '] ' : '') + esc(p.direccion || '(sin dirección)');
+                var label = esc(p.direccion || '(sin dirección)');
+                var ident = p.codigo ? esc(p.codigo) : ('#' + p.id);
                 var qStr  = esc(((p.codigo || '') + ' ' + (p.direccion || '') + ' ' + (p.estado || '') + ' ' + (p.barrio || '')).toLowerCase());
                 return '<div class="inter-row" data-q="' + qStr + '">' +
                     '<span class="inter-nombre"><a href="/admin/propiedad/' + p.id + '" target="_blank">' + label + '</a></span>' +
-                    (p.estado ? '<span class="badge badge-' + esc(p.estado) + '" style="font-size:10px">' + esc(p.estado) + '</span>' : '') +
+                    '<span style="font-size:11px;color:var(--muted)">' + ident + '</span>' +
                     '<button class="btn-action btn-match" onclick="asignarPropiedad(' + p.id + ',\'' + rol + '\')" style="font-size:11px;white-space:nowrap">+ Asignar</button>' +
                 '</div>';
             }).join('');
