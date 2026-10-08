@@ -172,7 +172,7 @@
                 <option value="casa">Casa</option>
                 <option value="departamento">Departamento</option>
                 <option value="local">Local</option>
-                <option value="terreno">Terreno</option>
+                <option value="terreno">Terreno</option><option value="loteo">Loteo</option>
                 <option value="campo">Campo</option>
                 <option value="otro">Otro</option>
             </select>
@@ -338,7 +338,7 @@
                     <option value="casa">Casa</option>
                     <option value="departamento">Departamento</option>
                     <option value="local">Local</option>
-                    <option value="terreno">Terreno</option>
+                    <option value="terreno">Terreno</option><option value="loteo">Loteo</option>
                     <option value="campo">Campo</option>
                     <option value="otro">Otro</option>
                 </select>
@@ -1051,7 +1051,7 @@
                     ? (this.querySelector('.badge') ? this.querySelector('.badge').textContent.trim() : '')
                     : this.textContent.trim();
                 const opts = {
-                    tipo:      ['casa','departamento','local','terreno','otro'],
+                    tipo:      ['casa','departamento','local','terreno','loteo','otro'],
                     operacion: ['venta','alquiler'],
                     estado:    ['disponible','reservada','vendida','rentada','cerrada']
                 }[field] || [];

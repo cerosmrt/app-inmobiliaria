@@ -40,7 +40,7 @@ class Propiedad(db.Model):
     ambientes = db.Column(db.Integer, nullable=True)
     superficie_terreno  = db.Column(db.Float, nullable=True)
     superficie_cubierta = db.Column(db.Float, nullable=True)
-    tipo = db.Column(db.String)         # casa, departamento, local, terreno, otro
+    tipo = db.Column(db.String)         # casa, departamento, local, terreno, loteo, campo, otro
     operacion = db.Column(db.String, nullable=True)  # venta, alquiler
     estado = db.Column(db.String)       # disponible, reservada, vendida, rentada, cerrada
     publicada = db.Column(db.Boolean, default=False)
