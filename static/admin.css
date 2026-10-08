@@ -617,3 +617,23 @@ a:hover { color: var(--text); text-decoration: underline; }
     .stats-strip { flex-wrap: wrap; }
     .stat-chip { padding: 8px 14px; }
 }
+
+/* Switch on/off (compartido: ficha de propiedad y tabla del dashboard) */
+.switch { position: relative; display: inline-flex; flex: 0 0 auto; cursor: pointer; }
+.switch input {
+    position: absolute; opacity: 0; width: 100%; height: 100%;
+    margin: 0; cursor: pointer;
+}
+.switch-track {
+    width: 32px; height: 18px; border-radius: 9px;
+    background: var(--border-strong); transition: background var(--tx);
+    display: block; pointer-events: none;
+}
+.switch-track::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform var(--tx);
+}
+.switch input:checked ~ .switch-track { background: var(--green); }
+.switch input:checked ~ .switch-track::after { transform: translateX(14px); }
+.switch input:focus-visible ~ .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }

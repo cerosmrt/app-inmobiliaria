@@ -783,8 +783,11 @@
                     '<span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado || '') + '</span>' +
                 '</td>' +
                 '<td class="editable-text" data-field="rango_min" data-id="' + p.id + '" title="' + (p.rango_max ? 'Max: ' + p.rango_max : '') + '">' + esc(precioStr) + '</td>' +
-                '<td style="text-align:center;font-size:15px;cursor:pointer" onclick="togglePublicada(' + p.id + ', ' + p.publicada + ')" title="' + (p.publicada ? 'Click para despublicar' : 'Click para publicar') + '">' +
-                    (p.publicada ? '<span style="color:var(--accent)">&#x2713;</span>' : '<span style="color:var(--muted)">&#x2715;</span>') +
+                '<td style="text-align:center" title="' + (p.publicada ? 'Publicada: click para despublicar' : 'Click para publicar') + '">' +
+                    '<label class="switch">' +
+                        '<input type="checkbox"' + (p.publicada ? ' checked' : '') + ' onchange="togglePublicada(' + p.id + ', ' + p.publicada + ')">' +
+                        '<span class="switch-track"></span>' +
+                    '</label>' +
                 '</td>' +
                 celdaCompletitud(p) +
                 '<td class="notas-col">' +
