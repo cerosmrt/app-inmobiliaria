@@ -123,13 +123,11 @@ class Propiedad(db.Model):
             ('descripcion', 'Descripción', tiene_desc),
             ('tipo', 'Tipo', bool(self.tipo)),
             ('operacion', 'Operación', bool(self.operacion)),
-            ('barrio', 'Barrio', bool((self.barrio or '').strip())),
             ('superficie', 'Hectáreas' if es_rural else 'Superficie / ambientes', tiene_sup),
         ]
         interno = [
             ('propietario', 'Propietario asignado', tiene_prop),
             ('ubicacion', 'Ubicación en el mapa', tiene_ubic),
-            ('notas', 'Notas internas', bool((self.notas or '').strip())),
         ]
 
         falta_aviso = [{'campo': c, 'label': l} for c, l, ok in aviso if not ok]
