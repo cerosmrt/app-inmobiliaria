@@ -241,7 +241,7 @@
             list.innerHTML = disponibles.map(function(p) {
                 var label = esc(p.direccion || '(sin dirección)');
                 var ident = p.codigo ? esc(p.codigo) : ('#' + p.id);
-                var qStr  = esc(((p.codigo || '') + ' #' + p.id + ' ' + (p.direccion || '') + ' ' + (p.estado || '') + ' ' + (p.barrio || '')).toLowerCase());
+                var qStr  = esc(((p.codigo || '') + ' #' + p.id + ' ' + (p.direccion || '') + ' ' + (p.barrio || '')).toLowerCase());
                 return '<div class="inter-row" data-q="' + qStr + '">' +
                     '<span style="font-size:12px;color:var(--muted);min-width:44px">' + ident + '</span>' +
                     '<span class="inter-nombre"><a href="/admin/propiedad/' + p.id + '" target="_blank">' + label + '</a></span>' +
