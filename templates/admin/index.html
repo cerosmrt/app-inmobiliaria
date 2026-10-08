@@ -163,6 +163,10 @@
             <button class="btn btn-green" onclick="abrirModalNuevaPropiedad()">+ Agregar propiedad</button>
             <button class="btn btn-gray"  onclick="abrirImportModal('propiedades')">↑ Importar CSV</button>
             <button class="btn btn-gray"  onclick="resetFiltrosPropiedades()">Limpiar filtros</button>
+            <div class="buscador-dato">
+                <input type="text" id="buscadorDato" placeholder="Tengo un dato: teléfono, nombre, dirección…" autocomplete="off" oninput="buscarDato(this.value)">
+                <div class="buscador-dato-res" id="buscadorDatoRes" style="display:none"></div>
+            </div>
         </div>
         <div class="filterbox no-print">
             <input type="text" id="filtroDireccion" placeholder="Propietario o dirección" onkeyup="filtrarPropiedades()" style="min-width:200px">
@@ -739,6 +743,47 @@
             filtrarPropiedades();
         });
     }
+
+    // "¿Ya la tengo?": se escribe un dato suelto (teléfono, nombre, dirección,
+    // código, #id) y lista las propiedades cargadas a las que aplica, y por qué.
+    function buscarDato(q) {
+        var cont = document.getElementById('buscadorDatoRes');
+        q = (q || '').trim().toLowerCase();
+        if (!q) { cont.style.display = 'none'; return; }
+        var digitos = q.replace(/\D/g, '');
+        var qId = q.replace(/^#/, '');
+        function tel(t) { return (t || '').replace(/\D/g, ''); }
+        function nombre(c) { return ((c.nombre || '') + ' ' + (c.apellido || '')).trim(); }
+        var res = [];
+        propiedades.forEach(function(p) {
+            var motivos = [];
+            if ((p.direccion || '').toLowerCase().includes(q)) motivos.push('dirección');
+            if ((p.codigo || '').toLowerCase().includes(q)) motivos.push('código');
+            if (/^\d+$/.test(qId) && String(p.id) === qId) motivos.push('ID');
+            if ((p.nombre_campo || '').toLowerCase().includes(q)) motivos.push('nombre del campo');
+            (p.propietarios || []).forEach(function(c) {
+                if (nombre(c).toLowerCase().includes(q)) motivos.push('propietario: ' + nombre(c));
+                else if (digitos.length >= 4 && tel(c.telefono).includes(digitos)) motivos.push('tel. de ' + nombre(c));
+            });
+            (p.interesados || []).forEach(function(c) {
+                if (nombre(c).toLowerCase().includes(q)) motivos.push('interesado: ' + nombre(c));
+                else if (digitos.length >= 4 && tel(c.telefono).includes(digitos)) motivos.push('tel. de ' + nombre(c));
+            });
+            if (motivos.length) res.push({ p: p, motivos: motivos });
+        });
+        cont.style.display = '';
+        if (!res.length) { cont.innerHTML = '<div class="buscador-dato-vacio">Ninguna propiedad cargada coincide con &laquo;' + esc(q) + '&raquo;.</div>'; return; }
+        cont.innerHTML = res.slice(0, 20).map(function(r) {
+            return '<a class="buscador-dato-fila" href="/admin/propiedad/' + r.p.id + '">' +
+                '<span class="bd-id">' + esc(r.p.codigo || ('#' + r.p.id)) + '</span>' +
+                '<span class="bd-dir">' + esc(r.p.direccion || '(sin dirección)') + '</span>' +
+                '<span class="bd-why">' + esc(r.motivos.join(' · ')) + '</span></a>';
+        }).join('');
+    }
+    document.addEventListener('click', function(e) {
+        var cont = document.getElementById('buscadorDatoRes');
+        if (cont && !e.target.closest('.buscador-dato')) cont.style.display = 'none';
+    });
 
     function filtrarPropiedades() {
         const dir     = document.getElementById('filtroDireccion').value.toLowerCase();

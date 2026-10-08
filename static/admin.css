@@ -638,3 +638,27 @@ a:hover { color: var(--text); text-decoration: underline; }
 .switch input:checked ~ .switch-track { background: var(--green); }
 .switch input:checked ~ .switch-track::after { transform: translateX(14px); }
 .switch input:focus-visible ~ .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Buscador "Tengo un dato": desplegable bajo el input, flota sobre la página */
+.buscador-dato { position: relative; margin-left: auto; }
+.buscador-dato input {
+    width: 320px; max-width: 100%; padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+    color: var(--text); background: var(--surface); box-sizing: border-box;
+}
+.buscador-dato input:focus { outline: none; border-color: var(--accent); }
+.buscador-dato-res {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; width: 460px; max-width: 90vw;
+    max-height: 320px; overflow-y: auto; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.buscador-dato-fila {
+    display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; font-size: 13px;
+    border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none;
+}
+.buscador-dato-fila:last-child { border-bottom: none; }
+.buscador-dato-fila:hover { background: var(--surface-3); text-decoration: none; }
+.buscador-dato-fila .bd-id { color: var(--muted); font-size: 12px; min-width: 44px; }
+.buscador-dato-fila .bd-dir { font-weight: 600; flex: 1; }
+.buscador-dato-fila .bd-why { color: var(--muted); font-size: 11.5px; text-align: right; }
+.buscador-dato-vacio { padding: 12px; color: var(--muted); font-size: 13px; }
