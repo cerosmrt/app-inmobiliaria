@@ -200,7 +200,7 @@
             '<input type="text" id="buscar-propiedad-cli" placeholder="Filtrar propiedades..." ' +
                 'autocomplete="off" oninput="filtrarDisponiblesProp(this)" ' +
                 'style="width:100%;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;margin-bottom:0">' +
-            '<div id="buscar-prop-cli-resultados"></div>' +
+            '<div id="buscar-prop-cli-resultados" style="display:none"></div>' +
         '</div>';
     }
 
@@ -254,6 +254,9 @@
         var q    = input.value.trim().toLowerCase();
         var list = document.getElementById('buscar-prop-cli-resultados');
         if (!list) return;
+        // Sin texto no se muestra la lista: aparece recién al escribir.
+        list.style.display = q ? '' : 'none';
+        if (!q) return;
         var rows = list.querySelectorAll('.inter-row[data-q]');
         var visible = 0;
         rows.forEach(function(r) {
