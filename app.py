@@ -967,12 +967,14 @@ def get_propiedades():
 @api_login_required
 def add_propiedad():
     data = _json_body()
-    faltan = _missing(data, 'direccion', 'tipo', 'estado')
+    # La dirección no es obligatoria: se puede cargar lo que se tenga y completar
+    # después. Va un texto fijo (y no NULL) porque el listado ordena por dirección.
+    faltan = _missing(data, 'tipo', 'estado')
     if faltan:
         return jsonify({'error': f'Faltan campos requeridos: {", ".join(faltan)}'}), 400
     nueva = Propiedad(
         codigo=data.get('codigo'),
-        direccion=data.get('direccion'),
+        direccion=(data.get('direccion') or '').strip() or 'Sin dirección',
         barrio=data.get('barrio'),
         rango_min=data.get('rango_min'),
         rango_max=data.get('rango_max'),

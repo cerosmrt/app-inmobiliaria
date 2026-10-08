@@ -362,7 +362,7 @@
                 <input id="np-nombre-campo" type="text" class="form-input" placeholder="La Esperanza">
             </div>
             <div style="grid-column:1/-1">
-                <label class="form-label" id="np-label-direccion">Dirección *</label>
+                <label class="form-label" id="np-label-direccion">Dirección</label>
                 <input id="np-direccion" type="text" class="form-input" placeholder="Av. Siempreviva 742">
                 <p id="np-mapa-hint" style="display:none;margin:5px 0 0;font-size:11.5px;color:var(--muted)">
                     📍 Guardá la propiedad y podrás marcar la ubicación exacta en el mapa.
@@ -418,15 +418,15 @@
             <!-- Create new -->
             <div id="np-nuevo-bloque" style="display:none;margin-top:10px;display:none;grid-template-columns:1fr 1fr;gap:8px">
                 <div>
-                    <label class="form-label">Nombre *</label>
+                    <label class="form-label">Nombre</label>
                     <input id="np-nombre" type="text" class="form-input" placeholder="Juan">
                 </div>
                 <div>
-                    <label class="form-label">Apellido *</label>
+                    <label class="form-label">Apellido</label>
                     <input id="np-apellido" type="text" class="form-input" placeholder="García">
                 </div>
                 <div style="grid-column:1/-1">
-                    <label class="form-label">Teléfono *</label>
+                    <label class="form-label">Teléfono</label>
                     <input id="np-telefono" type="text" class="form-input" placeholder="2235551234">
                 </div>
             </div>
@@ -996,8 +996,8 @@
     }
 
     function guardarNuevaPropiedad(irAlMapa) {
+        // Nada es obligatorio: sin dirección queda "Sin dirección" y se completa después.
         var direccion = document.getElementById('np-direccion').value.trim();
-        if (!direccion) { toast('Ingresá la dirección.', 'error'); return; }
 
         var tipo = document.getElementById('np-tipo').value;
         var esCampo = tipo === 'campo';
@@ -1036,10 +1036,11 @@
             var nombre   = document.getElementById('np-nombre').value.trim();
             var apellido = document.getElementById('np-apellido').value.trim();
             var telefono = document.getElementById('np-telefono').value.trim();
-            if (!nombre || !apellido || !telefono) { toast('Nombre, apellido y teléfono son requeridos.', 'error'); return; }
+            // Con cualquier dato alcanza; si no se escribió nada, la propiedad queda sin propietario.
+            if (!nombre && !apellido && !telefono) { crearPropiedad(null); return; }
             fetch('/api/clientes', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: nombre, apellido: apellido, telefono: telefono, tipo: 'propietario' })
+                body: JSON.stringify({ nombre: nombre || apellido || telefono, apellido: nombre ? apellido : '', telefono: telefono, tipo: 'propietario' })
             }).then(function(r) { return r.json(); })
               .then(function(c) { crearPropiedad(c.id); })
               .catch(function() { toast('Error al crear propietario', 'error'); });
