@@ -558,6 +558,7 @@ a:hover { color: var(--text); text-decoration: underline; }
     background: var(--surface); border: 1px solid var(--border-strong); border-radius: 9px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); padding: 10px 12px; font-size: 12px;
     opacity: 0; visibility: hidden; transform: translateY(-3px); transition: 0.13s;
+    pointer-events: none; /* se va apenas el mouse sale de la barra; no se queda tapando las filas de abajo */
 }
 .compl:hover .compl-pop, .compl:focus-within .compl-pop { opacity: 1; visibility: visible; transform: none; }
 .compl-pop b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
