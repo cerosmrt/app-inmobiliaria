@@ -243,8 +243,8 @@
                 var ident = p.codigo ? esc(p.codigo) : ('#' + p.id);
                 var qStr  = esc(((p.codigo || '') + ' ' + (p.direccion || '') + ' ' + (p.estado || '') + ' ' + (p.barrio || '')).toLowerCase());
                 return '<div class="inter-row" data-q="' + qStr + '">' +
+                    '<span style="font-size:12px;color:var(--muted);min-width:44px">' + ident + '</span>' +
                     '<span class="inter-nombre"><a href="/admin/propiedad/' + p.id + '" target="_blank">' + label + '</a></span>' +
-                    '<span style="font-size:11px;color:var(--muted)">' + ident + '</span>' +
                     '<button class="btn-action btn-match" onclick="asignarPropiedad(' + p.id + ',\'' + rol + '\')" style="font-size:11px;white-space:nowrap">+ Asignar</button>' +
                 '</div>';
             }).join('');
