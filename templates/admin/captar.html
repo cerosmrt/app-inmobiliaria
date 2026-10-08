@@ -249,6 +249,24 @@
         guardarValores();
         var pendientes = filas.filter(function(f) { return !filaVacia(f); });
         if (!pendientes.length) { toast('No hay nada para crear: completá alguna fila.', 'error'); return; }
+        // Antes de crear, avisa si algo ya está cargado (misma dirección o mismo código).
+        fetch('/api/propiedades').then(function(r) { return r.json(); }).then(function(existentes) {
+            var norm = function(x) { return (x || '').toString().trim().toLowerCase().replace(/\s+/g, ' '); };
+            var repetidas = [];
+            pendientes.forEach(function(f) {
+                var dir = norm(f.valores.direccion), cod = norm(f.valores.codigo);
+                var hit = existentes.filter(function(p) {
+                    return (dir && norm(p.direccion) === dir) || (cod && norm(p.codigo) === cod);
+                })[0];
+                if (hit) repetidas.push('"' + (f.valores.direccion || f.valores.codigo).trim() + '" ya existe (' + (hit.codigo || '#' + hit.id) + ' — ' + hit.direccion + ')');
+            });
+            if (!repetidas.length) return true;
+            return confirmar('Esto ya parece estar cargado:\n\n' + repetidas.join('\n') + '\n\n¿Crear igual?', 'Posible duplicado', 'Crear igual');
+        }).then(function(seguir) { if (seguir) ejecutarCreacion(pendientes); })
+          .catch(function() { ejecutarCreacion(pendientes); });
+    }
+
+    function ejecutarCreacion(pendientes) {
         var btn = document.getElementById('cg-btn-crear');
         btn.disabled = true;
         var creadas = 0, fallidas = 0;
