@@ -9,7 +9,7 @@ CRM inmobiliario para la inmobiliaria familiar (Moret, Gualeguay, Entre Ríos). 
 - **Una modificación por vez.** No avanzar en varias cosas juntas ni en batch.
 - **Antes de tocar código, recapitular el cambio con el usuario mediante preguntas multiple-choice** (herramienta AskUserQuestion) hasta confirmar que ambos están en la misma página.
 - **Todo lo nuevo entra primero como "Pendiente" en `ROADMAP.md`.** Al completar un ítem, moverlo a "Hecho".
-- **Commitear después de cada implementación terminada.** No acumular varios cambios sin commitear: cada modificación verificada se cierra con su propio commit (mensaje en español, en imperativo, explicando el *por qué*). Así cada paso queda revertible por separado.
+- **Commitear después de cada implementación terminada, sin esperar a que el usuario lo pida** (correr `python test_regresion.py` antes). No acumular varios cambios sin commitear: cada modificación verificada se cierra con su propio commit (mensaje en español, en imperativo, explicando el *por qué*). Así cada paso queda revertible por separado.
 - No asumir intención: si hay ambigüedad de alcance, preguntar antes.
 - **Respuestas breves.** El usuario prefiere ida y vuelta corto antes que un informe largo: dos o tres líneas por respuesta, lo que hiciste y lo que hay que saber. Nada de resúmenes con secciones, listas de todo lo tocado ni opciones que no pidió. El detalle va al commit y al ROADMAP, no al chat.
 
