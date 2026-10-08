@@ -10,7 +10,15 @@
         padding: 7px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
         font-size: 13px; font-family: inherit; color: var(--text); background: var(--surface);
     }
-    .cg-spacer { flex: 1; }
+    .cg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cg-chip {
+        display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+        padding: 6px 12px; border: 1.5px solid var(--border); border-radius: 999px;
+        font-size: 12.5px; color: var(--text-2); background: var(--surface); transition: var(--tx);
+    }
+    .cg-chip:hover { border-color: var(--border-strong); }
+    .cg-chip input { margin: 0; accent-color: var(--green); cursor: pointer; }
+    .cg-chip.on { border-color: var(--green); color: var(--text); background: var(--surface-2); font-weight: 600; }
     .cg-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
     table.cg-table { border-collapse: collapse; width: 100%; }
     table.cg-table th {
@@ -18,10 +26,6 @@
         color: var(--muted); padding: 9px 10px; border-bottom: 1px solid var(--border);
         background: var(--surface-2); white-space: nowrap;
     }
-    table.cg-table th .cg-quitar {
-        border: none; background: none; color: var(--muted); cursor: pointer; font-size: 12px; margin-left: 6px; padding: 0;
-    }
-    table.cg-table th .cg-quitar:hover { color: var(--accent); }
     table.cg-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
     table.cg-table tr:last-child td { border-bottom: none; }
     .cg-in {
@@ -56,8 +60,8 @@
     </p>
 
     <div class="cg-bar">
-        <select id="cg-selector" onchange="agregarColumna(this.value); this.value=''"></select>
-        <span class="cg-spacer"></span>
+        <span class="cg-hint" style="margin:0">Qué tenés para cargar:</span>
+        <div class="cg-chips" id="cg-chips"></div>
     </div>
 
     <div class="cg-scroll"><table class="cg-table" id="cg-tabla"></table></div>
@@ -90,18 +94,21 @@
     var _nextFila = 1;
 
     function renderSelector() {
-        var sel = document.getElementById('cg-selector');
-        var libres = Object.keys(COLUMNAS).filter(function(k) { return columnas.indexOf(k) === -1; });
-        sel.innerHTML = '<option value="">+ Agregar columna…</option>' + libres.map(function(k) {
-            return '<option value="' + k + '">' + esc(COLUMNAS[k].label) + '</option>';
+        document.getElementById('cg-chips').innerHTML = Object.keys(COLUMNAS).map(function(k) {
+            var on = columnas.indexOf(k) !== -1;
+            return '<label class="cg-chip' + (on ? ' on' : '') + '">' +
+                '<input type="checkbox"' + (on ? ' checked' : '') + ' onchange="alternarColumna(\'' + k + '\')">' +
+                esc(COLUMNAS[k].label) + '</label>';
         }).join('');
-        sel.style.display = libres.length ? '' : 'none';
     }
 
-    function agregarColumna(k) {
-        if (!k || columnas.indexOf(k) !== -1) return;
+    function alternarColumna(k) {
+        if (columnas.indexOf(k) !== -1) { quitarColumna(k); return; }
         guardarValores();
         columnas.push(k);
+        // Siempre en el orden de la lista, no en el que se tildaron.
+        var orden = Object.keys(COLUMNAS);
+        columnas.sort(function(a, b) { return orden.indexOf(a) - orden.indexOf(b); });
         if (!filas.length) filas.push({ id: _nextFila++, valores: {}, fotos: [] });
         render();
     }
@@ -115,7 +122,7 @@
     }
 
     function agregarFila() {
-        if (!columnas.length) { toast('Primero agregá una columna.', 'error'); return; }
+        if (!columnas.length) { toast('Primero tildá qué querés cargar.', 'error'); return; }
         guardarValores();
         filas.push({ id: _nextFila++, valores: {}, fotos: [] });
         render();
@@ -167,11 +174,11 @@
         document.getElementById('cg-btn-fila').style.display = columnas.length ? '' : 'none';
         document.getElementById('cg-btn-crear').style.display = filas.length ? '' : 'none';
         if (!columnas.length) {
-            t.innerHTML = '<tbody><tr><td class="cg-vacio">Empezá agregando una columna: elegí qué dato querés cargar.</td></tr></tbody>';
+            t.innerHTML = '<tbody><tr><td class="cg-vacio">Tildá arriba lo que tengas para cargar.</td></tr></tbody>';
             return;
         }
         t.innerHTML = '<thead><tr>' + columnas.map(function(k) {
-            return '<th>' + esc(COLUMNAS[k].label) + '<button class="cg-quitar" title="Quitar columna" onclick="quitarColumna(\'' + k + '\')">&#x2715;</button></th>';
+            return '<th>' + esc(COLUMNAS[k].label) + '</th>';
         }).join('') + '<th></th><th></th></tr></thead><tbody>' + filas.map(function(f) {
             return '<tr id="cg-fila-' + f.id + '">' + columnas.map(function(k) {
                 return '<td>' + celda(f, k) + '</td>';
