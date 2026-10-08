@@ -605,12 +605,10 @@
         { label: 'Tipo',           field: 'tipo',               type: 'select', grupo: 'hero', opts: ['casa','departamento','local','terreno','campo','otro'] },
         { label: 'Operación', field: 'operacion',          type: 'select', grupo: 'hero', opts: ['venta','alquiler'] },
 
-        // Dirección va primera: ocupa el ancho completo, así Código y Barrio
-        // quedan emparejados en una sola fila en vez de dejar medias filas vacías.
+        // Dirección y Código ocupan el ancho completo (el barrio se sacó de la ficha).
         { label: 'Dirección', field: 'direccion',          type: 'text',   grupo: 'ident', span2: true, mapLink: true },
         { label: 'Nombre del campo', field: 'nombre_campo',    type: 'text',   grupo: 'ident', span2: true, showFor: ['campo'] },
-        { label: 'Código',         field: 'codigo',             type: 'text',   grupo: 'ident' },
-        { label: 'Barrio',         field: 'barrio',             type: 'text',   grupo: 'ident' },
+        { label: 'Código',         field: 'codigo',             type: 'text',   grupo: 'ident', span2: true },
 
         // Terreno y Cubierto primero y en ese orden: la grilla es de dos
         // columnas y son el mismo dato en dos versiones, así que se leen
@@ -847,7 +845,7 @@
                       'error');
               }
               // When address changes and no geometry exists, geocode in background
-              if ((field === 'direccion' || field === 'barrio') && !propData.lat && !propData.geojson_geometry) {
+              if (field === 'direccion' && !propData.lat && !propData.geojson_geometry) {
                   fetch('/api/propiedades/' + propiedadId + '/geocode', {method:'POST', credentials:'same-origin'})
                       .then(function(r){ return r.json(); })
                       .then(function(d){
