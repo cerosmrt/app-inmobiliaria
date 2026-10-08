@@ -17,6 +17,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 
 ### Propiedades
+- **Cargador por columnas** (`/admin/captar`): planilla que arranca vacía; se agregan las columnas que se quieran (dirección, tipo, operación, precio, propietario, fotos, descripción, notas, código) y cada fila crea una propiedad en borrador. Nada obligatorio; el propietario puede quedar sin asignar.
 - **Asistente de completitud.** Cada propiedad expone `Propiedad.completitud()` (en `models.py`, fuente única): `{score, total, falta_aviso[], falta_interno[]}` sobre 10 ítems — 7 del aviso (precio, fotos, descripción, tipo, operación, barrio, superficie/ambientes) y 3 internos (propietario, ubicación en el mapa, notas). Las propiedades rurales (campo/terreno) piden hectáreas en vez de ambientes. **Nada bloquea publicar**: es una guía para cargar rápido con un dato y volver a completar. Sale en `as_dict()` (no en `_CAMPOS_PUBLICOS`, así que no viaja al sitio público). Dos vistas: (1) en la tabla de Propiedades, columna **"Completá"** con barra + `N/10` (rojo <50%, ámbar <100%, verde full), ordenable, tooltip con lo que falta agrupado en *aviso* / *interno*; más un filtro **"Incompletas"** al lado de "Publicadas". (2) en la ficha admin, panel **"Qué falta"** en el rail público bajo el switch de publicar, con cada faltante linkeado a su campo/acción. Al publicar con faltantes del aviso, un toast lo avisa (no impide). El `PUT /api/propiedades/<id>` ahora devuelve la propiedad entera (antes solo `{message}`) para refrescar el score sin recargar.
 - CRUD completo de propiedades con **soft-delete** (`deleted_at`) y archivado/restaurar/borrado permanente.
 - Campos dinámicos según tipo de propiedad (urbano vs. **campo**: hectáreas, subdivisible, uso de suelo, nombre del campo).
@@ -89,9 +90,6 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ---
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
-
-### 🧾 Cargador por columnas (pantalla `/admin/captar`, ya renombrada "Cargador")
-Hoy el Cargador crea propiedad + dueño con un formulario fijo. La idea: arrancar **vacío con un selector de columnas** (tipo, dirección, propietario, precio, fotos, descripción, notas…) y que cada columna agregada traiga su casillero/botón (texto, select, subida de fotos). Se carga lo que se tenga a mano — a veces solo fotos y descripción — y se completa después. Reglas acordadas: **nada es obligatorio** (una propiedad puede crearse con un solo dato), el propietario puede quedar sin asignar y se asigna luego desde la ficha. Escala: ~10 propiedades por tanda. Falta definir la forma exacta (tabla tipo planilla vs. tarjetas).
 
 ### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)
 Roberto quiere publicar con precio — le sirve para que el visitante ubique la casa en una franja — pero le incomoda que se lea como un número cerrado, porque en la práctica casi siempre se negocia. Su propuesta: rotularlo **"Precio sugerido"** o **"Sugerido U$S xxx"**, igual que en las tasaciones. Es un cambio de rótulo en la ficha pública y en las cards del listado; falta definir si va en todas las operaciones o solo en casas, y si el rótulo se guarda por propiedad o es fijo del sitio. **No tocar hasta charlarlo.**
