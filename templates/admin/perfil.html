@@ -5,7 +5,7 @@
 {% block page_topbar %}
 <div class="page-topbar">
     <span class="page-topbar-title">
-        <a href="/admin?tab=clientes" class="topbar-back">Clientes</a>
+        <a href="/admin?tab=interesados" class="topbar-back" id="topbar-volver">Interesados</a>
         <span class="topbar-sep">›</span>
         <span id="topbar-cliente-nombre">Perfil</span>
     </span>
@@ -131,6 +131,13 @@
                 var nombreCompleto = data.nombre + ' ' + data.apellido;
                 var tb = document.getElementById('topbar-cliente-nombre');
                 if (tb) tb.textContent = nombreCompleto;
+                // El "volver" lleva a la lista que corresponde al tipo de cliente.
+                var volver = document.getElementById('topbar-volver');
+                if (volver) {
+                    var tabVolver = data.tipo === 'propietario' ? 'propietarios' : 'interesados';
+                    volver.href = '/admin?tab=' + tabVolver;
+                    volver.textContent = data.tipo === 'propietario' ? 'Propietarios' : 'Interesados';
+                }
                 var initials = ((data.nombre[0] || '') + (data.apellido[0] || '')).toUpperCase();
                 document.getElementById('cliente-info').innerHTML =
                     '<div class="avatar">' + esc(initials) + '</div>' +
@@ -304,7 +311,7 @@
         confirmar('¿Seguro querés borrar este cliente?', 'Eliminar cliente').then(function(ok) {
             if (!ok) return;
             fetch('/api/clientes/' + clienteId, { method: 'DELETE' })
-                .then(function() { window.location.href = '/admin?tab=clientes'; })
+                .then(function() { window.location.href = '/admin?tab=' + (_clienteData && _clienteData.tipo === 'propietario' ? 'propietarios' : 'interesados'); })
                 .catch(function(e) { console.error('Error al eliminar cliente', e); });
         });
     }
