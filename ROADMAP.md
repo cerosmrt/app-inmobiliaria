@@ -40,6 +40,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
   - Validación **por magic bytes** como las fotos: un `.pdf` que adentro es otra cosa no entra, y las extensiones fuera de la lista tampoco. La suite cubre las dos cosas, más que sin sesión el archivo no se sirve y que al borrarlo desaparece del disco.
 
 ### Fotos
+- Galería de la ficha admin: miniaturas chicas (portada 2x2), borrar al pasar el mouse y **lightbox** con flechas/teclado; ya no se apelmazan con muchas fotos.
 - Upload con **validación por magic bytes**, conversión a **WebP**, generación de **thumbnails**, límite 10 MB.
 - Reordenar por **drag & drop**; borrar; galería con **lightbox** (teclado + swipe táctil) en la ficha pública.
 - **El card del rail no pasa de una pantalla** (`max-height: calc(100vh - 95px)`, donde 95 = topbar 46+1 + los 24px de padding arriba y abajo del `.container`) y adentro la **galería es el único bloque elástico** (`flex: 0 1 auto` + scroll propio): crece lo que necesita y se achica cuando el card toca el techo. Antes crecía sin límite y con 10+ fotos el rail pasaba a ser la columna más alta y estiraba toda la página. *Un primer intento con `max-height: 480px` fijo no alcanzó — sumado al recuadro de subida y la descripción el rail seguía midiendo ~780px contra ~520px de la izquierda.* El rail sigue **sin** sticky a propósito (ver comentario en `propiedad.html:46`), así no vuelve el bug del scrollbar doble.
