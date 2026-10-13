@@ -395,6 +395,10 @@
     /* ── Mapa de ubicación ─────────────────────────────────────────────────── */
     /* En el modal hay lugar de sobra: conviene grande para dibujar polígonos. */
     #geo-map { height: 56vh; min-height: 380px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
+    .geo-buscar { display: flex; gap: 8px; margin-bottom: 6px; }
+    .geo-buscar input { flex: 1; padding: 7px 11px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+    .geo-buscar-msg { font-size: 12px; color: var(--muted); min-height: 16px; margin-bottom: 8px; }
+    .geo-buscar-msg.error { color: #C41230; }
     .geo-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
     .geo-import-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .geo-import-btns label { cursor: pointer; }
@@ -528,6 +532,13 @@
             <button id="btn-modo-punto"    class="btn btn-blue" onclick="setGeoModo('punto')"   style="font-size:13px;padding:6px 16px">&#x1F4CD; Punto</button>
             <button id="btn-modo-poligono" class="btn btn-gray" onclick="setGeoModo('poligono')" style="font-size:13px;padding:6px 16px">&#x2B21; Pol&iacute;gono</button>
         </div>
+
+        <form id="geo-buscar" class="geo-buscar" onsubmit="buscarUbicacion(event)">
+            <input id="geo-buscar-input" type="text" autocomplete="off"
+                   placeholder="Direcci&oacute;n, coordenadas, link de Google Maps o Plus Code">
+            <button type="submit" class="btn btn-blue" style="font-size:13px;padding:6px 16px">Buscar</button>
+        </form>
+        <div id="geo-buscar-msg" class="geo-buscar-msg"></div>
 
         <div id="geo-map"></div>
 
@@ -1553,20 +1564,100 @@
         // Click → drop point (only in punto mode)
         _geoMap.on('click', function(e) {
             if (_geoModo !== 'punto') return;
-            var lat = e.latlng.lat, lng = e.latlng.lng;
-            if (_geoMarker) {
-                _geoMarker.setLatLng([lat, lng]);
-            } else {
-                _geoMarker = L.marker([lat, lng], { draggable: true }).addTo(_geoMap);
-                _geoMarker.on('dragend', function() {
-                    var ll = _geoMarker.getLatLng();
-                    guardarPunto(ll.lat, ll.lng);
-                });
-            }
-            guardarPunto(lat, lng);
+            colocarPunto(e.latlng.lat, e.latlng.lng);
         });
 
         setTimeout(function() { _geoMap.invalidateSize(); }, 50);
+    }
+
+    function colocarPunto(lat, lng) {
+        if (_geoMarker) {
+            _geoMarker.setLatLng([lat, lng]);
+        } else {
+            _geoMarker = L.marker([lat, lng], { draggable: true }).addTo(_geoMap);
+            _geoMarker.on('dragend', function() {
+                var ll = _geoMarker.getLatLng();
+                guardarPunto(ll.lat, ll.lng);
+            });
+        }
+        guardarPunto(lat, lng);
+    }
+
+    // ── Buscador de ubicación ───────────────────────────────────────────
+    var _PLUS_ALFABETO = '23456789CFGHJMPQRVWX';
+    var _GUALEGUAY = [-33.14, -59.31];
+
+    function _decodificarPlusCode(txt) {
+        var m = txt.trim().toUpperCase().match(/^([23456789CFGHJMPQRVWX0]{2,8})\+([23456789CFGHJMPQRVWX]{0,7})(?:\s|$)/);
+        if (!m) return null;
+        var codigo = m[1] + m[2];
+        if (m[1].length < 8) {
+            // Código corto: completar el prefijo con la ciudad de referencia.
+            var falta = 8 - m[1].length, lat = _GUALEGUAY[0] + 90, lng = _GUALEGUAY[1] + 180, pref = '';
+            for (var i = 0, r = 20; i < falta / 2; i++, r /= 20) {
+                var a = Math.floor(lat / r), b = Math.floor(lng / r);
+                pref += _PLUS_ALFABETO[a] + _PLUS_ALFABETO[b];
+                lat -= a * r; lng -= b * r;
+            }
+            codigo = pref + codigo;
+        }
+        var latV = -90, lngV = -180, res = 20;
+        for (var j = 0; j + 1 < codigo.length && j < 10; j += 2) {
+            var la = _PLUS_ALFABETO.indexOf(codigo[j]), lo = _PLUS_ALFABETO.indexOf(codigo[j + 1]);
+            if (la < 0 || lo < 0) return null;
+            latV += la * res; lngV += lo * res;
+            if (j + 2 < codigo.length && j + 2 < 10) res /= 20;
+        }
+        return [latV + res / 2, lngV + res / 2];
+    }
+
+    function _extraerCoordenadas(txt) {
+        var m;
+        // Link de Google Maps: ?q=lat,lng · @lat,lng · !3dlat!4dlng · ll=lat,lng
+        if ((m = txt.match(/[?&](?:q|ll|query)=(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i))) return [+m[1], +m[2]];
+        if ((m = txt.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/))) return [+m[1], +m[2]];
+        if ((m = txt.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/))) return [+m[1], +m[2]];
+        // Coordenadas sueltas: "-33.1196, -59.3462"
+        if ((m = txt.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)\s*$/)))
+            return [+m[1].replace(',', '.'), +m[2].replace(',', '.')];
+        return _decodificarPlusCode(txt);
+    }
+
+    function _geoMsg(texto, error) {
+        var el = document.getElementById('geo-buscar-msg');
+        el.textContent = texto || '';
+        el.className = 'geo-buscar-msg' + (error ? ' error' : '');
+    }
+
+    function _irAPunto(lat, lng) {
+        if (_geoModo !== 'punto') setGeoModo('punto');
+        colocarPunto(lat, lng);
+        _geoMap.setView([lat, lng], 18);
+    }
+
+    function buscarUbicacion(ev) {
+        ev.preventDefault();
+        var txt = document.getElementById('geo-buscar-input').value.trim();
+        if (!txt || !_geoMap) return;
+        var c = _extraerCoordenadas(txt);
+        if (c) {
+            if (Math.abs(c[0]) > 90 || Math.abs(c[1]) > 180) { _geoMsg('Coordenadas fuera de rango.', true); return; }
+            _geoMsg('');
+            _irAPunto(c[0], c[1]);
+            return;
+        }
+        // Dirección: geocodificar con OpenStreetMap, sesgado a Gualeguay.
+        _geoMsg('Buscando…');
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar'
+                + '&viewbox=-59.55,-32.95,-59.05,-33.30&q=' + encodeURIComponent(txt);
+        fetch(url, { headers: { 'Accept-Language': 'es' } })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (!res.length) { _geoMsg('No se encontró esa dirección. Probá agregando la ciudad o usá coordenadas.', true); return; }
+                _geoMsg(res[0].display_name);
+                _irAPunto(parseFloat(res[0].lat), parseFloat(res[0].lon));
+            })
+            .catch(function() { _geoMsg('No se pudo buscar la dirección.', true); });
     }
 
     function _mostrarStatusPunto(lat, lng) {

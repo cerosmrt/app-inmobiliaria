@@ -58,6 +58,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 - Mapeo de propiedades como **punto o polígono**; editor con **Leaflet.draw**, import **KML / GeoJSON / Shapefile**, cálculo de área con turf.
 - **Catastro**: parcelas en DB, capa **ATER en vivo** (WFS por bbox + gating de zoom + debounce + caché 24h), integración **IGN** (provincias/departamentos) con fallback a estáticos locales.
 - Mapa arranca centrado en **Gualeguay** (zoom 13); geocoding vía Nominatim.
+- Modal de ubicación de la ficha admin: **buscador** que acepta dirección (Nominatim sesgado a Gualeguay), coordenadas, link de Google Maps y Plus Code, y mueve el pin ahí.
 
 ### Sitio público
 - **El logo real, en vez del placeholder.** Hasta ahora el ícono de la pestaña era un `favicon.svg` dibujado a mano (cuadrado rojo con una "M" en Arial) y el header apuntaba a `/static/logo.png`, que **no existía**: el `onerror` lo escondía y quedaba solo el texto "Roberto / Moret / Inmobiliaria" armado con CSS. Entraron los dos archivos de marca (`M.png` y `RobertoMoretInmobiliaria.png`): venían con fondo blanco y mucho margen, así que se recortaron al contenido y se les pasó el blanco a transparente con rampa suave en el antialias. Quedaron tres assets: `static/logo.png` (logo completo, 240px de alto para pantallas retina), `static/isotipo.png` (solo la M) y `static/favicon.png` (la M en chapa blanca redondeada, para que se lea igual en pestaña clara y oscura).
