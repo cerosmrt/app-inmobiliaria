@@ -1152,6 +1152,47 @@ def get_propiedad(id):
         return jsonify(p.as_dict())
     return jsonify({"message": "Propiedad no encontrada"}), 404
 
+@app.route('/api/propiedades/<int:id>/exportar', methods=['GET'])
+@api_login_required
+def exportar_propiedad(id):
+    """ZIP para el community manager: fotos (JPG, en orden) y/o descripción pública.
+
+    Las fotos se guardan en WebP, que Instagram no acepta, así que se
+    convierten a JPG. Nunca se incluye `notas_internas`.
+    """
+    import re, zipfile
+    p = db.session.get(Propiedad, id)
+    if not p or p.deleted_at is not None:
+        return jsonify({"message": "Propiedad no encontrada"}), 404
+    con_fotos = request.args.get('fotos') == '1'
+    con_desc  = request.args.get('descripcion') == '1'
+    if not (con_fotos or con_desc):
+        return jsonify({"error": "Elegí qué exportar"}), 400
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        if con_desc:
+            texto = (p.descripcion or '').strip()
+            if texto:
+                z.writestr('descripcion.txt', texto + '\n')
+        if con_fotos:
+            for n, f in enumerate(_fotos_from_str(p.fotos), 1):
+                if not _dentro_de_uploads(f) or not os.path.isfile(f):
+                    continue
+                try:
+                    img = _PillowImage.open(f)
+                    out = io.BytesIO()
+                    img.convert('RGB').save(out, 'JPEG', quality=92)
+                    z.writestr('%02d.jpg' % n, out.getvalue())
+                except Exception:
+                    continue
+    if not buf.getbuffer().nbytes or not zipfile.ZipFile(io.BytesIO(buf.getvalue())).namelist():
+        return jsonify({"error": "No hay nada para exportar: sin fotos ni descripción cargadas"}), 404
+    nombre = re.sub(r'[^A-Za-z0-9_-]+', '_', (p.codigo or p.direccion or 'propiedad')).strip('_') or 'propiedad'
+    buf.seek(0)
+    return send_file(buf, mimetype='application/zip', as_attachment=True,
+                     download_name='%s.zip' % nombre)
+
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 @api_login_required
 def update_propiedad(id):

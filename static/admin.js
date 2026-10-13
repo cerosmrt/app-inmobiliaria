@@ -212,3 +212,51 @@ document.addEventListener('keydown', function(e) {
         if (btn) { e.preventDefault(); btn.click(); }
     }
 });
+
+// ── Exportar propiedad (ZIP para el community manager) ──────────────────────
+// Diálogo con casillas; la descarga la arma el servidor (/api/propiedades/<id>/exportar).
+function exportarPropiedad(id) {
+    var ov = document.getElementById('export-overlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'export-overlay';
+        ov.className = 'modal-overlay';
+        ov.innerHTML =
+            '<div class="modal-box" style="max-width:380px;max-height:none">' +
+                '<div class="modal-header" style="border-bottom:none;margin-bottom:4px;padding-bottom:0"><h3>Exportar propiedad</h3></div>' +
+                '<p style="color:var(--muted);font-size:13px;margin:0 0 12px">Se descarga un .zip con lo que marques.</p>' +
+                '<label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:14px"><input type="checkbox" id="export-fotos" checked> Fotos (JPG, en orden)</label>' +
+                '<label style="display:flex;gap:8px;align-items:center;margin-bottom:18px;font-size:14px"><input type="checkbox" id="export-desc" checked> Descripci&oacute;n</label>' +
+                '<div class="modal-footer" style="margin-top:0">' +
+                    '<button class="btn btn-gray" onclick="document.getElementById(\'export-overlay\').classList.remove(\'active\')">Cancelar</button>' +
+                    '<button class="btn btn-blue" id="export-ok">Descargar</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(ov);
+    }
+    ov.classList.add('active');
+    document.getElementById('export-ok').onclick = function () {
+        var fotos = document.getElementById('export-fotos').checked;
+        var desc  = document.getElementById('export-desc').checked;
+        if (!fotos && !desc) { toast('Marcá al menos una opción', 'error'); return; }
+        var btn = this;
+        btn.disabled = true;
+        fetch('/api/propiedades/' + id + '/exportar?fotos=' + (fotos ? 1 : 0) + '&descripcion=' + (desc ? 1 : 0))
+            .then(function (r) {
+                if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Error al exportar'); });
+                var cd = r.headers.get('Content-Disposition') || '';
+                var m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)/i);
+                return r.blob().then(function (b) { return { blob: b, nombre: m ? m[1] : 'propiedad.zip' }; });
+            })
+            .then(function (res) {
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(res.blob);
+                a.download = res.nombre;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+                ov.classList.remove('active');
+            })
+            .catch(function (e) { toast(e.message, 'error'); })
+            .finally(function () { btn.disabled = false; });
+    };
+}

@@ -504,6 +504,36 @@ usuarios_tpl = tpl('admin/usuarios.html')
 check('la UI decide con puedoTocar()', 'function puedoTocar' in usuarios_tpl)
 check('la UI ya no muestra el rango "Dueño"', '>Dueño<' not in usuarios_tpl)
 
+# ── Exportar propiedad (ZIP para el community manager) ───────────────────────
+seccion('Exportar — ZIP con fotos (JPG) y descripción, sin notas internas')
+import zipfile
+from PIL import Image as _Img
+with A.app.app_context():
+    pe = db.session.get(Propiedad, PROP_ID)
+    pe.descripcion = 'Casa luminosa en el centro.'
+    pe.notas_internas = 'SECRETO-INTERNO'
+    foto_rel = A.app.config['UPLOAD_FOLDER'] + '/_test_export.webp'
+    _Img.new('RGB', (40, 30), 'red').save(foto_rel, 'WEBP')
+    pe.fotos = foto_rel
+    db.session.commit()
+try:
+    logout()
+    check('anónimo no puede exportar', cli_http.get('/api/propiedades/%d/exportar?fotos=1' % PROP_ID).status_code == 401)
+    login()
+    r = cli_http.get('/api/propiedades/%d/exportar' % PROP_ID)
+    check('sin opciones marcadas da 400', r.status_code == 400, r.status_code)
+    r = cli_http.get('/api/propiedades/%d/exportar?fotos=1&descripcion=1' % PROP_ID)
+    check('exportar da un zip', r.status_code == 200 and r.mimetype == 'application/zip', r.status_code)
+    z = zipfile.ZipFile(_io.BytesIO(r.data))
+    check('incluye 01.jpg y descripcion.txt', sorted(z.namelist()) == ['01.jpg', 'descripcion.txt'], z.namelist())
+    check('la foto sale como JPG real', z.read('01.jpg')[:2] == bytes([255, 216]))
+    check('no filtra las notas internas', b'SECRETO-INTERNO' not in b''.join(z.read(n) for n in z.namelist()))
+    r = cli_http.get('/api/propiedades/%d/exportar?descripcion=1' % PROP_ID)
+    check('solo descripción trae solo el txt', zipfile.ZipFile(_io.BytesIO(r.data)).namelist() == ['descripcion.txt'])
+finally:
+    try: os.remove(foto_rel)
+    except OSError: pass
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 shutil.rmtree(_TMP, ignore_errors=True)
 print('\n' + '=' * 62)

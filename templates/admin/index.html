@@ -841,6 +841,7 @@
                     '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '">' +
                         (hasNotes ? '&#x1F4DD;' : '<span style="opacity:0.2">&#x1F4DD;</span>') +
                     '</button>' +
+                    '<button class="btn-action" onclick="exportarPropiedad(' + p.id + ')" title="Exportar fotos y descripci&oacute;n (.zip)">&#x2B07;</button>' +
                     '<button class="btn-action btn-cancel row-delete" onclick="eliminarPropiedad(' + p.id + ')" title="Eliminar">&#x2715;</button>' +
                 '</td>';
             tbody.appendChild(row);
