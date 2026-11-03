@@ -771,6 +771,15 @@
         var cont = document.getElementById('rotulo-publicada');
         if (!cont) return;
         var on = !!propData.publicada;
+        var arch = !!propData.archivada;
+        var btnArch = '<button type="button" class="btn-action" style="margin-left:8px" ' +
+            'onclick="guardarCampo(\'archivada\', ' + !arch + ')" ' +
+            'title="' + (arch ? 'Volver a poder publicarla' : 'Guardarla sin publicar: no se podrá publicar hasta desarchivarla') + '">' +
+            (arch ? 'Desarchivar' : 'Archivar') + '</button>';
+        if (arch) {
+            cont.innerHTML = '<span>Archivada &middot; no se publica</span>' + btnArch;
+            return;
+        }
         cont.innerHTML =
             '<span>' + (on ? 'Publicada' : 'Oculta') + '</span>' +
             '<label class="switch">' +
@@ -778,7 +787,7 @@
                 ' aria-label="Publicada en el sitio"' +
                 ' onchange="guardarCampo(\'publicada\', this.checked)">' +
                 '<span class="switch-track"></span>' +
-            '</label>';
+            '</label>' + btnArch;
     }
 
     function buildCampo(c) {

@@ -17,6 +17,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 
 ### Propiedades
+- **Propiedades archivadas**: columna `archivada` (migración `b3c7d9e41a52`). Archivar despublica y el `PUT` rechaza (400) publicar una archivada hasta desarchivarla. Se archiva desde la ficha (botón junto al switch de publicar) o desde la fila de la tabla; el filtro **Archivadas** muestra solo esas y por defecto la tabla las oculta. Conservan precio y todos sus datos. No es lo mismo que borrar (eso va a la Papelera).
 - **Papelera**: la pestaña que se llamaba "Archivados" (lo borrado, con Restaurar y Eliminar definitivamente) pasa a llamarse **Papelera**; la API es `/api/propiedades|clientes/papelera`. El nombre "Archivadas" queda libre para el estado nuevo de propiedades incompletas.
 - **Precio: "A consultar" es solo público.** El admin (tabla, ficha, popup del mapa) muestra siempre el número real aunque esté tildado "A consultar"; en la ficha se aclara "(público: a consultar)". `as_dict_publico()` blanquea `rango_min`/`rango_max` cuando está tildado, así el número no viaja por la API pública.
 - **Exportar propiedad**: botón en la ficha y en el listado; diálogo para elegir fotos y/o descripción y baja un .zip (fotos convertidas a JPG, en orden, para el community manager de Instagram). Nunca incluye notas internas.
@@ -97,7 +98,6 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
 
 ### 📝 Charla con el papá (03/11/2026) — se implementa de a una
-- **Estado "Archivada" para propiedades incompletas**: no se pueden publicar, quedan en la pestaña Archivados con todos sus datos (distinto de borrar).
 - **"¿Te interesa esta propiedad?" debajo de fotos y descripción** en la ficha pública, en todos los tamaños.
 
 ### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)

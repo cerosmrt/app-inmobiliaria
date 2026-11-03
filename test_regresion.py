@@ -534,6 +534,27 @@ finally:
     try: os.remove(foto_rel)
     except OSError: pass
 
+# ── Precio "a consultar" y propiedades archivadas ────────────────────────────
+seccion('Precio a consultar (solo público) y archivadas (no se publican)')
+login()
+r = cli_http.put('/api/propiedades/%d' % PROP_ID, json={'rango_min': 85000, 'precio_a_consultar': True,
+                                                         'publicada': True}, headers=H)
+check('el admin sigue viendo el número con "a consultar"', r.get_json().get('rango_min') == 85000, r.get_json())
+logout()
+pub = cli_http.get('/api/public/propiedades/%d' % PROP_ID).get_json()
+check('el público no recibe el número si es a consultar', pub.get('rango_min') is None and pub.get('rango_max') is None, pub)
+login()
+r = cli_http.put('/api/propiedades/%d' % PROP_ID, json={'archivada': True}, headers=H)
+check('archivar despublica', r.status_code == 200 and r.get_json()['archivada'] and not r.get_json()['publicada'], r.get_json())
+r = cli_http.put('/api/propiedades/%d' % PROP_ID, json={'publicada': True}, headers=H)
+check('una archivada no se puede publicar (400)', r.status_code == 400, r.status_code)
+logout()
+check('una archivada no está en el sitio público',
+      cli_http.get('/api/public/propiedades/%d' % PROP_ID).status_code == 404)
+login()
+r = cli_http.put('/api/propiedades/%d' % PROP_ID, json={'archivada': False, 'publicada': True}, headers=H)
+check('desarchivar y publicar se puede', r.status_code == 200 and r.get_json()['publicada'], r.status_code)
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 shutil.rmtree(_TMP, ignore_errors=True)
 print('\n' + '=' * 62)

@@ -192,6 +192,7 @@
             <div class="sep"></div>
             <label><input type="checkbox" id="filtroPublicadas" onchange="filtrarPropiedades()"> Publicadas</label>
             <label><input type="checkbox" id="filtroIncompletas" onchange="filtrarPropiedades()"> Incompletas</label>
+            <label title="Incompletas que no se van a publicar por ahora"><input type="checkbox" id="filtroArchivadas" onchange="filtrarPropiedades()"> Archivadas</label>
         </div>
         <div class="table-wrap">
             <table id="tablaPropiedades">
@@ -792,6 +793,7 @@
         const amb     = document.getElementById('filtroAmbientesProp').value;
         const soloPub = document.getElementById('filtroPublicadas').checked;
         const soloIncompletas = document.getElementById('filtroIncompletas').checked;
+        const verArchivadas = document.getElementById('filtroArchivadas').checked;
 
         let filtradas = propiedades.filter(function(p) {
             const matchDir = !dir || (p.direccion || '').toLowerCase().includes(dir)
@@ -799,6 +801,7 @@
                 || (p.codigo || '').toLowerCase().includes(dir);
             const incompleta = p.completitud && p.completitud.score < p.completitud.total;
             return matchDir
+                && !!p.archivada === verArchivadas
                 && (!tipo   || p.tipo === tipo)
                 && (!estado || p.estado === estado)
                 && (!amb    || p.ambientes == amb)
@@ -830,18 +833,21 @@
                     '<span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado || '') + '</span>' +
                 '</td>' +
                 '<td class="editable-text" data-field="rango_min" data-id="' + p.id + '" title="' + (p.rango_max ? 'Max: ' + p.rango_max : '') + '">' + esc(precioStr) + '</td>' +
-                '<td style="text-align:center" title="' + (p.publicada ? 'Publicada: click para despublicar' : 'Click para publicar') + '">' +
-                    '<label class="switch">' +
-                        '<input type="checkbox"' + (p.publicada ? ' checked' : '') + ' onchange="togglePublicada(' + p.id + ', ' + p.publicada + ')">' +
-                        '<span class="switch-track"></span>' +
-                    '</label>' +
-                '</td>' +
+                (p.archivada
+                    ? '<td style="text-align:center"><span class="badge" title="Archivada: no se puede publicar">Archivada</span></td>'
+                    : '<td style="text-align:center" title="' + (p.publicada ? 'Publicada: click para despublicar' : 'Click para publicar') + '">' +
+                        '<label class="switch">' +
+                            '<input type="checkbox"' + (p.publicada ? ' checked' : '') + ' onchange="togglePublicada(' + p.id + ', ' + p.publicada + ')">' +
+                            '<span class="switch-track"></span>' +
+                        '</label>' +
+                    '</td>') +
                 celdaCompletitud(p) +
                 '<td class="notas-col">' +
                     '<button class="btn-action btn-note" onclick="abrirNotas(' + p.id + ')" title="' + (hasNotes ? 'Ver/editar notas' : 'Agregar notas') + '">' +
                         (hasNotes ? '&#x1F4DD;' : '<span style="opacity:0.2">&#x1F4DD;</span>') +
                     '</button>' +
                     '<button class="btn-action" onclick="exportarPropiedad(' + p.id + ')" title="Exportar fotos y descripci&oacute;n (.zip)">&#x2B07;</button>' +
+                    '<button class="btn-action" onclick="toggleArchivada(' + p.id + ', ' + !!p.archivada + ')" title="' + (p.archivada ? 'Desarchivar' : 'Archivar (no se publica)') + '">' + (p.archivada ? '&#x21A9;' : '&#x1F4E6;') + '</button>' +
                     '<button class="btn-action btn-cancel row-delete" onclick="eliminarPropiedad(' + p.id + ')" title="Eliminar">&#x2715;</button>' +
                 '</td>';
             tbody.appendChild(row);
@@ -898,12 +904,25 @@
           .catch(function(e) { console.error('Error al togglear publicada', e); });
     }
 
+    function toggleArchivada(id, actual) {
+        fetch('/api/propiedades/' + id, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ archivada: !actual })
+        }).then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function() {
+              toast(actual ? 'Desarchivada' : 'Archivada: ya no se puede publicar', 'success');
+              cargarPropiedades();
+          })
+          .catch(function() { toast('Error', 'error'); });
+    }
+
     function resetFiltrosPropiedades() {
         ['filtroDireccion','filtroTipo','filtroEstado','filtroAmbientesProp'].forEach(function(id) {
             document.getElementById(id).value = '';
         });
         document.getElementById('filtroPublicadas').checked = false;
         document.getElementById('filtroIncompletas').checked = false;
+        document.getElementById('filtroArchivadas').checked = false;
         filtrarPropiedades();
     }
 

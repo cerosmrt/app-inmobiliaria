@@ -1200,6 +1200,10 @@ def update_propiedad(id):
     if not p:
         return jsonify({"message": "Propiedad no encontrada"}), 404
     data = request.get_json()
+    archivada = data.get('archivada', p.archivada)
+    if archivada and data.get('publicada'):
+        return jsonify({"error": "Una propiedad archivada no se puede publicar. Desarchivala primero."}), 400
+    p.archivada        = bool(archivada)
     p.codigo           = data.get('codigo', p.codigo)
     p.direccion        = data.get('direccion', p.direccion)
     p.barrio           = data.get('barrio', p.barrio)
@@ -1213,6 +1217,8 @@ def update_propiedad(id):
     p.tipo             = data.get('tipo', p.tipo)
     p.operacion        = data.get('operacion', p.operacion)
     p.publicada        = data.get('publicada', p.publicada)
+    if p.archivada:
+        p.publicada = False   # archivar saca el aviso del sitio
     p.destacada        = data.get('destacada', p.destacada)
     p.descripcion      = data.get('descripcion', p.descripcion)
     # `notas` es lo privado, al revés que `descripcion`, que se publica. La

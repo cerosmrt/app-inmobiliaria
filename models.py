@@ -44,6 +44,9 @@ class Propiedad(db.Model):
     operacion = db.Column(db.String, nullable=True)  # venta, alquiler
     estado = db.Column(db.String)       # disponible, reservada, vendida, rentada, cerrada
     publicada = db.Column(db.Boolean, default=False)
+    # Archivada: queda guardada con todos sus datos pero no se puede publicar.
+    # Para las incompletas que no se van a completar ni publicar por ahora.
+    archivada = db.Column(db.Boolean, default=False)
     destacada = db.Column(db.Boolean, default=False)
     fotos = db.Column(db.String, nullable=True)
     descripcion = db.Column(db.Text, nullable=True)
@@ -164,6 +167,7 @@ class Propiedad(db.Model):
             'operacion': self.operacion or '',
             'estado': self.estado,
             'publicada': self.publicada,
+            'archivada': bool(self.archivada),
             'destacada': self.destacada,
             'fotos': self._fotos_list(),
             'descripcion': self.descripcion or '',
