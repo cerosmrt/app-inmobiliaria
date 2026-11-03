@@ -94,7 +94,14 @@ class Propiedad(db.Model):
     def as_dict_publico(self):
         """Serialización para el sitio público. Ver _CAMPOS_PUBLICOS."""
         completo = self.as_dict()
-        return {k: completo[k] for k in self._CAMPOS_PUBLICOS if k in completo}
+        publico = {k: completo[k] for k in self._CAMPOS_PUBLICOS if k in completo}
+        # "A consultar" es solo de cara al público: el número se guarda siempre
+        # (es dato útil para el admin) pero no tiene que viajar en la API pública.
+        if self.precio_a_consultar:
+            for k in ('rango_min', 'rango_max'):
+                if k in publico:
+                    publico[k] = None
+        return publico
 
     def completitud(self):
         """Qué le falta a la propiedad para estar "completa" — nada de esto

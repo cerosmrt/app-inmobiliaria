@@ -17,6 +17,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 
 ### Propiedades
+- **Precio: "A consultar" es solo público.** El admin (tabla, ficha, popup del mapa) muestra siempre el número real aunque esté tildado "A consultar"; en la ficha se aclara "(público: a consultar)". `as_dict_publico()` blanquea `rango_min`/`rango_max` cuando está tildado, así el número no viaja por la API pública.
 - **Exportar propiedad**: botón en la ficha y en el listado; diálogo para elegir fotos y/o descripción y baja un .zip (fotos convertidas a JPG, en orden, para el community manager de Instagram). Nunca incluye notas internas.
 - **Cargador por columnas** (`/admin/captar`): planilla que arranca vacía; se agregan las columnas que se quieran (dirección, tipo, operación, precio, propietario, fotos, descripción, notas, código) y cada fila crea una propiedad en borrador. Nada obligatorio; el propietario puede quedar sin asignar.
 - **Asistente de completitud.** Cada propiedad expone `Propiedad.completitud()` (en `models.py`, fuente única): `{score, total, falta_aviso[], falta_interno[]}` sobre 10 ítems — 7 del aviso (precio, fotos, descripción, tipo, operación, barrio, superficie/ambientes) y 3 internos (propietario, ubicación en el mapa, notas). Las propiedades rurales (campo/terreno) piden hectáreas en vez de ambientes. **Nada bloquea publicar**: es una guía para cargar rápido con un dato y volver a completar. Sale en `as_dict()` (no en `_CAMPOS_PUBLICOS`, así que no viaja al sitio público). Dos vistas: (1) en la tabla de Propiedades, columna **"Completá"** con barra + `N/10` (rojo <50%, ámbar <100%, verde full), ordenable, tooltip con lo que falta agrupado en *aviso* / *interno*; más un filtro **"Incompletas"** al lado de "Publicadas". (2) en la ficha admin, panel **"Qué falta"** en el rail público bajo el switch de publicar, con cada faltante linkeado a su campo/acción. Al publicar con faltantes del aviso, un toast lo avisa (no impide). El `PUT /api/propiedades/<id>` ahora devuelve la propiedad entera (antes solo `{message}`) para refrescar el score sin recargar.
@@ -93,6 +94,11 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ---
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
+
+### 📝 Charla con el papá (03/11/2026) — se implementa de a una
+- **Estado "Archivada" para propiedades incompletas**: no se pueden publicar, quedan en la pestaña Archivados con todos sus datos (distinto de borrar).
+- **"¿Te interesa esta propiedad?" debajo de fotos y descripción** en la ficha pública, en todos los tamaños.
+- **Papelera**: pestaña nueva con propiedades y clientes borrados; Restaurar y Eliminar definitivamente, vaciado manual.
 
 ### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)
 Roberto quiere publicar con precio — le sirve para que el visitante ubique la casa en una franja — pero le incomoda que se lea como un número cerrado, porque en la práctica casi siempre se negocia. Su propuesta: rotularlo **"Precio sugerido"** o **"Sugerido U$S xxx"**, igual que en las tasaciones. Es un cambio de rótulo en la ficha pública y en las cards del listado; falta definir si va en todas las operaciones o solo en casas, y si el rótulo se guarda por propiedad o es fijo del sitio. **No tocar hasta charlarlo.**

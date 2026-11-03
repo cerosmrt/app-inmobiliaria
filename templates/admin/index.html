@@ -813,8 +813,8 @@
         filtradas.forEach(function(p) {
             const row = document.createElement('tr');
             const hasNotes = p.descripcion && p.descripcion.trim().length > 0;
-            const precioStr = p.precio_a_consultar ? '$ consultar'
-                : (p.rango_min ? (p.es_usd ? 'USD ' : '$ ') + p.rango_min.toLocaleString('es-AR') : '$ consultar');
+            // El admin siempre muestra el número real; "a consultar" es solo del sitio público.
+            const precioStr = p.rango_min ? (p.es_usd ? 'USD ' : '$ ') + p.rango_min.toLocaleString('es-AR') : '$ consultar';
             const propNames = (p.propietarios || []).map(function(c) {
                 return '<a href="/cliente/' + c.id + '">' + esc(c.nombre + ' ' + c.apellido) + '</a>';
             }).join(', ') || (p.propietario_id ? '<a href="/cliente/' + p.propietario_id + '">' + esc(p.propietario || '') + '</a>' : '—');

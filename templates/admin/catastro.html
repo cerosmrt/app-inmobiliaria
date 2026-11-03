@@ -732,11 +732,11 @@ var HOUSE_ICON = '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><p
 
 function ptfPopupHtml(props) {
     var precio = '';
-    if (props.precio_a_consultar) {
-        precio = 'Consultar';
-    } else if (props.precio) {
+    if (props.precio) {
         var sym = props.es_usd ? 'USD' : 'ARS';
         precio = sym + ' ' + Number(props.precio).toLocaleString('es-AR');
+    } else if (props.precio_a_consultar) {
+        precio = 'Consultar';
     }
     return '<div style="font-family:var(--mono,monospace);font-size:12px;min-width:180px;line-height:1.6">' +
         '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#e2e8f0">' + (props.titulo||'Propiedad') + '</div>' +

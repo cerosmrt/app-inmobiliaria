@@ -678,10 +678,10 @@
 
     // Precio tal como se lee en la franja: "USD 85.000" / "$ 85.000" / "A consultar".
     function _fmtPrecio() {
-        if (propData.precio_a_consultar) return 'A consultar';
         var v = propData.rango_min;
-        if (v == null || v === '') return null;
-        return (propData.es_usd ? 'USD ' : '$ ') + Number(v).toLocaleString('es-AR');
+        if (v == null || v === '') return propData.precio_a_consultar ? 'A consultar' : null;
+        var str = (propData.es_usd ? 'USD ' : '$ ') + Number(v).toLocaleString('es-AR');
+        return propData.precio_a_consultar ? str + ' (público: a consultar)' : str;
     }
 
     // ── Carga inicial ─────────────────────────────────────────────────────────
