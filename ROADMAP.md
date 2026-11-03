@@ -17,6 +17,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 
 ### Propiedades
+- **El orden de las columnas se recuerda**: Interesados, Propietarios y Propiedades guardan el orden elegido en `localStorage` (`orden_<tabla>`), por navegador; sigue hasta que se cambie o se borren los datos del navegador.
 - **Propiedades archivadas**: columna `archivada` (migración `b3c7d9e41a52`). Archivar despublica y el `PUT` rechaza (400) publicar una archivada hasta desarchivarla. Se archiva desde la ficha (botón junto al switch de publicar) o desde la fila de la tabla; el filtro **Archivadas** muestra solo esas y por defecto la tabla las oculta. Conservan precio y todos sus datos. No es lo mismo que borrar (eso va a la Papelera).
 - **Papelera**: la pestaña que se llamaba "Archivados" (lo borrado, con Restaurar y Eliminar definitivamente) pasa a llamarse **Papelera**; la API es `/api/propiedades|clientes/papelera`. El nombre "Archivadas" queda libre para el estado nuevo de propiedades incompletas.
 - **Precio: "A consultar" es solo público.** El admin (tabla, ficha, popup del mapa) muestra siempre el número real aunque esté tildado "A consultar"; en la ficha se aclara "(público: a consultar)". `as_dict_publico()` blanquea `rango_min`/`rango_max` cuando está tildado, así el número no viaja por la API pública.

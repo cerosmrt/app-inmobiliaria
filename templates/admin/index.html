@@ -446,9 +446,20 @@
 <script>
     let clientes = [];
     let propiedades = [];
-    let sortInteresados  = { field: null, dir: 1 };
-    let sortPropietarios = { field: null, dir: 1 };
-    let sortPropiedades  = { field: null, dir: 1 };
+    // El orden elegido en cada tabla se recuerda en este navegador (localStorage).
+    function leerOrden(tabla) {
+        try {
+            var o = JSON.parse(localStorage.getItem('orden_' + tabla) || 'null');
+            if (o && typeof o.field === 'string' && (o.dir === 1 || o.dir === -1)) return o;
+        } catch (e) {}
+        return { field: null, dir: 1 };
+    }
+    function guardarOrden(tabla, s) {
+        try { localStorage.setItem('orden_' + tabla, JSON.stringify({ field: s.field, dir: s.dir })); } catch (e) {}
+    }
+    let sortInteresados  = leerOrden('interesados');
+    let sortPropietarios = leerOrden('propietarios');
+    let sortPropiedades  = leerOrden('propiedades');
     let notasPropiedadId = null;
 
     // ── URL filter persistence ─────────────────────────────────────────────────
@@ -512,15 +523,20 @@
         if (!s) return;
         if (s.field === field) s.dir *= -1;
         else { s.field = field; s.dir = 1; }
-        document.querySelectorAll('th[data-sort="' + tabla + '"]').forEach(t => {
-            const icon = t.querySelector('.sort-icon');
-            const active = t.dataset.field === field;
-            if (icon) icon.textContent = active ? (s.dir === 1 ? '▴' : '▾') : '';
-            t.classList.toggle('sorted', active);
-        });
+        guardarOrden(tabla, s);
+        pintarOrden(tabla, s);
         if (tabla === 'interesados') filtrarInteresados();
         else if (tabla === 'propietarios') filtrarPropietarios();
         else filtrarPropiedades();
+    }
+
+    function pintarOrden(tabla, s) {
+        document.querySelectorAll('th[data-sort="' + tabla + '"]').forEach(t => {
+            const icon = t.querySelector('.sort-icon');
+            const active = !!s.field && t.dataset.field === s.field;
+            if (icon) icon.textContent = active ? (s.dir === 1 ? '▴' : '▾') : '';
+            t.classList.toggle('sorted', active);
+        });
     }
 
     function applySort(arr, s) {
@@ -1543,6 +1559,9 @@
         // concreta, no al abrir el panel.
         var tab = new URLSearchParams(window.location.search).get('tab') || 'propiedades';
         mostrarTab(tab);
+        pintarOrden('interesados', sortInteresados);
+        pintarOrden('propietarios', sortPropietarios);
+        pintarOrden('propiedades', sortPropiedades);
         leerFiltrosDeURL();
         cargarClientes();
         cargarPropiedades();
