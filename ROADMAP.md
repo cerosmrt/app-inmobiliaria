@@ -66,6 +66,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 - Modal de ubicación de la ficha admin: **buscador** que acepta dirección (Nominatim sesgado a Gualeguay), coordenadas, link de Google Maps y Plus Code, y mueve el pin ahí.
 
 ### Sitio público
+- **Ficha pública en una sola columna**: "¿Te interesa esta propiedad?" va debajo de las fotos y la descripción (antes ocupaba media pantalla al costado), en escritorio y celular.
 - **El logo real, en vez del placeholder.** Hasta ahora el ícono de la pestaña era un `favicon.svg` dibujado a mano (cuadrado rojo con una "M" en Arial) y el header apuntaba a `/static/logo.png`, que **no existía**: el `onerror` lo escondía y quedaba solo el texto "Roberto / Moret / Inmobiliaria" armado con CSS. Entraron los dos archivos de marca (`M.png` y `RobertoMoretInmobiliaria.png`): venían con fondo blanco y mucho margen, así que se recortaron al contenido y se les pasó el blanco a transparente con rampa suave en el antialias. Quedaron tres assets: `static/logo.png` (logo completo, 240px de alto para pantallas retina), `static/isotipo.png` (solo la M) y `static/favicon.png` (la M en chapa blanca redondeada, para que se lea igual en pestaña clara y oscura).
   - **Dónde va:** favicon en las 6 páginas (landing, ficha pública, admin, login, registro, setup); el logo completo reemplaza al texto CSS en el header público, en el login y en las pantallas de alta; el isotipo va en el brand del sidebar admin, sobre chapa blanca — el sidebar es negro y los trazos oscuros del logo desaparecerían.
   - Se borró `favicon.svg` y se bumpeó `admin.css?v=13` para que no quede cacheada la regla vieja del brand.
@@ -96,9 +97,6 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ---
 
 ## 🔜 Pendiente (ordenado por prioridad / impacto)
-
-### 📝 Charla con el papá (03/11/2026) — se implementa de a una
-- **"¿Te interesa esta propiedad?" debajo de fotos y descripción** en la ficha pública, en todos los tamaños.
 
 ### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)
 Roberto quiere publicar con precio — le sirve para que el visitante ubique la casa en una franja — pero le incomoda que se lea como un número cerrado, porque en la práctica casi siempre se negocia. Su propuesta: rotularlo **"Precio sugerido"** o **"Sugerido U$S xxx"**, igual que en las tasaciones. Es un cambio de rótulo en la ficha pública y en las cards del listado; falta definir si va en todas las operaciones o solo en casas, y si el rótulo se guarda por propiedad o es fijo del sitio. **No tocar hasta charlarlo.**
