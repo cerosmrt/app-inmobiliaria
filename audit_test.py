@@ -163,12 +163,12 @@ if new_cli_id:
     ids_activos = [c["id"] for c in r.json()] if r.status_code == 200 else []
     check("Soft delete oculta cliente de lista activa", new_cli_id not in ids_activos)
 
-    # Aparece en archivados
-    r = session.get(f"{BASE}/api/clientes/archivados")
-    check("GET /api/clientes/archivados 200", r.status_code == 200, str(r.status_code))
+    # Aparece en papelera
+    r = session.get(f"{BASE}/api/clientes/papelera")
+    check("GET /api/clientes/papelera 200", r.status_code == 200, str(r.status_code))
     if r.status_code == 200:
         ids_arch = [c["id"] for c in r.json()]
-        check("Cliente archivado aparece en archivados", new_cli_id in ids_arch)
+        check("Cliente borrado aparece en papelera", new_cli_id in ids_arch)
 
     # Restore
     r = session.put(f"{BASE}/api/clientes/{new_cli_id}/restore",
@@ -236,11 +236,11 @@ if new_prop_id:
     ids = [p["id"] for p in r.json()] if r.ok else []
     check("Soft delete oculta propiedad", new_prop_id not in ids)
 
-    # Archivados
-    r = session.get(f"{BASE}/api/propiedades/archivados")
-    check("GET /api/propiedades/archivados 200", r.status_code == 200, str(r.status_code))
+    # Papelera
+    r = session.get(f"{BASE}/api/propiedades/papelera")
+    check("GET /api/propiedades/papelera 200", r.status_code == 200, str(r.status_code))
     if r.ok:
-        check("Propiedad en archivados", new_prop_id in [p["id"] for p in r.json()])
+        check("Propiedad en papelera", new_prop_id in [p["id"] for p in r.json()])
 
     # Restore
     r = session.put(f"{BASE}/api/propiedades/{new_prop_id}/restore",
@@ -1187,22 +1187,22 @@ if pid23res and pid23cer:
 else:
     fail("FASE 23 stats contadores setup", f"pid_res={pid23res} pid_cer={pid23cer}")
 
-# ── 4. Archivados tab tiene filtro de búsqueda en HTML ───────────────────────
+# ── 4. Papelera tab tiene filtro de búsqueda en HTML ───────────────────────
 if r_admin23.ok:
-    check("tab-archivados tiene #archivados-search input",
-          'id="archivados-search"' in r_admin23.text, "input no encontrado")
-    check("tab-archivados tiene #archivados-filter div",
-          'id="archivados-filter"' in r_admin23.text, "div filter no encontrado")
-    check("admin HTML tiene función filtrarArchivados",
-          "filtrarArchivados" in r_admin23.text, "función no encontrada")
-    check("admin HTML tiene _archivadosData variable (cache local)",
-          "_archivadosData" in r_admin23.text, "_archivadosData no encontrado")
-    check("archivados-filter oculto por defecto (display:none)",
-          'id="archivados-filter" style="display:none"' in r_admin23.text or
-          "archivados-filter\" style=\"display:none" in r_admin23.text,
+    check("tab-papelera tiene #papelera-search input",
+          'id="papelera-search"' in r_admin23.text, "input no encontrado")
+    check("tab-papelera tiene #papelera-filter div",
+          'id="papelera-filter"' in r_admin23.text, "div filter no encontrado")
+    check("admin HTML tiene función filtrarPapelera",
+          "filtrarPapelera" in r_admin23.text, "función no encontrada")
+    check("admin HTML tiene _papeleraData variable (cache local)",
+          "_papeleraData" in r_admin23.text, "_papeleraData no encontrado")
+    check("papelera-filter oculto por defecto (display:none)",
+          'id="papelera-filter" style="display:none"' in r_admin23.text or
+          "papelera-filter\" style=\"display:none" in r_admin23.text,
           "filter no inicia oculto")
 
-# ── 5. Round-trip: archivar propiedad y verificar que aparece en archivados ──
+# ── 5. Round-trip: borrar propiedad y verificar que aparece en papelera ──
 r23arc = session.post(f"{BASE}/api/propiedades",
                       json={"codigo": "F23-ARC", "direccion": "Fase23 Archivar",
                             "tipo": "departamento", "operacion": "alquiler", "estado": "disponible"},
@@ -1212,13 +1212,13 @@ pid23arc = r23arc.json().get("id") if r23arc.ok else None
 if pid23arc:
     r_del = session.delete(f"{BASE}/api/propiedades/{pid23arc}",
                            headers={"X-CSRFToken": real_csrf})
-    check("DELETE (archivar) propiedad 200", r_del.status_code == 200, str(r_del.status_code))
+    check("DELETE (borrar) propiedad 200", r_del.status_code == 200, str(r_del.status_code))
 
-    r_arch = session.get(f"{BASE}/api/propiedades/archivados")
-    check("GET /api/propiedades/archivados 200",
+    r_arch = session.get(f"{BASE}/api/propiedades/papelera")
+    check("GET /api/propiedades/papelera 200",
           r_arch.status_code == 200, str(r_arch.status_code))
     ids_arch = [p["id"] for p in r_arch.json()]
-    check("Propiedad archivada aparece en /api/propiedades/archivados",
+    check("Propiedad archivada aparece en /api/propiedades/papelera",
           pid23arc in ids_arch, str(ids_arch[:5]))
 
     r_active = session.get(f"{BASE}/api/propiedades")
@@ -1238,7 +1238,7 @@ if pid23arc:
     session.delete(f"{BASE}/api/propiedades/{pid23arc}/permanente",
                    headers={"X-CSRFToken": real_csrf})
 else:
-    fail("FASE 23 archivar setup", f"pid={pid23arc}")
+    fail("FASE 23 borrar setup", f"pid={pid23arc}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n=== FASE 24: REGRESIÓN — PRODUCCIÓN DEBUGGING PASS ===")
@@ -1250,7 +1250,7 @@ if r_admin_f24.ok:
     check("admin/index.html NO referencia .tab-btn.active (selector muerto)",
           '.tab-btn.active' not in html, "selector muerto todavía presente")
     check("admin/index.html guardarFiltrosEnURL detecta tab por display del DOM",
-          "tab-propiedades" in html and ("tab-archivados" in html),
+          "tab-propiedades" in html and ("tab-papelera" in html),
           "detección de tab por DOM no encontrada")
     check("admin/index.html leerFiltrosDeURL NO manipula .tab-btn (ya no existe)",
           ".querySelectorAll('.tab-btn')" not in html and

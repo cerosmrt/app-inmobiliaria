@@ -17,6 +17,7 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 
 
 ### Propiedades
+- **Papelera**: la pestaña que se llamaba "Archivados" (lo borrado, con Restaurar y Eliminar definitivamente) pasa a llamarse **Papelera**; la API es `/api/propiedades|clientes/papelera`. El nombre "Archivadas" queda libre para el estado nuevo de propiedades incompletas.
 - **Precio: "A consultar" es solo público.** El admin (tabla, ficha, popup del mapa) muestra siempre el número real aunque esté tildado "A consultar"; en la ficha se aclara "(público: a consultar)". `as_dict_publico()` blanquea `rango_min`/`rango_max` cuando está tildado, así el número no viaja por la API pública.
 - **Exportar propiedad**: botón en la ficha y en el listado; diálogo para elegir fotos y/o descripción y baja un .zip (fotos convertidas a JPG, en orden, para el community manager de Instagram). Nunca incluye notas internas.
 - **Cargador por columnas** (`/admin/captar`): planilla que arranca vacía; se agregan las columnas que se quieran (dirección, tipo, operación, precio, propietario, fotos, descripción, notas, código) y cada fila crea una propiedad en borrador. Nada obligatorio; el propietario puede quedar sin asignar.
@@ -98,7 +99,6 @@ En producción en **https://moretinmobiliaria.com** (Railway + Cloudflare).
 ### 📝 Charla con el papá (03/11/2026) — se implementa de a una
 - **Estado "Archivada" para propiedades incompletas**: no se pueden publicar, quedan en la pestaña Archivados con todos sus datos (distinto de borrar).
 - **"¿Te interesa esta propiedad?" debajo de fotos y descripción** en la ficha pública, en todos los tamaños.
-- **Papelera**: pestaña nueva con propiedades y clientes borrados; Restaurar y Eliminar definitivamente, vaciado manual.
 
 ### 💲 "Precio sugerido" en vez del precio a secas (charla con el papá, 14/08/2026)
 Roberto quiere publicar con precio — le sirve para que el visitante ubique la casa en una franja — pero le incomoda que se lea como un número cerrado, porque en la práctica casi siempre se negocia. Su propuesta: rotularlo **"Precio sugerido"** o **"Sugerido U$S xxx"**, igual que en las tasaciones. Es un cambio de rótulo en la ficha pública y en las cards del listado; falta definir si va en todas las operaciones o solo en casas, y si el rótulo se guarda por propiedad o es fijo del sitio. **No tocar hasta charlarlo.**

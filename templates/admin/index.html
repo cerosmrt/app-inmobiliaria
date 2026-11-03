@@ -212,15 +212,15 @@
     </div>
 
     <!-- ═══ TAB ARCHIVADOS ═══ -->
-    <div id="tab-archivados" style="display:none">
+    <div id="tab-papelera" style="display:none">
         <div class="toolbar no-print">
-            <button class="btn btn-gray" onclick="verArchivados('propiedades')">Propiedades archivadas</button>
-            <button class="btn btn-gray" onclick="verArchivados('clientes')">Clientes archivados</button>
+            <button class="btn btn-gray" onclick="verPapelera('propiedades')">Propiedades borradas</button>
+            <button class="btn btn-gray" onclick="verPapelera('clientes')">Clientes borrados</button>
         </div>
-        <div id="archivados-filter" style="display:none;margin:8px 0" class="no-print">
-            <input id="archivados-search" type="text" placeholder="Buscar en archivados..." oninput="filtrarArchivados()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:260px;font-size:0.9rem">
+        <div id="papelera-filter" style="display:none;margin:8px 0" class="no-print">
+            <input id="papelera-search" type="text" placeholder="Buscar en papelera..." oninput="filtrarPapelera()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:260px;font-size:0.9rem">
         </div>
-        <div id="archivados-content">
+        <div id="papelera-content">
             <p style="color:var(--muted);padding:8px 0">Seleccioná qué querés ver arriba.</p>
         </div>
     </div>
@@ -454,9 +454,9 @@
     function guardarFiltrosEnURL() {
         const p = new URLSearchParams();
         const tabProp  = document.getElementById('tab-propiedades');
-        const tabArch  = document.getElementById('tab-archivados');
+        const tabArch  = document.getElementById('tab-papelera');
         const tabPropT = document.getElementById('tab-propietarios');
-        const currentTab = tabArch  && tabArch.style.display  !== 'none' ? 'archivados'
+        const currentTab = tabArch  && tabArch.style.display  !== 'none' ? 'papelera'
                          : tabProp  && tabProp.style.display  !== 'none' ? 'propiedades'
                          : tabPropT && tabPropT.style.display !== 'none' ? 'propietarios'
                          : 'interesados';
@@ -489,13 +489,13 @@
 
     // ── TABS ──────────────────────────────────────────────────────────────────
     function mostrarTab(tab) {
-        ['interesados','propietarios','propiedades','archivados'].forEach(function(t) {
+        ['interesados','propietarios','propiedades','papelera'].forEach(function(t) {
             document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none';
         });
         document.querySelectorAll('.sb-link[data-tab]').forEach(function(a) {
             a.classList.toggle('sb-active', a.dataset.tab === tab);
         });
-        var titles = { interesados: 'Interesados', propietarios: 'Propietarios', propiedades: 'Propiedades', archivados: 'Archivados' };
+        var titles = { interesados: 'Interesados', propietarios: 'Propietarios', propiedades: 'Propiedades', papelera: 'Papelera' };
         var el = document.getElementById('topbar-tab-title');
         if (el) el.textContent = titles[tab] || tab;
         if (tab === 'propiedades' && propiedades.length === 0) cargarPropiedades();
@@ -1216,33 +1216,33 @@
     }
 
     // ── ARCHIVADOS ────────────────────────────────────────────────────────────
-    var _archivadosTipo = null;
-    var _archivadosData = [];
+    var _papeleraTipo = null;
+    var _papeleraData = [];
 
-    function verArchivados(tipo) {
-        _archivadosTipo = tipo;
-        _archivadosData = [];
-        var contenido = document.getElementById('archivados-content');
-        var filtroEl = document.getElementById('archivados-filter');
-        var searchEl = document.getElementById('archivados-search');
+    function verPapelera(tipo) {
+        _papeleraTipo = tipo;
+        _papeleraData = [];
+        var contenido = document.getElementById('papelera-content');
+        var filtroEl = document.getElementById('papelera-filter');
+        var searchEl = document.getElementById('papelera-search');
         contenido.innerHTML = '<p style="color:var(--muted);padding:8px 0">Cargando...</p>';
         filtroEl.style.display = 'none';
         searchEl.value = '';
-        fetch('/api/' + tipo + '/archivados')
+        fetch('/api/' + tipo + '/papelera')
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                _archivadosData = data;
+                _papeleraData = data;
                 filtroEl.style.display = data.length ? '' : 'none';
-                renderArchivados(tipo, data);
+                renderPapelera(tipo, data);
             })
             .catch(function() { contenido.innerHTML = '<p style="color:var(--accent)">Error al cargar.</p>'; });
     }
 
-    function filtrarArchivados() {
-        var q = document.getElementById('archivados-search').value.toLowerCase().trim();
-        if (!q) { renderArchivados(_archivadosTipo, _archivadosData); return; }
-        var filtered = _archivadosData.filter(function(item) {
-            if (_archivadosTipo === 'propiedades') {
+    function filtrarPapelera() {
+        var q = document.getElementById('papelera-search').value.toLowerCase().trim();
+        if (!q) { renderPapelera(_papeleraTipo, _papeleraData); return; }
+        var filtered = _papeleraData.filter(function(item) {
+            if (_papeleraTipo === 'propiedades') {
                 return (item.direccion || '').toLowerCase().includes(q) ||
                        (item.tipo || '').toLowerCase().includes(q) ||
                        (item.estado || '').toLowerCase().includes(q);
@@ -1252,13 +1252,13 @@
                        (item.tipo || '').toLowerCase().includes(q);
             }
         });
-        renderArchivados(_archivadosTipo, filtered);
+        renderPapelera(_papeleraTipo, filtered);
     }
 
-    function renderArchivados(tipo, data) {
-        var c = document.getElementById('archivados-content');
+    function renderPapelera(tipo, data) {
+        var c = document.getElementById('papelera-content');
         if (!data.length) {
-            c.innerHTML = '<p style="color:var(--muted);padding:8px 0">Sin registros archivados.</p>';
+            c.innerHTML = '<p style="color:var(--muted);padding:8px 0">La papelera está vacía.</p>';
             return;
         }
         var filas, encabezado;
@@ -1269,7 +1269,7 @@
                     '<td><span class="badge badge-' + esc(p.estado) + '">' + esc(p.estado) + '</span></td>' +
                     '<td class="no-print">' +
                         '<button class="btn-action btn-leer" onclick="restaurarRegistro(\'propiedades\',' + p.id + ')">Restaurar</button> ' +
-                        '<button class="btn-action btn-cancel" onclick="borrarPermanente(\'propiedades\',' + p.id + ')">Borrar</button>' +
+                        '<button class="btn-action btn-cancel" onclick="borrarPermanente(\'propiedades\',' + p.id + ')">Eliminar definitivamente</button>' +
                     '</td></tr>';
             }).join('');
         } else {
@@ -1280,7 +1280,7 @@
                     '<td><span class="badge badge-' + esc(cl.tipo) + '">' + esc(cl.tipo) + '</span></td>' +
                     '<td class="no-print">' +
                         '<button class="btn-action btn-leer" onclick="restaurarRegistro(\'clientes\',' + cl.id + ')">Restaurar</button> ' +
-                        '<button class="btn-action btn-cancel" onclick="borrarPermanente(\'clientes\',' + cl.id + ')">Borrar</button>' +
+                        '<button class="btn-action btn-cancel" onclick="borrarPermanente(\'clientes\',' + cl.id + ')">Eliminar definitivamente</button>' +
                     '</td></tr>';
             }).join('');
         }
@@ -1291,7 +1291,7 @@
 
     function restaurarRegistro(tipo, id) {
         fetch('/api/' + tipo + '/' + id + '/restore', { method: 'PUT' })
-            .then(function() { toast('Restaurado', 'success'); verArchivados(tipo); cargarStats(); })
+            .then(function() { toast('Restaurado', 'success'); verPapelera(tipo); cargarStats(); })
             .catch(function() { toast('Error', 'error'); });
     }
 
@@ -1299,7 +1299,7 @@
         confirmar('Esta acción no se puede deshacer.', 'Eliminar definitivo', 'Eliminar').then(function(ok) {
             if (!ok) return;
             fetch('/api/' + tipo + '/' + id + '/permanente', { method: 'DELETE' })
-                .then(function() { toast('Eliminado definitivamente', 'success'); verArchivados(tipo); })
+                .then(function() { toast('Eliminado definitivamente', 'success'); verPapelera(tipo); })
                 .catch(function() { toast('Error', 'error'); });
         });
     }

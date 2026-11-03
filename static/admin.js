@@ -89,7 +89,7 @@ var _paletteSelIdx = -1;
 var _PALETTE_ACCIONES = [
     { label: 'Propiedades', sub: 'Ir al listado',   href: '/admin?tab=propiedades' },
     { label: 'Clientes',    sub: 'Ir al listado',   href: '/admin' },
-    { label: 'Archivados',  sub: 'Ver eliminados',  href: '/admin?tab=archivados' },
+    { label: 'Papelera',  sub: 'Ver borrados',  href: '/admin?tab=papelera' },
     { label: 'Consultas',   sub: 'Ver mensajes',    href: '/admin/consultas' },
 ];
 

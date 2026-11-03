@@ -1098,9 +1098,9 @@ def bulk_estado_propiedades():
     db.session.commit()
     return jsonify({'updated': len(props)})
 
-@app.route('/api/propiedades/archivados', methods=['GET'])
+@app.route('/api/propiedades/papelera', methods=['GET'])
 @api_login_required
-def get_propiedades_archivadas():
+def get_propiedades_papelera():
     props = Propiedad.query.filter(Propiedad.deleted_at.isnot(None)).all()
     return jsonify([p.as_dict() for p in props])
 
@@ -1588,9 +1588,9 @@ def add_cliente():
     db.session.commit()
     return jsonify(nuevo.as_dict()), 201
 
-@app.route('/api/clientes/archivados', methods=['GET'])
+@app.route('/api/clientes/papelera', methods=['GET'])
 @api_login_required
-def get_clientes_archivados():
+def get_clientes_papelera():
     clientes = Cliente.query.filter(Cliente.deleted_at.isnot(None)).all()
     return jsonify([c.as_dict() for c in clientes])
 
